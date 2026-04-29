@@ -21,18 +21,29 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const body = await req.json();
-  const veiculo = await prisma.veiculo.create({
-    data: {
-      placa: body.placa.toUpperCase(),
-      tipo: body.tipo,
-      modelo: body.modelo || null,
-      ano: body.ano ? parseInt(body.ano) : null,
-      capacidadeKg: body.capacidadeKg ? parseFloat(body.capacidadeKg) : null,
-      motoristaId: body.motoristaId || null,
-    },
-  });
+  try {
+    const ano = body.ano ? parseInt(body.ano) : null;
+    const capacidadeKg = body.capacidadeKg ? parseFloat(body.capacidadeKg) : null;
 
-  return NextResponse.json(veiculo, { status: 201 });
+    const veiculo = await prisma.veiculo.create({
+      data: {
+        placa: body.placa.toUpperCase(),
+        tipo: body.tipo,
+        modelo: body.modelo || null,
+        ano: isNaN(ano as any) ? null : ano,
+        capacidadeKg: isNaN(capacidadeKg as any) ? null : capacidadeKg,
+        motoristaId: body.motoristaId || null,
+      },
+    });
+
+    return NextResponse.json(veiculo, { status: 201 });
+  } catch (error: any) {
+    console.error("Erro ao salvar veiculo:", error);
+    if (error.code === 'P2002') {
+      return NextResponse.json({ error: "Já existe um veículo cadastrado com esta placa." }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Erro ao cadastrar veículo. Verifique os dados." }, { status: 400 });
+  }
 }
 
 export async function PUT(req: NextRequest) {
@@ -47,9 +58,23 @@ export async function PUT(req: NextRequest) {
   });
 
   if (data.placa) data.placa = data.placa.toUpperCase();
-  if (data.ano) data.ano = parseInt(data.ano);
-  if (data.capacidadeKg) data.capacidadeKg = parseFloat(data.capacidadeKg);
+  if (data.ano !== undefined && data.ano !== null) {
+    const ano = parseInt(data.ano);
+    data.ano = isNaN(ano) ? null : ano;
+  }
+  if (data.capacidadeKg !== undefined && data.capacidadeKg !== null) {
+    const cap = parseFloat(data.capacidadeKg);
+    data.capacidadeKg = isNaN(cap) ? null : cap;
+  }
 
-  const veiculo = await prisma.veiculo.update({ where: { id }, data });
-  return NextResponse.json(veiculo);
+  try {
+    const veiculo = await prisma.veiculo.update({ where: { id }, data });
+    return NextResponse.json(veiculo);
+  } catch (error: any) {
+    console.error("Erro ao atualizar veiculo:", error);
+    if (error.code === 'P2002') {
+      return NextResponse.json({ error: "Já existe um veículo cadastrado com esta placa." }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Erro ao atualizar veículo. Verifique os dados." }, { status: 400 });
+  }
 }

@@ -69,10 +69,13 @@ export default function FrotaPage() {
       const method = editing ? "PUT" : "POST";
       const body = editing ? { id: editing.id, ...formMot } : formMot;
       const res = await fetch("/api/motoristas", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao salvar motorista");
+      }
       toast.success(editing ? "Atualizado" : "Cadastrado");
       setShowModal(false); fetchLists();
-    } catch { toast.error("Erro ao salvar"); }
+    } catch (error: any) { toast.error(error.message || "Erro ao salvar"); }
     finally { setSaving(false); }
   }
 
@@ -83,10 +86,13 @@ export default function FrotaPage() {
       const method = editing ? "PUT" : "POST";
       const body = editing ? { id: editing.id, ...formVei } : formVei;
       const res = await fetch("/api/veiculos", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erro ao salvar veículo");
+      }
       toast.success(editing ? "Atualizado" : "Cadastrado");
       setShowModal(false); fetchLists();
-    } catch { toast.error("Erro ao salvar"); }
+    } catch (error: any) { toast.error(error.message || "Erro ao salvar"); }
     finally { setSaving(false); }
   }
 
