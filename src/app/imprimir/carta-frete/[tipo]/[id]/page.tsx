@@ -237,7 +237,12 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
 
           {/* Observações */}
           <div className="border-b-[2px] border-black p-1 text-justify">
-            <span className="font-bold">OBSERVAÇÕES </span> NF: {notasStr}. Motorista responsável pela guarda, integridade e correta entrega da carga fracionada desde o recebimento até a comprovação de entrega, nos termos do Código Civil (Art. 730-756) e Lei 11.442/2007.
+            <span className="font-bold">OBSERVAÇÕES: </span> Motorista responsável pela guarda, integridade e correta entrega da carga fracionada desde o recebimento até a comprovação de entrega, nos termos do Código Civil (Art. 730-756) e Lei 11.442/2007.
+            {data.observacoes && (
+              <span className="block mt-1 uppercase">
+                <strong>NOTA/EXTRA:</strong> {data.observacoes}
+              </span>
+            )}
           </div>
 
           {/* Composição Financeira & Assinaturas */}
