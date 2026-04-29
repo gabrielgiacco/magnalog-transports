@@ -81,7 +81,7 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
           <div className="flex border-b-[2px] border-black">
             {/* Logo */}
             <div className="w-[15%] border-r border-black flex items-center justify-center p-2">
-              <span className="font-bold text-lg tracking-wider text-blue-900 italic">MAGNA <span className="text-red-600">LOG</span></span>
+              <img src="/logo-magna-carta.png" alt="Magna Log" className="max-w-full h-auto" style={{ maxHeight: "60px" }} />
             </div>
             {/* Emitente Info */}
             <div className="w-[50%] p-1 border-r border-black">
@@ -169,20 +169,26 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
           {/* Mercadoria Transportada */}
           <div className="border-b-[2px] border-black">
             <div className="text-center font-bold border-b border-black bg-gray-200">MERCADORIA TRANSPORTADA</div>
-            <div className="flex text-center font-bold border-b border-black">
-              <div className="w-[20%] border-r border-black">NATUREZA DA CARGA</div>
+            <div className="flex text-center font-bold border-b border-black text-[9px]">
+              <div className="w-[15%] border-r border-black">DESTINO</div>
+              <div className="w-[15%] border-r border-black">NATUREZA DA CARGA</div>
               <div className="w-[20%] border-r border-black">NOTA FISCAL</div>
-              <div className="w-[20%] border-r border-black">VALOR MERCADORIA</div>
+              <div className="w-[15%] border-r border-black">VALOR MERCADORIA</div>
               <div className="w-[20%] border-r border-black">QUANT. M3 / KG / TON</div>
-              <div className="w-[20%]">ESPÉCIE</div>
+              <div className="w-[15%]">ESPÉCIE</div>
             </div>
-            <div className="flex text-center h-6">
-              <div className="w-[20%] border-r border-black flex items-center justify-center">DIVERSOS</div>
-              <div className="w-[20%] border-r border-black flex items-center justify-center truncate px-1 text-[9px]">{notasStr.substring(0, 30)}{notasStr.length > 30 ? "..." : ""}</div>
-              <div className="w-[20%] border-r border-black flex items-center justify-center">{formatCurrency(sumValores)}</div>
-              <div className="w-[20%] border-r border-black flex items-center justify-center">{sumPesos.toLocaleString("pt-BR")} KG</div>
-              <div className="w-[20%] flex items-center justify-center">VOLUMES</div>
-            </div>
+            {notas.map((n: any, idx: number) => (
+              <div key={n.id || idx} className="flex text-center min-h-[24px] border-b border-black last:border-b-0 text-[10px]">
+                <div className="w-[15%] border-r border-black flex items-center justify-center truncate px-1">
+                  {n.cidade ? `${n.cidade}/${n.uf}` : "DIVERSOS"}
+                </div>
+                <div className="w-[15%] border-r border-black flex items-center justify-center">DIVERSOS</div>
+                <div className="w-[20%] border-r border-black flex items-center justify-center truncate px-1">{n.numero}</div>
+                <div className="w-[15%] border-r border-black flex items-center justify-center">{formatCurrency(n.valorNota || 0)}</div>
+                <div className="w-[20%] border-r border-black flex items-center justify-center">{(n.pesoBruto || 0).toLocaleString("pt-BR")} KG</div>
+                <div className="w-[15%] flex items-center justify-center">{n.volumes || 0} VOL</div>
+              </div>
+            ))}
           </div>
 
           {/* Dados Motorista e Veículo Headers */}
