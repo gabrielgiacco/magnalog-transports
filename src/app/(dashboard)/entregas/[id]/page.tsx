@@ -296,6 +296,9 @@ export default function EntregaDetailPage() {
                 <Copy size={14} /> Editar
               </Button>
             )}
+            <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}`, '_blank')}>
+              <Printer size={14} /> Carta Frete
+            </Button>
             {!isReadOnly && entrega.status !== "OCORRENCIA" && entrega.status !== "FINALIZADO" && (
               <Button variant="danger" size="sm" onClick={() => setShowOcorrencia(true)}>
                 <AlertCircle size={14} /> Ocorrência

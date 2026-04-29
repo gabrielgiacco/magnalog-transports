@@ -7,7 +7,7 @@ import { Button, Card, Loading, StatusBadge, Modal, Select, Table, Th, Td, Tr } 
 import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
 import {
   ArrowLeft, Truck, User, Calendar, Package, Weight,
-  Plus, Trash2, CheckCircle2, PlayCircle, AlertTriangle, Search, ShieldCheck, FileText, History
+  Plus, Trash2, CheckCircle2, PlayCircle, AlertTriangle, Search, ShieldCheck, FileText, History, Printer
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
@@ -177,6 +177,9 @@ export default function RotaDetailPage() {
                 {nextStatus.icon} {nextStatus.label}
               </Button>
             )}
+            <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/rota/${id}`, '_blank')}>
+              <Printer size={14} /> Carta Frete
+            </Button>
           </div>
         }
       />
