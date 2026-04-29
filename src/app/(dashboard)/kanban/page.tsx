@@ -179,7 +179,8 @@ export default function KanbanPage() {
               isRota: true,
               codigo: e.rota?.codigo || e.rotaId.substring(0, 5),
               razaoSocial: "",
-              cidade: "Múltiplos Destinos",
+              cidadesArray: [],
+              cidade: "",
               uf: "",
               pesoTotal: 0,
               _count: { notas: 0 },
@@ -194,6 +195,9 @@ export default function KanbanPage() {
           r.pesoTotal += e.pesoTotal || 0;
           r._count.notas += e._count?.notas || 0;
           r.entregasCount++;
+          if (e.cidade && !r.cidadesArray.includes(e.cidade)) {
+            r.cidadesArray.push(e.cidade);
+          }
           if (e.notas) r.notas.push(...e.notas);
           if (e.qualidade) r.qualidade = e.qualidade;
         } else {
@@ -206,6 +210,8 @@ export default function KanbanPage() {
 
       for (const r of Object.values(groupedRotas)) {
         r.razaoSocial = `${r.entregasCount} Entregas Vinculadas na Rota`;
+        r.cidade = r.cidadesArray.length > 0 ? r.cidadesArray.join(", ") : "Múltiplos Destinos";
+        delete r.cidadesArray;
         processed.push(r);
       }
       setEntregas(processed);

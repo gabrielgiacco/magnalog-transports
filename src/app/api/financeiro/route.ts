@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
       include: {
         motorista: { select: { nome: true, tipo: true, valorDiaria: true } },
         entregas: {
-          select: { id: true, codigo: true, razaoSocial: true, notas: { select: { numero: true } } }
+          select: { id: true, codigo: true, razaoSocial: true, cidade: true, notas: { select: { numero: true } } }
         },
         _count: { select: { entregas: true } }
       }
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
       id: r.id,
       codigo: r.codigo,
       razaoSocial: `Rota Fracionada (${r._count.entregas} entregas)`,
-      cidade: "Múltiplos Destinos",
+      cidade: Array.from(new Set(r.entregas.map((e: any) => e.cidade).filter(Boolean))).join(", ") || "Múltiplos Destinos",
       status: r.status,
       valorMotorista: r.valorMotorista || 0,
       valorSaida: r.valorSaida || 0,
