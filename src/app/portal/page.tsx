@@ -86,24 +86,44 @@ export default function PortalPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="text-[10px] font-mono uppercase tracking-widest mb-2" style={{ color: "var(--text3)" }}>Total de NFs</div>
-            <div className="font-head text-3xl font-black" style={{ color: "var(--accent)" }}>{total}</div>
-          </div>
-          <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="text-[10px] font-mono uppercase tracking-widest mb-2" style={{ color: "var(--text3)" }}>Em Trânsito</div>
-            <div className="font-head text-3xl font-black" style={{ color: "#8b5cf6" }}>
-              {notas.filter((n) => n.entrega?.status === "EM_ROTA").length}
-            </div>
-          </div>
-          <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="text-[10px] font-mono uppercase tracking-widest mb-2" style={{ color: "var(--text3)" }}>Entregues</div>
-            <div className="font-head text-3xl font-black" style={{ color: "#10b981" }}>
-              {notas.filter((n) => ["ENTREGUE", "FINALIZADO"].includes(n.entrega?.status)).length}
-            </div>
-          </div>
+        {/* Stats / Dashboard */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <button
+            onClick={() => { setFilterStatus(""); setPage(1); }}
+            className={`text-left rounded-xl p-5 transition-all relative overflow-hidden ${filterStatus === "" ? "ring-2 ring-offset-2 ring-blue-500" : "hover:opacity-80"}`}
+            style={{ 
+              background: "var(--surface)", 
+              border: "1px solid var(--border)",
+              borderColor: filterStatus === "" ? "var(--accent)" : "var(--border)"
+            }}
+          >
+            <div className="text-[10px] font-mono uppercase tracking-widest mb-2 z-10 relative" style={{ color: "var(--text3)" }}>Total de NFs</div>
+            <div className="font-head text-3xl font-black z-10 relative" style={{ color: "var(--accent)" }}>{total}</div>
+            <div className="absolute bottom-0 left-0 h-1 transition-all duration-1000" style={{ background: "var(--accent)", width: "100%", opacity: 0.5 }} />
+          </button>
+
+          {[
+            { id: "EM_SEPARACAO", label: "Em Separação", value: stats.EM_SEPARACAO, color: "#f59e0b" },
+            { id: "EM_ROTA", label: "Em Trânsito", value: stats.EM_ROTA, color: "#8b5cf6" },
+            { id: "OCORRENCIA", label: "Ocorrências", value: stats.OCORRENCIA, color: "#ef4444" },
+            { id: "FINALIZADAS", label: "Finalizadas", value: stats.FINALIZADAS, color: "#10b981" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => { setFilterStatus(item.id); setPage(1); }}
+              className={`text-left rounded-xl p-5 transition-all relative overflow-hidden ${filterStatus === item.id ? "ring-2 ring-offset-2" : "hover:opacity-80"}`}
+              style={{ 
+                background: "var(--surface)", 
+                border: "1px solid var(--border)",
+                borderColor: filterStatus === item.id ? item.color : "var(--border)",
+                "--tw-ring-color": item.color
+              } as any}
+            >
+              <div className="text-[10px] font-mono uppercase tracking-widest mb-2 z-10 relative" style={{ color: "var(--text3)" }}>{item.label}</div>
+              <div className="font-head text-3xl font-black z-10 relative" style={{ color: item.color }}>{item.value}</div>
+              <div className="absolute bottom-0 left-0 h-1 transition-all duration-1000" style={{ background: item.color, width: total > 0 ? `${(item.value / total) * 100}%` : '0%', opacity: 0.5 }} />
+            </button>
+          ))}
         </div>
 
         {/* Filters */}

@@ -6,17 +6,17 @@ export default withAuth(
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
 
+    // Cliente não aprovado
+    if (token?.role === "CLIENTE" && !(token as any).aprovado) {
+      return NextResponse.redirect(new URL("/aguardando-aprovacao", req.url));
+    }
+
     // Portal do cliente — só CLIENTE aprovado ou ADMIN
     if (pathname.startsWith("/portal")) {
       if (token?.role !== "CLIENTE" && token?.role !== "ADMIN") {
         return NextResponse.redirect(new URL("/login", req.url));
       }
       return NextResponse.next();
-    }
-
-    // Cliente não aprovado
-    if (token?.role === "CLIENTE" && !(token as any).aprovado) {
-      return NextResponse.redirect(new URL("/aguardando-aprovacao", req.url));
     }
 
     // Redirect old routes to unified page

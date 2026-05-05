@@ -30,16 +30,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && session?.user && (session.user as any).role === "CLIENTE") {
-      router.push("/portal");
+    if (session?.user) {
+      if ((session.user as any).role === "CLIENTE") {
+        router.push("/portal");
+      } else {
+        fetch("/api/dashboard")
+          .then((r) => r.json())
+          .then(setData)
+          .finally(() => setLoading(false));
+      }
     }
-  }, [session, loading, router]);
-
-  useEffect(() => {
-    if ((session?.user as any)?.role !== "CLIENTE") {
-      fetch("/api/dashboard").then((r) => r.json()).then(setData).finally(() => setLoading(false));
-    }
-  }, [session]);
+  }, [session, router]);
 
   if (loading) return <><Topbar title="Dashboard" /><Loading /></>;
 

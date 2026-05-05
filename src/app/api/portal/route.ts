@@ -48,7 +48,11 @@ export async function GET(req: NextRequest) {
   }
 
   if (status) {
-    where.entrega = { status };
+    if (status === "FINALIZADAS") {
+      where.entrega = { status: { in: ["ENTREGUE", "FINALIZADO"] } };
+    } else {
+      where.entrega = { status };
+    }
   }
 
   const [notas, total] = await Promise.all([
@@ -77,5 +81,26 @@ export async function GET(req: NextRequest) {
     prisma.notaFiscal.count({ where }),
   ]);
 
-  return NextResponse.json({ notas, total, pages: Math.ceil(total / limit) });
+  // Remover o filtro de status para o gráfico (para mostrar os totais gerais da busca atual)
+  const chartWhere = { ...where };
+  delete chartWhere.entrega;
+
+  const [countEmSeparacao, countOcorrencia, countFinalizadas, countEmRota] = await Promise.all([
+    prisma.notaFiscal.count({ where: { ...chartWhere, entrega: { status: "EM_SEPARACAO" } } }),
+    prisma.notaFiscal.count({ where: { ...chartWhere, entrega: { status: "OCORRENCIA" } } }),
+    prisma.notaFiscal.count({ where: { ...chartWhere, entrega: { status: { in: ["ENTREGUE", "FINALIZADO"] } } } }),
+    prisma.notaFiscal.count({ where: { ...chartWhere, entrega: { status: "EM_ROTA" } } }),
+  ]);
+
+  return NextResponse.json({ 
+    notas, 
+    total, 
+    pages: Math.ceil(total / limit),
+    stats: {
+      EM_SEPARACAO: countEmSeparacao,
+      OCORRENCIA: countOcorrencia,
+      FINALIZADAS: countFinalizadas,
+      EM_ROTA: countEmRota
+    }
+  });
 }
