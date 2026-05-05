@@ -16,6 +16,7 @@ export default function PortalPage() {
   const router = useRouter();
   const [notas, setNotas] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState({ EM_SEPARACAO: 0, OCORRENCIA: 0, FINALIZADAS: 0, EM_ROTA: 0 });
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -45,6 +46,7 @@ export default function PortalPage() {
     setNotas(data.notas || []);
     setTotal(data.total || 0);
     setPages(data.pages || 1);
+    setStats(data.stats || { EM_SEPARACAO: 0, OCORRENCIA: 0, FINALIZADAS: 0, EM_ROTA: 0 });
     setLoading(false);
   }, [page, debouncedSearch, filterStatus]);
 
