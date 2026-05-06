@@ -35,18 +35,37 @@ export async function GET(req: NextRequest) {
     const [
       entregasCount,
       porStatus,
-      porCidade,
+      rawPorCidade,
       receitaTotal,
     ] = await Promise.all([
       prisma.entrega.count({ where }),
       prisma.entrega.groupBy({ by: ["status"], where, _count: true }),
-      prisma.entrega.groupBy({ by: ["cidade"], where, _count: true, orderBy: { _count: { cidade: "desc" } }, take: 10 }),
+      prisma.entrega.groupBy({ by: ["cidade"], where, _count: true }),
       prisma.entrega.aggregate({
         where,
         _sum: { valorFrete: true, pesoTotal: true, volumeTotal: true },
         _avg: { valorFrete: true },
       }),
     ]);
+
+    function formatCityName(str: string) {
+      return str.toLowerCase().split(' ').map(word => {
+        if (["de", "da", "do", "das", "dos"].includes(word)) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      }).join(' ');
+    }
+
+    const cidadeMap = new Map<string, number>();
+    for (const item of rawPorCidade) {
+      if (!item.cidade) continue;
+      const nomeCidade = item.cidade.split(",")[0].trim();
+      const normalized = nomeCidade.toUpperCase();
+      cidadeMap.set(normalized, (cidadeMap.get(normalized) || 0) + item._count);
+    }
+    const porCidade = Array.from(cidadeMap.entries())
+      .map(([cidade, _count]) => ({ cidade: formatCityName(cidade), _count }))
+      .sort((a, b) => b._count - a._count)
+      .slice(0, 10);
 
     // Batch 2
     const [

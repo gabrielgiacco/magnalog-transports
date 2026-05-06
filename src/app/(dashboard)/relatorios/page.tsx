@@ -139,17 +139,17 @@ export default function RelatoriosPage() {
                 {/* KPIs */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
                   {[
-                    { label:"Entregas", value: data.entregas, icon:"📦", color:"#f97316" },
-                    { label:"Notas Fiscais", value: data.notas, icon:"📄", color:"#3b82f6" },
-                    { label:"Receita Frete", value: formatCurrency(data.financeiro?._sum?.valorFrete??0), icon:"💰", color:"#10b981" },
-                    { label:"Custo Motorista", value: formatCurrency(data.financeiro?._sum?.custoMotorista??0), icon:"🚛", color:"#ef4444" },
-                    { label:"Margem", value: `${formatCurrency(data.financeiro?.margem??0)} (${data.financeiro?.margemPercent??0}%)`, icon:"📊", color: (data.financeiro?.margem??0)>=0?"#10b981":"#ef4444" },
-                    { label:"Taxa Entrega", value: `${data.financeiro?.taxaEntrega??0}%`, icon:"✅", color: (data.financeiro?.taxaEntrega??0)>=80?"#10b981":(data.financeiro?.taxaEntrega??0)>=60?"#f59e0b":"#ef4444" },
+                    { label:"Entregas", value: data.entregas, icon:"📦", color:"#f97316", desc: "Total de entregas registradas no período" },
+                    { label:"Notas Fiscais", value: data.notas, icon:"📄", color:"#3b82f6", desc: "Total de notas fiscais emitidas no período" },
+                    { label:"Receita Frete", value: formatCurrency(data.financeiro?._sum?.valorFrete??0), icon:"💰", color:"#10b981", desc: "Soma total dos valores de frete cobrados" },
+                    { label:"Custo Motorista", value: formatCurrency(data.financeiro?._sum?.custoMotorista??0), icon:"🚛", color:"#ef4444", desc: "Soma total dos custos pagos aos motoristas" },
+                    { label:"Margem", value: `${formatCurrency(data.financeiro?.margem??0)} (${data.financeiro?.margemPercent??0}%)`, icon:"📊", color: (data.financeiro?.margem??0)>=0?"#10b981":"#ef4444", desc: "Lucro bruto: Receita Frete subtraída do Custo Motorista" },
+                    { label:"Taxa Entrega", value: `${data.financeiro?.taxaEntrega??0}%`, icon:"✅", color: (data.financeiro?.taxaEntrega??0)>=80?"#10b981":(data.financeiro?.taxaEntrega??0)>=60?"#f59e0b":"#ef4444", desc: "Porcentagem de entregas com status Entregue ou Finalizado" },
                   ].map((k) => (
-                    <Card key={k.label} className="relative overflow-hidden py-3 sm:py-4 px-3 sm:px-5">
+                    <Card key={k.label} className="relative overflow-hidden py-3 sm:py-4 px-3 sm:px-5" title={k.desc}>
                       <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background:k.color }} />
                       <div className="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest mb-1 sm:mb-2 truncate" style={{ color:"var(--text3)" }}>{k.label}</div>
-                      <div className="font-head text-lg sm:text-2xl font-black truncate" style={{ color:k.color }}>{k.value}</div>
+                      <div className="font-head text-lg sm:text-2xl font-black truncate" title={String(k.value)} style={{ color:k.color }}>{k.value}</div>
                       <div className="absolute right-2 sm:right-3 top-2 sm:top-3 text-xl sm:text-2xl opacity-10">{k.icon}</div>
                     </Card>
                   ))}
@@ -188,7 +188,7 @@ export default function RelatoriosPage() {
                   <Card>
                     <div className="font-head text-sm font-bold mb-4">Top 10 Cidades</div>
                     <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={data.porCidade?.map((c: any) => ({ cidade: c.cidade.split(",")[0], entregas: c._count }))}
+                      <BarChart data={data.porCidade?.map((c: any) => ({ cidade: c.cidade, entregas: c._count }))}
                         layout="vertical" barSize={10}>
                         <XAxis type="number" tick={{ fontSize:10, fill:"var(--text3)" }} axisLine={false} tickLine={false} />
                         <YAxis type="category" dataKey="cidade" tick={{ fontSize:10, fill:"var(--text2)" }} width={90} axisLine={false} tickLine={false} />
@@ -209,8 +209,8 @@ export default function RelatoriosPage() {
                       { l:"Ticket Médio", v: formatCurrency(data.financeiro?._avg?.valorFrete??0), c:"#f97316", sub:"Receita média por entrega" },
                       { l:"Ticket Líquido", v: formatCurrency(data.entregas > 0 ? (data.financeiro?.margem ?? 0) / data.entregas : 0), c:"#10b981", sub:"Lucro médio por entrega" },
                     ].map((item) => (
-                      <div key={item.l} className="text-center p-3 sm:p-4 rounded-xl" style={{ background:"var(--surface2)" }}>
-                        <div className="font-head text-base sm:text-xl font-black truncate" style={{ color:item.c }}>{item.v}</div>
+                      <div key={item.l} className="text-center p-3 sm:p-4 rounded-xl" title={item.sub} style={{ background:"var(--surface2)" }}>
+                        <div className="font-head text-base sm:text-xl font-black truncate" title={String(item.v)} style={{ color:item.c }}>{item.v}</div>
                         <div className="text-[9px] sm:text-[10px] font-mono mt-1 truncate" style={{ color:"var(--text3)" }}>{item.l.toUpperCase()}</div>
                       </div>
                     ))}
@@ -222,15 +222,15 @@ export default function RelatoriosPage() {
                   <div className="font-head text-sm font-bold mb-4">Resumo Financeiro do Mês</div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
                     {[
-                      { l:"Frete Total", v: data.financeiro?._sum?.valorFrete??0, c:"#10b981" },
-                      { l:"Custo Motorista", v: data.financeiro?._sum?.custoMotorista??0, c:"#ef4444" },
-                      { l:"Descarga", v: data.financeiro?._sum?.valorDescarga??0, c:"#3b82f6" },
-                      { l:"Armazenagem", v: data.financeiro?._sum?.armazenagem??0, c:"#8b5cf6" },
-                      { l:"Adiantamentos", v: data.financeiro?._sum?.adiantamento??0, c:"#f59e0b" },
-                      { l:"Saldo Pendente", v: data.financeiro?._sum?.saldoPendente??0, c:((data.financeiro?._sum?.saldoPendente??0)>0)?"#ef4444":"#10b981" },
+                      { l:"Frete Total", v: data.financeiro?._sum?.valorFrete??0, c:"#10b981", desc:"Soma total de todo o frete no período" },
+                      { l:"Custo Motorista", v: data.financeiro?._sum?.custoMotorista??0, c:"#ef4444", desc:"Soma total de todos os custos com motoristas" },
+                      { l:"Descarga", v: data.financeiro?._sum?.valorDescarga??0, c:"#3b82f6", desc:"Total gasto com taxas de descarga" },
+                      { l:"Armazenagem", v: data.financeiro?._sum?.armazenagem??0, c:"#8b5cf6", desc:"Custos gerados com armazenagem de paletes" },
+                      { l:"Adiantamentos", v: data.financeiro?._sum?.adiantamento??0, c:"#f59e0b", desc:"Total de adiantamentos pagos aos motoristas" },
+                      { l:"Saldo Pendente", v: data.financeiro?._sum?.saldoPendente??0, c:((data.financeiro?._sum?.saldoPendente??0)>0)?"#ef4444":"#10b981", desc:"Total pendente para pagar aos motoristas" },
                     ].map((item) => (
-                      <div key={item.l} className="text-center p-3 sm:p-4 rounded-xl" style={{ background:"var(--surface2)" }}>
-                        <div className="font-head text-base sm:text-xl font-black truncate" style={{ color:item.c }}>{formatCurrency(item.v)}</div>
+                      <div key={item.l} className="text-center p-3 sm:p-4 rounded-xl" title={item.desc} style={{ background:"var(--surface2)" }}>
+                        <div className="font-head text-base sm:text-xl font-black truncate" title={formatCurrency(item.v)} style={{ color:item.c }}>{formatCurrency(item.v)}</div>
                         <div className="text-[9px] sm:text-[10px] font-mono mt-1 truncate" style={{ color:"var(--text3)" }}>{item.l.toUpperCase()}</div>
                       </div>
                     ))}
