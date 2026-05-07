@@ -8,7 +8,9 @@ export function CategoriasTab() {
   const [loading, setLoading] = useState(true);
   
   const [showModal, setShowModal] = useState(false);
+  const [showSubModal, setShowSubModal] = useState(false);
   const [form, setForm] = useState<any>({ tipo: "DESPESA" });
+  const [subForm, setSubForm] = useState<any>({ nome: "", categoriaId: "" });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -37,7 +39,21 @@ export function CategoriasTab() {
       toast.error("Erro ao salvar");
     }
   }
-
+  async function handleSaveSub() {
+    try {
+      const res = await fetch("/api/financeiro/subcategorias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subForm)
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Subcategoria criada");
+      setShowSubModal(false);
+      fetchData();
+    } catch {
+      toast.error("Erro ao salvar");
+    }
+  }
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
       <div className="flex justify-between items-center mb-4">
@@ -55,6 +71,7 @@ export function CategoriasTab() {
                 <Th>Nome</Th>
                 <Th>Tipo</Th>
                 <Th>Subcategorias</Th>
+                <Th></Th>
               </tr>
             </thead>
             <tbody>
@@ -66,6 +83,11 @@ export function CategoriasTab() {
                   </Td>
                   <Td className="text-xs" style={{ color: "var(--text3)" }}>
                     {c.subcategorias?.map((s: any) => s.nome).join(", ") || "Nenhuma"}
+                  </Td>
+                  <Td className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => { setSubForm({ nome: "", categoriaId: c.id }); setShowSubModal(true); }}>
+                      + Subcategoria
+                    </Button>
                   </Td>
                 </Tr>
               ))}
@@ -82,6 +104,13 @@ export function CategoriasTab() {
             <option value="DESPESA">Despesa</option>
           </Select>
           <Button onClick={handleSave} className="w-full">Salvar</Button>
+        </div>
+      </Modal>
+
+      <Modal open={showSubModal} onClose={() => setShowSubModal(false)} title="Nova Subcategoria">
+        <div className="space-y-4">
+          <Input label="Nome da Subcategoria" value={subForm.nome || ""} onChange={e => setSubForm((f: any) => ({ ...f, nome: e.target.value }))} />
+          <Button onClick={handleSaveSub} className="w-full">Salvar</Button>
         </div>
       </Modal>
     </div>

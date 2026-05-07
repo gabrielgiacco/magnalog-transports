@@ -682,6 +682,7 @@ model LancamentoFinanceiro {
   subcategoria     SubcategoriaFinanceira? @relation(fields: [subcategoriaId], references: [id], onDelete: SetNull)
   
   favorecido       String? 
+  anexoUrl         String?
   
   rotaId           String?
   entregaId        String?

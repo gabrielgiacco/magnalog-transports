@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const body = await req.json();
-  const { descricao, tipo, valor, dataVencimento, dataPagamento, status, categoriaId, subcategoriaId, favorecido } = body;
+  const { descricao, tipo, valor, dataVencimento, dataPagamento, status, categoriaId, subcategoriaId, favorecido, anexoUrl } = body;
 
   const lancamento = await prisma.lancamentoFinanceiro.create({
     data: {
@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
       status: status || (dataPagamento ? "PAGO" : "PENDENTE"),
       categoriaId: categoriaId || null,
       subcategoriaId: subcategoriaId || null,
-      favorecido
+      favorecido,
+      anexoUrl
     }
   });
 

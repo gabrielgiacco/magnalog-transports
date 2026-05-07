@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, Button, StatusBadge, Loading, Empty, Table, Th, Td, Tr, Modal, Input, Select } from "@/components/ui";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { Paperclip, Upload, Plus } from "lucide-react";
 
 export function LancamentosTab() {
   const [lancamentos, setLancamentos] = useState<any[]>([]);
@@ -10,7 +11,13 @@ export function LancamentosTab() {
   const [loading, setLoading] = useState(true);
   
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [form, setForm] = useState<any>({ tipo: "DESPESA", status: "PENDENTE" });
+  
+  const [showCatModal, setShowCatModal] = useState(false);
+  const [catNome, setCatNome] = useState("");
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [subNome, setSubNome] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -59,13 +66,56 @@ export function LancamentosTab() {
     }
   }
 
+  async function handleSaveCat() {
+    try {
+      const res = await fetch("/api/financeiro/categorias", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: catNome, tipo: form.tipo })
+      });
+      if (!res.ok) throw new Error();
+      const cat = await res.json();
+      setForm((f: any) => ({ ...f, categoriaId: cat.id }));
+      setShowCatModal(false);
+      setCatNome("");
+      fetchData();
+      toast.success("Categoria adicionada");
+    } catch { toast.error("Erro ao adicionar"); }
+  }
+
+  async function handleSaveSub() {
+    try {
+      const res = await fetch("/api/financeiro/subcategorias", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: subNome, categoriaId: form.categoriaId })
+      });
+      if (!res.ok) throw new Error();
+      const sub = await res.json();
+      setForm((f: any) => ({ ...f, subcategoriaId: sub.id }));
+      setShowSubModal(false);
+      setSubNome("");
+      fetchData();
+      toast.success("Subcategoria adicionada");
+    } catch { toast.error("Erro ao adicionar"); }
+  }
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files || e.target.files.length === 0) return;
+    toast.success("Arquivo recebido! (Simulação de importação)");
+    setShowImportModal(false);
+  }
+
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-sm font-semibold" style={{ color: "var(--text2)" }}>Lançamentos de Caixa</h2>
-        <Button onClick={() => { setForm({ tipo: "DESPESA", status: "PENDENTE" }); setShowModal(true); }}>
-          + Novo Lançamento
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+            <Upload size={14} className="mr-2" /> Importar OFX/CSV
+          </Button>
+          <Button onClick={() => { setForm({ tipo: "DESPESA", status: "PENDENTE" }); setShowModal(true); }}>
+            + Novo Lançamento
+          </Button>
+        </div>
       </div>
 
       <Card className="p-0 overflow-hidden shadow-none">
@@ -129,12 +179,37 @@ export function LancamentosTab() {
             </Select>
             <Input label="Valor (R$)" type="number" step="0.01" value={form.valor || ""} onChange={e => set("valor", e.target.value)} />
           </div>
-          <Select label="Categoria" value={form.categoriaId || ""} onChange={e => set("categoriaId", e.target.value)}>
-            <option value="">Selecione...</option>
-            {categorias.filter(c => c.tipo === form.tipo).map(c => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </Select>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Select label="Categoria" value={form.categoriaId || ""} onChange={e => { set("categoriaId", e.target.value); set("subcategoriaId", ""); }}>
+                  <option value="">Selecione...</option>
+                  {categorias.filter(c => c.tipo === form.tipo).map(c => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </Select>
+              </div>
+              <Button type="button" variant="outline" className="mb-0.5 px-3" onClick={() => setShowCatModal(true)}>
+                <Plus size={16} />
+              </Button>
+            </div>
+            
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Select label="Subcategoria" value={form.subcategoriaId || ""} onChange={e => set("subcategoriaId", e.target.value)} disabled={!form.categoriaId}>
+                  <option value="">Selecione...</option>
+                  {form.categoriaId && categorias.find(c => c.id === form.categoriaId)?.subcategorias?.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.nome}</option>
+                  ))}
+                </Select>
+              </div>
+              <Button type="button" variant="outline" className="mb-0.5 px-3" onClick={() => setShowSubModal(true)} disabled={!form.categoriaId}>
+                <Plus size={16} />
+              </Button>
+            </div>
+          </div>
+
           <Input label="Favorecido (Opcional)" value={form.favorecido || ""} onChange={e => set("favorecido", e.target.value)} />
           <div className="grid grid-cols-2 gap-4">
             <Input label="Vencimento" type="date" value={form.dataVencimento || ""} onChange={e => set("dataVencimento", e.target.value)} />
@@ -146,7 +221,56 @@ export function LancamentosTab() {
           {form.status === "PAGO" && (
             <Input label="Data de Pagamento" type="date" value={form.dataPagamento || ""} onChange={e => set("dataPagamento", e.target.value)} />
           )}
-          <Button onClick={handleSave} className="w-full">Salvar</Button>
+
+          <div className="border border-dashed border-gray-200 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer relative mt-2">
+            <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                toast.success(`Arquivo ${e.target.files[0].name} anexado (Simulação)`);
+                set("anexoUrl", URL.createObjectURL(e.target.files[0]));
+              }
+            }} />
+            <div className="flex flex-col items-center justify-center space-y-1">
+              <Paperclip size={20} className="text-gray-400" />
+              {form.anexoUrl ? (
+                <span className="text-sm font-medium text-emerald-600">Comprovante anexado</span>
+              ) : (
+                <>
+                  <span className="text-sm font-medium" style={{ color: "var(--text2)" }}>Adicionar anexo</span>
+                  <span className="text-xs" style={{ color: "var(--text3)" }}>Comprovantes ou fotos</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <Button onClick={handleSave} className="w-full">Salvar Lançamento</Button>
+        </div>
+      </Modal>
+
+      {/* Mini Modal para Criar Categoria */}
+      <Modal open={showCatModal} onClose={() => setShowCatModal(false)} title="Nova Categoria">
+        <div className="space-y-4">
+          <Input label="Nome da Categoria" value={catNome} onChange={e => setCatNome(e.target.value)} autoFocus />
+          <Button onClick={handleSaveCat} className="w-full" disabled={!catNome.trim()}>Salvar Categoria</Button>
+        </div>
+      </Modal>
+
+      {/* Mini Modal para Criar Subcategoria */}
+      <Modal open={showSubModal} onClose={() => setShowSubModal(false)} title="Nova Subcategoria">
+        <div className="space-y-4">
+          <Input label="Nome da Subcategoria" value={subNome} onChange={e => setSubNome(e.target.value)} autoFocus />
+          <Button onClick={handleSaveSub} className="w-full" disabled={!subNome.trim()}>Salvar Subcategoria</Button>
+        </div>
+      </Modal>
+
+      {/* Modal de Importação */}
+      <Modal open={showImportModal} onClose={() => setShowImportModal(false)} title="Importar Lançamentos">
+        <div className="space-y-4 text-center p-4">
+          <Upload size={48} className="mx-auto text-gray-300 mb-2" />
+          <p className="text-sm" style={{ color: "var(--text2)" }}>Selecione um arquivo OFX (Extrato Bancário) ou CSV para importar transações em lote.</p>
+          <div className="relative mt-4">
+            <input type="file" accept=".ofx,.csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleImport} />
+            <Button className="w-full pointer-events-none">Selecionar Arquivo OFX / CSV</Button>
+          </div>
         </div>
       </Modal>
     </div>
