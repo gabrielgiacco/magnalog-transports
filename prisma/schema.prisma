@@ -154,6 +154,7 @@ model Rota {
   volumeTotal Int        @default(0)
   valorMotorista Float   @default(0)
   valorSaida     Float   @default(0)
+  valorDescarga  Float   @default(0)
   adiantamentoMotorista Float @default(0)
   dataAdiantamento DateTime?
   descontosMotorista Float @default(0)
@@ -170,6 +171,7 @@ model Rota {
   contasPagar ContaPagar[]
   qualidade   QualidadeOperacional?
   avarias     Avaria[]
+  lancamentos LancamentoFinanceiro[]
 }
 
 enum StatusEntrega {
@@ -238,6 +240,7 @@ model Entrega {
   contasPagar      ContaPagar[]
   qualidade        QualidadeOperacional?
   avarias          Avaria[]
+  lancamentos      LancamentoFinanceiro[]
 
   @@index([cnpj])
   @@index([status])
@@ -334,6 +337,7 @@ model Fatura {
   observacoes      String?      @db.Text
   ctes             CTe[]
   entregas         Entrega[]
+  lancamentos      LancamentoFinanceiro[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -626,4 +630,73 @@ model NotaDevolucao {
 
   @@index([avariaId])
   @@index([status])
+}
+
+// ─── ERP Financeiro ──────────────────────────────────────────────────────
+
+enum TipoLancamento {
+  RECEITA
+  DESPESA
+}
+
+enum StatusLancamento {
+  PENDENTE
+  PAGO
+  CANCELADO
+}
+
+model CategoriaFinanceira {
+  id            String   @id @default(cuid())
+  nome          String
+  tipo          TipoLancamento
+  subcategorias SubcategoriaFinanceira[]
+  lancamentos   LancamentoFinanceiro[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SubcategoriaFinanceira {
+  id            String   @id @default(cuid())
+  nome          String
+  categoriaId   String
+  categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  lancamentos   LancamentoFinanceiro[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([categoriaId])
+}
+
+model LancamentoFinanceiro {
+  id               String   @id @default(cuid())
+  descricao        String
+  tipo             TipoLancamento
+  valor            Float
+  dataVencimento   DateTime
+  dataPagamento    DateTime?
+  status           StatusLancamento @default(PENDENTE)
+  
+  categoriaId      String?
+  subcategoriaId   String?
+  categoria        CategoriaFinanceira? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  subcategoria     SubcategoriaFinanceira? @relation(fields: [subcategoriaId], references: [id], onDelete: SetNull)
+  
+  favorecido       String? 
+  
+  rotaId           String?
+  entregaId        String?
+  faturaId         String?
+  
+  rota             Rota?    @relation(fields: [rotaId], references: [id], onDelete: SetNull)
+  entrega          Entrega? @relation(fields: [entregaId], references: [id], onDelete: SetNull)
+  fatura           Fatura?  @relation(fields: [faturaId], references: [id], onDelete: SetNull)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@index([categoriaId])
+  @@index([subcategoriaId])
+  @@index([rotaId])
+  @@index([entregaId])
+  @@index([faturaId])
 }

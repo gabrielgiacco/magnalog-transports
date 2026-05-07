@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
       select: {
         id: true, codigo: true, razaoSocial: true, cidade: true, status: true,
-        valorMotorista: true, valorSaida: true, adiantamentoMotorista: true, dataAdiantamento: true,
+        valorMotorista: true, valorSaida: true, valorDescarga: true, adiantamentoMotorista: true, dataAdiantamento: true,
         descontosMotorista: true, saldoMotorista: true, dataPagamentoSaldo: true, statusCanhoto: true,
         dataEntrega: true, dataAgendada: true,
         motoristaId: true, motorista: { select: { nome: true, tipo: true, valorDiaria: true } },
@@ -106,6 +106,7 @@ export async function GET(req: NextRequest) {
       status: r.status,
       valorMotorista: r.valorMotorista || 0,
       valorSaida: r.valorSaida || 0,
+      valorDescarga: r.valorDescarga || 0,
       adiantamentoMotorista: r.adiantamentoMotorista || 0,
       dataAdiantamento: r.dataAdiantamento,
       descontosMotorista: r.descontosMotorista || 0,
@@ -176,6 +177,7 @@ export async function GET(req: NextRequest) {
     adiantamentoMotorista: (acc.adiantamentoMotorista || 0) + (v.adiantamentoMotorista || 0),
     saldoMotorista: (acc.saldoMotorista || 0) + v.saldoMotorista,
     valorSaida: (acc.valorSaida || 0) + (v.valorSaida || 0),
+    valorDescarga: (acc.valorDescarga || 0) + (v.valorDescarga || 0),
     descontosMotorista: (acc.descontosMotorista || 0) + (v.descontosMotorista || 0),
   }), {});
 
@@ -205,11 +207,12 @@ export async function PATCH(req: NextRequest) {
     dataPagamentoSaldo, 
     statusCanhoto,
     valorMotorista,
-    valorSaida
+    valorSaida,
+    valorDescarga
   } = body;
 
   const model = isRota ? prisma.rota : prisma.entrega;
-  const current = await (model as any).findUnique({ where: { id } });
+  const current = await (model as any).findUnique({ where: { id }, include: { motorista: true } });
   if (!current) return NextResponse.json({ error: "Não encontrada" }, { status: 404 });
 
   // Compute balance
@@ -225,6 +228,7 @@ export async function PATCH(req: NextRequest) {
     data: {
       ...(valorMotorista !== undefined && { valorMotorista }),
       ...(valorSaida !== undefined && { valorSaida }),
+      ...(valorDescarga !== undefined && { valorDescarga }),
       ...(adiantamentoMotorista !== undefined && { adiantamentoMotorista }),
       ...(dataAdiantamento !== undefined && { dataAdiantamento: dataAdiantamento ? new Date(dataAdiantamento) : null }),
       ...(descontosMotorista !== undefined && { descontosMotorista }),
@@ -233,6 +237,82 @@ export async function PATCH(req: NextRequest) {
       saldoMotorista: saldoFinalMotorista,
     },
   });
+
+  // ERP Sync: Auto-generate/Update Lancamentos Financeiros
+  try {
+    const motoristaNome = current.motorista?.nome || "Motorista";
+    
+    // Find category for Frota
+    const catFrota = await prisma.categoriaFinanceira.findFirst({
+      where: { nome: "Frota / Terceiros" },
+      include: { subcategorias: true }
+    });
+
+    if (catFrota) {
+      const getSub = (name: string) => catFrota.subcategorias.find(s => s.nome === name)?.id || null;
+
+      const syncLancamento = async (
+        desc: string, 
+        val: number, 
+        dtPg: Date | null, 
+        subName: string, 
+        extraDesc: string = ""
+      ) => {
+        if (val <= 0 && !dtPg) return; // Only sync if there is a value
+        const subId = getSub(subName);
+        
+        // Find existing
+        const existing = await prisma.lancamentoFinanceiro.findFirst({
+          where: {
+            descricao: { startsWith: desc },
+            ...(isRota ? { rotaId: id } : { entregaId: id })
+          }
+        });
+
+        const data = {
+          descricao: `${desc} ${extraDesc}`,
+          tipo: "DESPESA" as const,
+          valor: val,
+          dataVencimento: current.data || current.dataEntrega || current.createdAt,
+          dataPagamento: dtPg,
+          status: dtPg ? ("PAGO" as const) : ("PENDENTE" as const),
+          categoriaId: catFrota.id,
+          subcategoriaId: subId,
+          favorecido: motoristaNome,
+          ...(isRota ? { rotaId: id } : { entregaId: id })
+        };
+
+        if (existing) {
+          await prisma.lancamentoFinanceiro.update({ where: { id: existing.id }, data });
+        } else if (val > 0) {
+          await prisma.lancamentoFinanceiro.create({ data });
+        }
+      };
+
+      // 1. Pagamento Saldo Motorista
+      if (saldoFinalMotorista > 0 || dataPagamentoSaldo) {
+         await syncLancamento("Acerto Motorista -", saldoFinalMotorista, dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null, "Pagamento Motorista", current.codigo);
+      }
+
+      // 2. Adiantamento Motorista
+      if (vAdiantamento > 0 || dataAdiantamento) {
+         await syncLancamento("Adiantamento Motorista -", vAdiantamento, dataAdiantamento ? new Date(dataAdiantamento) : null, "Adiantamento Motorista", current.codigo);
+      }
+
+      // 3. Descarga
+      const vDescarga = valorDescarga ?? current.valorDescarga;
+      if (vDescarga > 0) {
+         await syncLancamento("Descarga -", vDescarga, dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null, "Descarga (Chapa)", current.codigo);
+      }
+      
+      // 4. Saída / Pedágio
+      if (vSaida > 0) {
+         await syncLancamento("Saída/Pedágio -", vSaida, dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null, "Vale / Pedágio", current.codigo);
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao sincronizar ERP financeiro", e);
+  }
 
   return NextResponse.json(result);
 }
