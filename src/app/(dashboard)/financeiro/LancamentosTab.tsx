@@ -12,6 +12,7 @@ export function LancamentosTab() {
   
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [form, setForm] = useState<any>({ tipo: "DESPESA", status: "PENDENTE" });
   
   const [showCatModal, setShowCatModal] = useState(false);
@@ -98,10 +99,31 @@ export function LancamentosTab() {
     } catch { toast.error("Erro ao adicionar"); }
   }
 
-  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files || e.target.files.length === 0) return;
-    toast.success("Arquivo recebido! (Simulação de importação)");
-    setShowImportModal(false);
+    const file = e.target.files[0];
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/financeiro/importar", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Erro ao importar");
+        return;
+      }
+      if (data.total === 0 && data.duplicadas > 0) {
+        toast(data.message, { icon: "⚠️" });
+      } else {
+        toast.success(data.message);
+      }
+      setShowImportModal(false);
+      fetchData();
+    } catch {
+      toast.error("Erro ao enviar arquivo");
+    } finally {
+      setImporting(false);
+    }
   }
 
   return (
@@ -110,7 +132,7 @@ export function LancamentosTab() {
         <h2 className="text-sm font-semibold" style={{ color: "var(--text2)" }}>Lançamentos de Caixa</h2>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowImportModal(true)}>
-            <Upload size={14} className="mr-2" /> Importar OFX/CSV
+            <Upload size={14} className="mr-2" /> Importar OFX
           </Button>
           <Button onClick={() => { setForm({ tipo: "DESPESA", status: "PENDENTE" }); setShowModal(true); }}>
             + Novo Lançamento
@@ -263,14 +285,22 @@ export function LancamentosTab() {
       </Modal>
 
       {/* Modal de Importação */}
-      <Modal open={showImportModal} onClose={() => setShowImportModal(false)} title="Importar Lançamentos">
+      <Modal open={showImportModal} onClose={() => setShowImportModal(false)} title="Importar Extrato Bancário (OFX)">
         <div className="space-y-4 text-center p-4">
           <Upload size={48} className="mx-auto text-gray-300 mb-2" />
-          <p className="text-sm" style={{ color: "var(--text2)" }}>Selecione um arquivo OFX (Extrato Bancário) ou CSV para importar transações em lote.</p>
-          <div className="relative mt-4">
-            <input type="file" accept=".ofx,.csv" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleImport} />
-            <Button className="w-full pointer-events-none">Selecionar Arquivo OFX / CSV</Button>
-          </div>
+          <p className="text-sm font-medium" style={{ color: "var(--text2)" }}>Selecione um arquivo OFX para importar transações do extrato bancário.</p>
+          <p className="text-xs" style={{ color: "var(--text3)" }}>Baixe o arquivo OFX no internet banking do seu banco (Sicredi, Inter, Itaú, Nubank, etc). Transações duplicadas são ignoradas automaticamente.</p>
+          {importing ? (
+            <div className="py-6">
+              <div className="animate-spin w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full mx-auto mb-3"></div>
+              <p className="text-sm font-medium" style={{ color: "var(--text2)" }}>Processando arquivo...</p>
+            </div>
+          ) : (
+            <div className="relative mt-4">
+              <input type="file" accept=".ofx" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleImport} />
+              <Button className="w-full pointer-events-none">Selecionar Arquivo .OFX</Button>
+            </div>
+          )}
         </div>
       </Modal>
     </div>
