@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, Button, StatusBadge, Loading, Empty, Table, Th, Td, Tr, Modal, Input, Select } from "@/components/ui";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import toast from "react-hot-toast";
-import { Paperclip, Upload, Plus } from "lucide-react";
+import { Paperclip, Upload, Plus, Edit2, Trash2 } from "lucide-react";
 
 export function LancamentosTab() {
   const [lancamentos, setLancamentos] = useState<any[]>([]);
@@ -13,6 +13,7 @@ export function LancamentosTab() {
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ tipo: "DESPESA", status: "PENDENTE" });
   
   const [showCatModal, setShowCatModal] = useState(false);
@@ -38,17 +39,52 @@ export function LancamentosTab() {
 
   async function handleSave() {
     try {
+      const method = editingId ? "PATCH" : "POST";
+      const payload = editingId ? { ...form, id: editingId } : form;
       const res = await fetch("/api/financeiro/lancamentos", {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error();
-      toast.success("Lançamento criado");
+      toast.success(editingId ? "Lançamento atualizado" : "Lançamento criado");
       setShowModal(false);
+      setEditingId(null);
       fetchData();
     } catch {
       toast.error("Erro ao salvar");
+    }
+  }
+
+  function openEdit(l: any) {
+    setEditingId(l.id);
+    setForm({
+      descricao: l.descricao || "",
+      tipo: l.tipo,
+      valor: String(l.valor || 0),
+      categoriaId: l.categoriaId || "",
+      subcategoriaId: l.subcategoriaId || "",
+      favorecido: l.favorecido || "",
+      dataVencimento: l.dataVencimento ? l.dataVencimento.slice(0, 10) : "",
+      dataPagamento: l.dataPagamento ? l.dataPagamento.slice(0, 10) : "",
+      status: l.status || "PENDENTE",
+    });
+    setShowModal(true);
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Tem certeza que deseja excluir este lançamento?")) return;
+    try {
+      const res = await fetch(`/api/financeiro/lancamentos?id=${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Erro ao excluir");
+        return;
+      }
+      toast.success("Lançamento excluído");
+      fetchData();
+    } catch {
+      toast.error("Erro ao excluir");
     }
   }
 
@@ -134,7 +170,7 @@ export function LancamentosTab() {
           <Button variant="outline" onClick={() => setShowImportModal(true)}>
             <Upload size={14} className="mr-2" /> Importar OFX
           </Button>
-          <Button onClick={() => { setForm({ tipo: "DESPESA", status: "PENDENTE" }); setShowModal(true); }}>
+          <Button onClick={() => { setEditingId(null); setForm({ tipo: "DESPESA", status: "PENDENTE" }); setShowModal(true); }}>
             + Novo Lançamento
           </Button>
         </div>
@@ -180,9 +216,17 @@ export function LancamentosTab() {
                     <StatusBadge status={l.status} />
                   </Td>
                   <Td>
-                    {l.status === "PENDENTE" && (
-                      <Button variant="ghost" size="sm" onClick={() => handlePay(l.id)}>Baixar</Button>
-                    )}
+                    <div className="flex items-center gap-1 justify-end">
+                      {l.status === "PENDENTE" && (
+                        <Button variant="ghost" size="sm" onClick={() => handlePay(l.id)}>Baixar</Button>
+                      )}
+                      <button onClick={() => openEdit(l)} className="p-1.5 rounded-md hover:bg-gray-100 transition-colors" title="Editar">
+                        <Edit2 size={14} style={{ color: "var(--text3)" }} />
+                      </button>
+                      <button onClick={() => handleDelete(l.id)} className="p-1.5 rounded-md hover:bg-rose-50 transition-colors" title="Excluir">
+                        <Trash2 size={14} className="text-rose-400 hover:text-rose-600" />
+                      </button>
+                    </div>
                   </Td>
                 </Tr>
               ))}
@@ -191,7 +235,7 @@ export function LancamentosTab() {
         )}
       </Card>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Novo Lançamento">
+      <Modal open={showModal} onClose={() => { setShowModal(false); setEditingId(null); }} title={editingId ? "Editar Lançamento" : "Novo Lançamento"}>
         <div className="space-y-4">
           <Input label="Descrição" value={form.descricao || ""} onChange={e => set("descricao", e.target.value)} />
           <div className="grid grid-cols-2 gap-4">

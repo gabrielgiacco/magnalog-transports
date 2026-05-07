@@ -71,15 +71,41 @@ export async function PATCH(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const body = await req.json();
-  const { id, status, dataPagamento } = body;
+  const { id, descricao, tipo, valor, dataVencimento, dataPagamento, status, categoriaId, subcategoriaId, favorecido } = body;
+
+  const data: any = {};
+  if (descricao !== undefined) data.descricao = descricao;
+  if (tipo !== undefined) data.tipo = tipo;
+  if (valor !== undefined) data.valor = parseFloat(valor);
+  if (dataVencimento !== undefined) data.dataVencimento = new Date(dataVencimento);
+  if (dataPagamento !== undefined) data.dataPagamento = dataPagamento ? new Date(dataPagamento) : null;
+  if (status !== undefined) data.status = status;
+  if (categoriaId !== undefined) data.categoriaId = categoriaId || null;
+  if (subcategoriaId !== undefined) data.subcategoriaId = subcategoriaId || null;
+  if (favorecido !== undefined) data.favorecido = favorecido;
 
   const lancamento = await prisma.lancamentoFinanceiro.update({
     where: { id },
-    data: {
-      status,
-      ...(dataPagamento !== undefined && { dataPagamento: dataPagamento ? new Date(dataPagamento) : null })
-    }
+    data
   });
 
   return NextResponse.json(lancamento);
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+  const user = session.user as any;
+  if (user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Apenas administradores podem excluir lançamentos" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
+
+  await prisma.lancamentoFinanceiro.delete({ where: { id } });
+
+  return NextResponse.json({ success: true });
 }
