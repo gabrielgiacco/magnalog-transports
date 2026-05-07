@@ -62,16 +62,16 @@ export function LancamentosTab() {
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold text-slate-200">Lançamentos de Caixa</h2>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--text2)" }}>Lançamentos de Caixa</h2>
         <Button onClick={() => { setForm({ tipo: "DESPESA", status: "PENDENTE" }); setShowModal(true); }}>
           + Novo Lançamento
         </Button>
       </div>
 
-      <Card className="p-0 overflow-hidden shadow">
+      <Card className="p-0 overflow-hidden shadow-none">
         {loading ? <Loading /> : lancamentos.length === 0 ? <Empty text="Nenhum lançamento encontrado" /> : (
           <Table>
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
               <tr>
                 <Th>Descrição</Th>
                 <Th>Categoria</Th>
@@ -86,18 +86,18 @@ export function LancamentosTab() {
               {lancamentos.map(l => (
                 <Tr key={l.id}>
                   <Td>
-                    <div className="font-bold text-sm text-gray-800">{l.descricao}</div>
-                    <div className="text-[10px] text-gray-500 font-mono">
-                      {l.tipo === "RECEITA" ? <span className="text-emerald-500">RECEITA</span> : <span className="text-rose-500">DESPESA</span>}
+                    <div className="font-bold text-sm" style={{ color: "var(--text)" }}>{l.descricao}</div>
+                    <div className="text-[10px] font-mono">
+                      {l.tipo === "RECEITA" ? <span className="text-emerald-500 font-bold">RECEITA</span> : <span className="text-rose-500 font-bold">DESPESA</span>}
                     </div>
                   </Td>
                   <Td>
                     <div className="text-sm font-medium">{l.categoria?.nome || "-"}</div>
-                    <div className="text-[10px] text-gray-500">{l.subcategoria?.nome || ""}</div>
+                    <div className="text-[10px]" style={{ color: "var(--text3)" }}>{l.subcategoria?.nome || ""}</div>
                   </Td>
-                  <Td className="text-sm font-medium text-gray-700">{l.favorecido || "-"}</Td>
+                  <Td className="text-sm font-medium" style={{ color: "var(--text2)" }}>{l.favorecido || "-"}</Td>
                   <Td>
-                    <div className="text-xs font-bold text-gray-600">{formatDate(l.dataVencimento)}</div>
+                    <div className="text-xs font-mono">{formatDate(l.dataVencimento)}</div>
                   </Td>
                   <Td className="text-right">
                     <span className={`font-mono font-bold ${l.tipo === "RECEITA" ? "text-emerald-500" : "text-rose-500"}`}>

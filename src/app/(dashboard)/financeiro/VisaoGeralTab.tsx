@@ -27,46 +27,46 @@ export function VisaoGeralTab() {
       {/* Cards KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-100">
             <TrendingUp size={24} />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-400 uppercase">Receitas Previstas</div>
-            <div className="text-xl font-black text-emerald-500">{formatCurrency(data.totalReceitas)}</div>
-            <div className="text-[10px] text-slate-500 mt-1">Realizado: {formatCurrency(data.receitasPagas)}</div>
+            <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Receitas Previstas</div>
+            <div className="text-xl font-bold font-mono text-emerald-600">{formatCurrency(data.totalReceitas)}</div>
+            <div className="text-[10px]" style={{ color: "var(--text3)" }}>Realizado: {formatCurrency(data.receitasPagas)}</div>
           </div>
         </Card>
 
         <Card className="p-4 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-rose-500/10 border border-rose-500/20 text-rose-500">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 border border-rose-100">
             <TrendingDown size={24} />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-400 uppercase">Despesas Previstas</div>
-            <div className="text-xl font-black text-rose-500">{formatCurrency(data.totalDespesas)}</div>
-            <div className="text-[10px] text-slate-500 mt-1">Realizado: {formatCurrency(data.despesasPagas)}</div>
+            <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Despesas Previstas</div>
+            <div className="text-xl font-bold font-mono text-rose-600">{formatCurrency(data.totalDespesas)}</div>
+            <div className="text-[10px]" style={{ color: "var(--text3)" }}>Realizado: {formatCurrency(data.despesasPagas)}</div>
           </div>
         </Card>
 
         <Card className="p-4 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-500/10 border border-blue-500/20 text-blue-500">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600 border border-blue-100">
             <DollarSign size={24} />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-400 uppercase">Saldo Previsto</div>
-            <div className={`text-xl font-black ${data.saldoPrevisto >= 0 ? "text-blue-500" : "text-rose-500"}`}>
+            <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Saldo Previsto</div>
+            <div className={`text-xl font-bold font-mono ${data.saldoPrevisto >= 0 ? "text-blue-600" : "text-rose-600"}`}>
               {formatCurrency(data.saldoPrevisto)}
             </div>
           </div>
         </Card>
 
         <Card className="p-4 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-orange-500/10 border border-orange-500/20 text-orange-500">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-orange-50 text-orange-600 border border-orange-100">
             <Wallet size={24} />
           </div>
           <div>
-            <div className="text-xs font-bold text-slate-400 uppercase">Saldo Realizado (Caixa)</div>
-            <div className={`text-xl font-black ${data.saldoRealizado >= 0 ? "text-orange-500" : "text-rose-500"}`}>
+            <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Saldo Realizado (Caixa)</div>
+            <div className={`text-xl font-bold font-mono ${data.saldoRealizado >= 0 ? "text-orange-600" : "text-rose-600"}`}>
               {formatCurrency(data.saldoRealizado)}
             </div>
           </div>
@@ -75,11 +75,11 @@ export function VisaoGeralTab() {
 
       {/* Despesas por Categoria */}
       <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b border-slate-800">
-          <h3 className="text-sm font-bold text-slate-200">Despesas por Categoria (Mês Atual)</h3>
+        <div className="p-4" style={{ borderBottom: "1px solid var(--border)" }}>
+          <h3 className="text-sm font-semibold" style={{ color: "var(--text2)" }}>Despesas por Categoria (Mês Atual)</h3>
         </div>
         <Table>
-          <thead className="bg-slate-800/50">
+          <thead style={{ background: "var(--surface2)" }}>
             <tr>
               <Th>Categoria</Th>
               <Th className="text-right">Total Gasto</Th>
@@ -87,11 +87,11 @@ export function VisaoGeralTab() {
           </thead>
           <tbody>
             {data.despesasPorCategoria.length === 0 ? (
-              <Tr><Td colSpan={2} className="text-center text-slate-500">Nenhuma despesa registrada no mês</Td></Tr>
+              <Tr><Td colSpan={2} className="text-center" style={{ color: "var(--text3)" }}>Nenhuma despesa registrada no mês</Td></Tr>
             ) : (
               data.despesasPorCategoria.map((cat: any) => (
                 <Tr key={cat.name}>
-                  <Td className="font-medium text-slate-300">{cat.name}</Td>
+                  <Td className="font-medium">{cat.name}</Td>
                   <Td className="text-right text-rose-500 font-mono font-bold">{formatCurrency(cat.value)}</Td>
                 </Tr>
               ))

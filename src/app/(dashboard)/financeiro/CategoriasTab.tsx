@@ -41,16 +41,16 @@ export function CategoriasTab() {
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold text-slate-200">Categorias Financeiras</h2>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--text2)" }}>Categorias Financeiras</h2>
         <Button onClick={() => { setForm({ tipo: "DESPESA" }); setShowModal(true); }}>
           + Nova Categoria
         </Button>
       </div>
 
-      <Card className="p-0 overflow-hidden shadow">
+      <Card className="p-0 overflow-hidden shadow-none">
         {loading ? <Loading /> : categorias.length === 0 ? <Empty text="Nenhuma categoria encontrada" /> : (
           <Table>
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>
               <tr>
                 <Th>Nome</Th>
                 <Th>Tipo</Th>
@@ -60,11 +60,11 @@ export function CategoriasTab() {
             <tbody>
               {categorias.map(c => (
                 <Tr key={c.id}>
-                  <Td className="font-bold text-sm text-gray-800">{c.nome}</Td>
+                  <Td className="font-bold text-sm" style={{ color: "var(--text)" }}>{c.nome}</Td>
                   <Td>
-                    {c.tipo === "RECEITA" ? <span className="text-emerald-500 font-bold">RECEITA</span> : <span className="text-rose-500 font-bold">DESPESA</span>}
+                    {c.tipo === "RECEITA" ? <span className="text-emerald-500 font-bold text-xs">RECEITA</span> : <span className="text-rose-500 font-bold text-xs">DESPESA</span>}
                   </Td>
-                  <Td className="text-xs text-gray-500">
+                  <Td className="text-xs" style={{ color: "var(--text3)" }}>
                     {c.subcategorias?.map((s: any) => s.nome).join(", ") || "Nenhuma"}
                   </Td>
                 </Tr>
