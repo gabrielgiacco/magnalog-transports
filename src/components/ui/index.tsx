@@ -221,11 +221,18 @@ export function ComboboxMotorista({
   const selected = motoristas.find((m) => m.id === value);
   const filtered = motoristas.filter((m) => m.nome.toLowerCase().includes(search.toLowerCase()));
 
+  function handleClear(e: React.MouseEvent) {
+    e.stopPropagation();
+    onChange("");
+    onAutoFillVeiculo("");
+    setSearch("");
+  }
+
   return (
     <div className="flex flex-col gap-1.5 w-full relative">
       <label className="text-[10px] uppercase tracking-widest font-mono" style={{ color: "var(--text3)" }}>Motorista</label>
       <div 
-        className="w-full px-3 py-2 rounded-lg text-sm border cursor-text transition-all flex items-center justify-between"
+        className="w-full px-3 py-2 rounded-lg text-sm border cursor-text transition-all flex items-center justify-between gap-1"
         style={{ background: "var(--surface2)", borderColor: open ? "var(--accent)" : "var(--border)", color: "var(--text)", fontFamily: "'Inter', sans-serif" }}
         onClick={() => setOpen(true)}
       >
@@ -240,12 +247,41 @@ export function ComboboxMotorista({
         ) : (
           <span className={selected ? "" : "opacity-50"}>{selected?.nome || "Selecionar..."}</span>
         )}
-        <ChevronDown size={14} style={{ color: "var(--text3)" }} />
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {selected && !open && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-0.5 rounded hover:bg-red-100 transition-colors"
+              title="Limpar motorista"
+            >
+              <X size={14} className="text-red-400" />
+            </button>
+          )}
+          <ChevronDown size={14} style={{ color: "var(--text3)" }} />
+        </div>
       </div>
 
       {open && (
         <div className="absolute top-[100%] left-0 right-0 mt-1 rounded-lg shadow-lg border z-50 overflow-hidden max-h-48 overflow-y-auto"
           style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          {/* Opção de limpar motorista */}
+          {value && (
+            <div
+              className="flex items-center gap-2 p-3 text-sm hover:bg-red-50 cursor-pointer transition-colors"
+              style={{ borderBottom: "1px solid var(--border)" }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange("");
+                onAutoFillVeiculo("");
+                setOpen(false);
+                setSearch("");
+              }}
+            >
+              <X size={13} className="text-red-400" />
+              <span className="font-medium text-red-500">Limpar motorista</span>
+            </div>
+          )}
           {filtered.length === 0 ? (
             <div className="p-3 text-sm text-center opacity-50">Nenhum encontrado</div>
           ) : (
