@@ -40,7 +40,7 @@ export async function POST(
       rotaId: null,
       motoristaId: null,
       veiculoId: null,
-      dataChegada: null,
+      dataChegada: originalEntrega.dataChegada,
       dataAgendada: null,
       dataEntrega: null,
       valorFrete: originalEntrega.valorFrete, // mantemos o valor de receita, ou talvez devesse zerar? mantendo.

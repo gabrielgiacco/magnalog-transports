@@ -73,18 +73,29 @@ export async function PATCH(req: NextRequest) {
     data: { entregaId: entregaId || null },
   });
 
-  // Recalculate totals for the target entrega
+  // Recalculate totals for the target entrega and preserve dataChegada
   if (entregaId) {
-    const notasEntrega = await prisma.notaFiscal.findMany({
-      where: { entregaId },
-      select: { pesoBruto: true, volumes: true },
-    });
+    const [notasEntrega, entregaDestino] = await Promise.all([
+      prisma.notaFiscal.findMany({
+        where: { entregaId },
+        select: { pesoBruto: true, volumes: true },
+      }),
+      prisma.entrega.findUnique({
+        where: { id: entregaId },
+        select: { dataChegada: true },
+      }),
+    ]);
+    const updateData: any = {
+      pesoTotal: notasEntrega.reduce((s: number, n: any) => s + n.pesoBruto, 0),
+      volumeTotal: notasEntrega.reduce((s: number, n: any) => s + n.volumes, 0),
+    };
+    // Se a entrega destino não tem dataChegada, definir como agora
+    if (!entregaDestino?.dataChegada) {
+      updateData.dataChegada = new Date();
+    }
     await prisma.entrega.update({
       where: { id: entregaId },
-      data: {
-        pesoTotal: notasEntrega.reduce((s: number, n: any) => s + n.pesoBruto, 0),
-        volumeTotal: notasEntrega.reduce((s: number, n: any) => s + n.volumes, 0),
-      },
+      data: updateData,
     });
   }
 

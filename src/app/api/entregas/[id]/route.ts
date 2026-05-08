@@ -151,8 +151,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     data.dataEntrega = new Date();
   }
 
+  // Preservar dataChegada: se veio como vazio/null, remover do payload para não sobrescrever
+  // A dataChegada só deve mudar quando o usuário explicitamente define uma data no formulário de edição
+  const dataChegadaExplicit = data.dataChegada;
+  if (!dataChegadaExplicit || dataChegadaExplicit === "") {
+    delete data.dataChegada;
+  }
+
   // Transformar strings vazias (UI blank fields) em nulos para o Prisma
+  // Exceto dataChegada que já foi tratada acima
   Object.keys(data).forEach((key) => {
+    if (key === "dataChegada") return; // já tratado
     if (data[key] === "") {
       data[key] = null;
     }
@@ -271,7 +280,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const count = await prisma.entrega.count();
   const codigo = notasParaSeparar.map((n) => n.numero).join(" / ");
 
-  // Criar nova entrega com dados do mesmo destinatário
+  // Criar nova entrega com dados do mesmo destinatário (herdar dataChegada da original)
   const novaEntrega = await prisma.entrega.create({
     data: {
       codigo,
@@ -285,6 +294,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       pesoTotal,
       volumeTotal,
       status: entregaOrigem.status,
+      dataChegada: entregaOrigem.dataChegada,
     },
   });
 
