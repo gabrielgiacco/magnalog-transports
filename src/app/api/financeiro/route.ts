@@ -208,7 +208,8 @@ export async function PATCH(req: NextRequest) {
     statusCanhoto,
     valorMotorista,
     valorSaida,
-    valorDescarga
+    valorDescarga,
+    dataFrete
   } = body;
 
   const model = isRota ? prisma.rota : prisma.entrega;
@@ -223,20 +224,40 @@ export async function PATCH(req: NextRequest) {
   
   const saldoFinalMotorista = vMotorista - vAdiantamento - vSaida - vDescontos;
 
+  // Build update data
+  const updateData: any = {
+    ...(valorMotorista !== undefined && { valorMotorista }),
+    ...(valorSaida !== undefined && { valorSaida }),
+    ...(valorDescarga !== undefined && { valorDescarga }),
+    ...(adiantamentoMotorista !== undefined && { adiantamentoMotorista }),
+    ...(dataAdiantamento !== undefined && { dataAdiantamento: dataAdiantamento ? new Date(dataAdiantamento) : null }),
+    ...(descontosMotorista !== undefined && { descontosMotorista }),
+    ...(dataPagamentoSaldo !== undefined && { dataPagamentoSaldo: dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null }),
+    ...(statusCanhoto !== undefined && { statusCanhoto }),
+    saldoMotorista: saldoFinalMotorista,
+  };
+
+  // Update date if changed
+  if (dataFrete !== undefined && dataFrete) {
+    if (isRota) {
+      updateData.data = new Date(dataFrete);
+    } else {
+      updateData.dataAgendada = new Date(dataFrete);
+    }
+  }
+
   const result = await (model as any).update({
     where: { id },
-    data: {
-      ...(valorMotorista !== undefined && { valorMotorista }),
-      ...(valorSaida !== undefined && { valorSaida }),
-      ...(valorDescarga !== undefined && { valorDescarga }),
-      ...(adiantamentoMotorista !== undefined && { adiantamentoMotorista }),
-      ...(dataAdiantamento !== undefined && { dataAdiantamento: dataAdiantamento ? new Date(dataAdiantamento) : null }),
-      ...(descontosMotorista !== undefined && { descontosMotorista }),
-      ...(dataPagamentoSaldo !== undefined && { dataPagamentoSaldo: dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null }),
-      ...(statusCanhoto !== undefined && { statusCanhoto }),
-      saldoMotorista: saldoFinalMotorista,
-    },
+    data: updateData,
   });
+
+  // If date changed on a route, also update dataAgendada on all linked deliveries
+  if (dataFrete && isRota) {
+    await prisma.entrega.updateMany({
+      where: { rotaId: id },
+      data: { dataAgendada: new Date(dataFrete) },
+    });
+  }
 
   // ERP Sync: Auto-generate/Update Lancamentos Financeiros
   try {

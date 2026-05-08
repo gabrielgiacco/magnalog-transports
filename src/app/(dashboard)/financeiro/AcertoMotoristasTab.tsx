@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, StatusBadge, Modal, Input, Table, Th, Td, Tr, Select } from "@/components/ui";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { RefreshCw, Edit2, Search, DollarSign, Clock, CheckCircle, Download, FileSignature, AlertCircle, HandCoins, CalendarDays } from "lucide-react";
+import { RefreshCw, Edit2, Search, DollarSign, Clock, CheckCircle, Download, FileSignature, AlertCircle, HandCoins, CalendarDays, Pencil } from "lucide-react";
 
 type PeriodoPreset = "todos" | "semanal" | "quinzenal" | "mensal";
 
@@ -96,6 +96,8 @@ export function AcertoMotoristasTab() {
 
   function openEdit(e: any) {
     setEditingId(e.id);
+    // Determine the freight date: for routes use rota.data (dataEntrega), for direct use dataAgendada or dataEntrega
+    const freteDate = e.dataEntrega || e.dataAgendada || "";
     setEditForm({
       valorMotorista: String(e.valorMotorista || 0),
       valorSaida: String(e.valorSaida || 0),
@@ -104,7 +106,8 @@ export function AcertoMotoristasTab() {
       dataAdiantamento: e.dataAdiantamento ? e.dataAdiantamento.slice(0, 10) : "",
       descontosMotorista: String(e.descontosMotorista || 0),
       dataPagamentoSaldo: e.dataPagamentoSaldo ? e.dataPagamentoSaldo.slice(0, 10) : "",
-      statusCanhoto: e.statusCanhoto || "PENDENTE"
+      statusCanhoto: e.statusCanhoto || "PENDENTE",
+      dataFrete: freteDate ? new Date(freteDate).toISOString().slice(0, 10) : "",
     });
     setShowEdit(true);
   }
@@ -127,7 +130,8 @@ export function AcertoMotoristasTab() {
           dataAdiantamento: editForm.dataAdiantamento || null,
           descontosMotorista: parseFloat(editForm.descontosMotorista) || 0,
           dataPagamentoSaldo: editForm.dataPagamentoSaldo || null,
-          statusCanhoto: editForm.statusCanhoto
+          statusCanhoto: editForm.statusCanhoto,
+          dataFrete: editForm.dataFrete || null,
         }),
       });
       if (!res.ok) throw new Error();
@@ -404,9 +408,18 @@ export function AcertoMotoristasTab() {
                       </div>
                     </Td>
                     <Td>
-                      <span className="font-mono text-[11px] font-semibold" style={{ color: "var(--text2)" }}>
-                        {formatDate(e.dataEntrega || e.dataAgendada) || "-"}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[11px] font-semibold" style={{ color: "var(--text2)" }}>
+                          {formatDate(e.dataEntrega || e.dataAgendada) || "-"}
+                        </span>
+                        <button
+                          onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}
+                          className="p-0.5 rounded hover:bg-amber-100 transition-colors group"
+                          title="Editar data do frete"
+                        >
+                          <Pencil size={11} className="text-gray-300 group-hover:text-amber-600 transition-colors" />
+                        </button>
+                      </div>
                     </Td>
                     <Td>
                       <StatusBadge status={e.statusCanhoto || "PENDENTE"} />
@@ -445,6 +458,15 @@ export function AcertoMotoristasTab() {
 
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Fechar Acerto do Terceiro" size="lg">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {/* Data do Frete - highlighted section */}
+          <div className="sm:col-span-3 border border-amber-200 bg-amber-50 p-3 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarDays size={14} className="text-amber-700" />
+              <div className="text-xs font-bold text-amber-800 uppercase">Data do Frete</div>
+            </div>
+            <Input label="Data da Rota / Entrega" type="date" value={editForm.dataFrete} onChange={(e) => set("dataFrete", e.target.value)} />
+          </div>
+
           <Input label="Valor Combinado (Frete)" type="number" step="0.01" value={editForm.valorMotorista} onChange={(e) => set("valorMotorista", e.target.value)} />
           <Input label="Vales / Saída (Pedágio)" type="number" step="0.01" value={editForm.valorSaida} onChange={(e) => set("valorSaida", e.target.value)} />
           <Input label="Descarga" type="number" step="0.01" value={editForm.valorDescarga} onChange={(e) => set("valorDescarga", e.target.value)} />
