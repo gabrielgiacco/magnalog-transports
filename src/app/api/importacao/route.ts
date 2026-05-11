@@ -172,14 +172,18 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Lógica de agrupamento automático (fracionado)
+        // Somente agrupa notas se forem adicionadas no MESMO DIA (pela data de criação da entrega)
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
+        const fimDeHoje = new Date(hoje);
+        fimDeHoje.setHours(23, 59, 59, 999);
 
         const entregaExistente = await prisma.entrega.findFirst({
           where: {
             cnpj: nota.destinatarioCnpj,
             status: { notIn: ["ENTREGUE", "FINALIZADO", "OCORRENCIA"] },
             notas: { some: { emitenteCnpj: nota.emitenteCnpj } },
+            createdAt: { gte: hoje, lte: fimDeHoje },
           },
           orderBy: { createdAt: "desc" },
         });
