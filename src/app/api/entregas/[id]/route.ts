@@ -142,10 +142,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   const data: any = { ...body };
 
-  // Ao finalizar entrega, marcar canhoto como recebido e setar data de entrega
+  // Ao finalizar entrega, marcar canhoto como recebido, setar data de entrega e dar baixa nas ocorrências
   if (data.status === "FINALIZADO") {
     data.statusCanhoto = "RECEBIDO";
     if (!data.dataEntrega) data.dataEntrega = new Date();
+
+    // Dar baixa automática em todas as ocorrências não resolvidas desta entrega
+    await prisma.ocorrencia.updateMany({
+      where: { entregaId: params.id, resolvida: false },
+      data: {
+        resolvida: true,
+        resolucao: "Baixa automática — entrega finalizada",
+      },
+    });
   }
   if (data.status === "ENTREGUE" && !data.dataEntrega) {
     data.dataEntrega = new Date();
