@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { parseNotaFiscalXML } from "@/lib/xml-parser";
 import { parseCTeXML } from "@/lib/cte-parser";
+import { geocodeAddress } from "@/lib/geocode";
 
 export async function POST(req: NextRequest) {
   try {
@@ -220,6 +221,8 @@ export async function POST(req: NextRequest) {
               dataChegada: new Date(),
               status: "PROGRAMADO",
               chaveAcesso: nota.chaveAcesso,
+              // Tenta geocodificar no momento da criação
+              ...(await geocodeAddress(nota).then(coords => coords ? { latitude: coords.lat, longitude: coords.lng } : {}))
             },
           });
           entregaId = novaEntrega.id;
