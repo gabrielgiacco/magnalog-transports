@@ -129,12 +129,12 @@ export default function AvariasPage() {
   const fetchDevolucoes = useCallback(async () => {
     setLoadingDev(true);
     try {
-      const res = await fetch("/api/avarias?limit=200");
+      const res = await fetch("/api/avarias?limit=200", { cache: "no-store" });
       const data = await res.json();
       const groups: { avaria: any; nfds: any[] }[] = [];
       for (const a of (data.avarias || [])) {
         if (a._count?.devolucoes > 0) {
-          const detail = await fetch(`/api/avarias/${a.id}`).then(r => r.json());
+          const detail = await fetch(`/api/avarias/${a.id}`, { cache: "no-store" }).then(r => r.json());
           if (detail.devolucoes?.length > 0) {
             groups.push({
               avaria: { id: a.id, codigo: a.codigo, status: a.status, descricao: a.descricao, dataOcorrencia: a.dataOcorrencia, dataChegada: detail.dataChegada || null, transportadoraChegada: detail.transportadoraChegada || "", motoristaChegada: detail.motoristaChegada || "", placaChegada: detail.placaChegada || "" },
@@ -292,10 +292,11 @@ export default function AvariasPage() {
       for (const devId of selectedDevIds) {
         const dev = allDevolucoes.find(d => d.id === devId);
         if (!dev) continue;
-        await fetch(`/api/avarias/${dev.avariaId}/devolucao`, {
+        const res = await fetch(`/api/avarias/${dev.avariaId}/devolucao`, {
           method: "PUT", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ devolucaoId: devId, status: bulkForm.status, responsavel: bulkForm.motorista || bulkForm.transportadora, observacoes: obs }),
         });
+        if (!res.ok) throw new Error("Erro na API ao atualizar status.");
       }
       toast.success(`${selectedDevIds.length} NF(s) atualizada(s)`);
       setShowBulkSaida(false);
