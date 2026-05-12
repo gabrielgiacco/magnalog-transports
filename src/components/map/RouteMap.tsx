@@ -42,6 +42,17 @@ function ChangeView({ bounds }: { bounds: L.LatLngBounds | null }) {
   return null;
 }
 
+// Componente para centralizar o mapa em uma coordenada específica
+function CenteringView({ center }: { center: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, 16, { animate: true });
+    }
+  }, [center, map]);
+  return null;
+}
+
 export interface MapEntrega {
   id: string;
   codigo: string;
@@ -60,9 +71,10 @@ interface RouteMapProps {
   entregas: MapEntrega[];
   selectedIds: string[];
   onToggleEntrega: (id: string) => void;
+  centerTo?: [number, number];
 }
 
-export default function RouteMap({ entregas, selectedIds, onToggleEntrega }: RouteMapProps) {
+export default function RouteMap({ entregas, selectedIds, onToggleEntrega, centerTo }: RouteMapProps) {
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
 
   useEffect(() => {
@@ -86,7 +98,8 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega }: Rou
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
       
-      {bounds && <ChangeView bounds={bounds} />}
+      {bounds && !centerTo && <ChangeView bounds={bounds} />}
+      {centerTo && <CenteringView center={centerTo} />}
 
       {entregas.map((entrega) => {
         const isSelected = selectedIds.includes(entrega.id);

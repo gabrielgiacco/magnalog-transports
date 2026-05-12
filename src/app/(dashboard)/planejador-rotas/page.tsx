@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Input, Select, ComboboxMotorista } from "@/components/ui";
 import { formatWeight } from "@/lib/utils";
-import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw } from "lucide-react";
+import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation } from "lucide-react";
 import type { MapEntrega } from "@/components/map/RouteMap";
 
 // Carregar o mapa dinamicamente, com SSR desabilitado
@@ -32,6 +32,8 @@ export default function PlanejadorRotasPage() {
   const [form, setForm] = useState({ data: "", motoristaId: "", veiculoId: "", valorMotorista: "", observacoes: "" });
   const [saving, setSaving] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -130,6 +132,24 @@ export default function PlanejadorRotasPage() {
   const totalPeso = selectedEntregas.reduce((s, e) => s + e.pesoTotal, 0);
   const totalVol = selectedEntregas.reduce((s, e) => s + e.volumeTotal, 0);
 
+  const disponiveis = entregas.filter(e => !selectedIds.includes(e.id));
+  const filteredDisponiveis = disponiveis.filter(e => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      e.razaoSocial.toLowerCase().includes(q) ||
+      e.codigo.toLowerCase().includes(q) ||
+      e.cidade.toLowerCase().includes(q) ||
+      e.notas?.some(n => n.numero.toLowerCase().includes(q))
+    );
+  });
+
+  function centerOnMap(e: MapEntrega) {
+    setMapCenter([e.latitude, e.longitude]);
+    // Reset after a moment to allow re-centering if clicked again
+    setTimeout(() => setMapCenter(null), 1000);
+  }
+
   return (
     <div className="flex flex-col h-full">
       <Topbar
@@ -161,6 +181,7 @@ export default function PlanejadorRotasPage() {
                 entregas={entregas} 
                 selectedIds={selectedIds} 
                 onToggleEntrega={toggleEntrega} 
+                centerTo={mapCenter || undefined}
               />
             )}
           </Card>
@@ -197,18 +218,70 @@ export default function PlanejadorRotasPage() {
               </div>
             </div>
 
-            {/* Lista de Selecionados */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-500">Entregas Selecionadas</div>
+            {/* Busca e Lista de Disponíveis */}
+            <div className="flex flex-col min-h-0 h-[400px]">
+              <div className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-500 flex items-center justify-between">
+                <span>Entregas Disponíveis ({filteredDisponiveis.length})</span>
+              </div>
+              
+              <div className="relative mb-2">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="NF ou Razão Social..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-lg text-xs outline-none border border-slate-200 focus:border-orange-500 transition-colors"
+                  style={{ background: "var(--surface2)" }}
+                />
+              </div>
+
               <div className="flex-1 overflow-y-auto bg-slate-50 border border-slate-200 rounded-lg p-2 space-y-1">
+                {filteredDisponiveis.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-400 italic text-center p-4">
+                    {searchQuery ? "Nenhuma entrega encontrada." : "Todas as entregas foram adicionadas."}
+                  </div>
+                ) : (
+                  filteredDisponiveis.map(e => (
+                    <div key={e.id} className="bg-white p-2.5 rounded border border-slate-200 shadow-sm flex items-center justify-between gap-2 group hover:border-orange-200 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-slate-800 truncate">{e.razaoSocial}</div>
+                        <div className="text-[10px] font-mono text-slate-500 truncate">{e.cidade} - {e.notas?.map((n:any)=>n.numero).join(", ") || e.codigo}</div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => centerOnMap(e)} 
+                          title="Ver no mapa"
+                          className="text-slate-400 hover:text-blue-500 transition-colors p-1"
+                        >
+                          <Navigation size={14} />
+                        </button>
+                        <button 
+                          onClick={() => toggleEntrega(e.id)} 
+                          title="Adicionar à rota"
+                          className="text-slate-400 hover:text-orange-500 transition-colors p-1"
+                        >
+                          <MapPin size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Lista de Selecionados */}
+            <div className="flex flex-col min-h-0 h-[200px]">
+              <div className="text-[10px] font-bold uppercase tracking-wider mb-2 text-slate-500">Selecionadas ({selectedIds.length})</div>
+              <div className="flex-1 overflow-y-auto bg-orange-50/30 border border-orange-100 rounded-lg p-2 space-y-1">
                 {selectedEntregas.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-xs text-slate-400 italic text-center p-4">
-                    Clique nos marcadores do mapa para adicionar entregas à rota.
+                    Nenhuma selecionada.
                   </div>
                 ) : (
                   selectedEntregas.map(e => (
-                    <div key={e.id} className="bg-white p-2.5 rounded border border-slate-200 shadow-sm flex items-center justify-between gap-2 group">
-                      <div className="min-w-0">
+                    <div key={e.id} className="bg-white p-2.5 rounded border border-orange-200 shadow-sm flex items-center justify-between gap-2 group">
+                      <div className="min-w-0 flex-1">
                         <div className="text-xs font-bold text-slate-800 truncate">{e.razaoSocial}</div>
                         <div className="text-[10px] font-mono text-slate-500 truncate">{e.cidade} - {e.notas?.map((n:any)=>n.numero).join(", ") || e.codigo}</div>
                       </div>
