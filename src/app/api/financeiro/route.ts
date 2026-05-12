@@ -142,13 +142,14 @@ export async function GET(req: NextRequest) {
         // Primeira viagem deste motorista nesta data → mantém o valor da diária
         diariaVistos.set(key, v.codigo);
         v.valorMotorista = v.motoristaValorDiaria || v.valorMotorista;
-        v.saldoMotorista = v.valorMotorista - (v.adiantamentoMotorista || 0) - (v.valorSaida || 0) - (v.descontosMotorista || 0);
+        v.saldoMotorista = v.valorMotorista + (v.valorDescarga || 0) - (v.adiantamentoMotorista || 0) - (v.valorSaida || 0) - (v.descontosMotorista || 0);
         v.isDiariaPrincipal = true;
       } else {
         // Viagem adicional do mesmo dia → valor motorista = 0 (diária já cobrada)
         v.valorMotoristaOriginal = v.valorMotorista;
+        v.valorMotoristaOriginal = v.valorMotorista;
         v.valorMotorista = 0;
-        v.saldoMotorista = -(v.adiantamentoMotorista || 0) - (v.valorSaida || 0) - (v.descontosMotorista || 0);
+        v.saldoMotorista = (v.valorDescarga || 0) - (v.adiantamentoMotorista || 0) - (v.valorSaida || 0) - (v.descontosMotorista || 0);
         v.isDiariaExtra = true;
         v.diariaCobradaEm = diariaVistos.get(key);
       }
@@ -220,9 +221,9 @@ export async function PATCH(req: NextRequest) {
   const vMotorista = valorMotorista ?? current.valorMotorista;
   const vAdiantamento = adiantamentoMotorista ?? current.adiantamentoMotorista;
   const vSaida = valorSaida ?? current.valorSaida;
-  const vDescontos = descontosMotorista ?? current.descontosMotorista;
+  const vDescarga = valorDescarga ?? current.valorDescarga;
   
-  const saldoFinalMotorista = vMotorista - vAdiantamento - vSaida - vDescontos;
+  const saldoFinalMotorista = vMotorista + vDescarga - vAdiantamento - vSaida - vDescontos;
 
   // Build update data
   const updateData: any = {

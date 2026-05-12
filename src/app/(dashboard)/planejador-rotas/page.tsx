@@ -5,8 +5,8 @@ import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Input, Select, ComboboxMotorista } from "@/components/ui";
-import { formatWeight } from "@/lib/utils";
-import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation } from "lucide-react";
+import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation, Navigation2, Plus, AlertCircle } from "lucide-react";
+import { formatWeight, formatCurrency } from "@/lib/utils";
 import type { MapEntrega } from "@/components/map/RouteMap";
 
 // Carregar o mapa dinamicamente, com SSR desabilitado
@@ -129,8 +129,9 @@ export default function PlanejadorRotasPage() {
   }
 
   const selectedEntregas = entregas.filter(e => selectedIds.includes(e.id));
-  const totalPeso = selectedEntregas.reduce((s, e) => s + e.pesoTotal, 0);
-  const totalVol = selectedEntregas.reduce((s, e) => s + e.volumeTotal, 0);
+  const totalPeso = selectedEntregas.reduce((s, e) => s + (e.pesoTotal || 0), 0);
+  const totalVol = selectedEntregas.reduce((s, e) => s + (e.volumeTotal || 0), 0);
+  const totalDescarga = selectedEntregas.reduce((s, e) => s + (e.valorDescarga || 0), 0);
 
   const disponiveis = entregas.filter(e => !selectedIds.includes(e.id));
   const filteredDisponiveis = disponiveis.filter(e => {
@@ -144,10 +145,14 @@ export default function PlanejadorRotasPage() {
     );
   });
 
-  function centerOnMap(e: MapEntrega) {
-    setMapCenter([e.latitude, e.longitude]);
-    // Reset after a moment to allow re-centering if clicked again
-    setTimeout(() => setMapCenter(null), 1000);
+  function focusOnMap(e: MapEntrega) {
+    if (e.latitude && e.longitude) {
+      setMapCenter([e.latitude, e.longitude]);
+      // Reset after a moment to allow re-centering if clicked again
+      setTimeout(() => setMapCenter(null), 1000);
+    } else {
+      toast.error("Esta entrega não possui coordenadas geográficas.");
+    }
   }
 
   return (
@@ -215,6 +220,10 @@ export default function PlanejadorRotasPage() {
                   <div className="text-xl font-black text-slate-700">{totalVol}</div>
                   <div className="text-[10px] font-mono text-slate-500 uppercase">Volumes</div>
                 </div>
+                <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-center col-span-3 mt-1">
+                  <div className="text-[10px] font-mono text-indigo-600/70 uppercase">Custo Total de Descarga</div>
+                  <div className="text-xl font-black text-indigo-700">{formatCurrency(totalDescarga)}</div>
+                </div>
               </div>
             </div>
 
@@ -245,23 +254,20 @@ export default function PlanejadorRotasPage() {
                   filteredDisponiveis.map(e => (
                     <div key={e.id} className="bg-white p-2.5 rounded border border-slate-200 shadow-sm flex items-center justify-between gap-2 group hover:border-orange-200 transition-colors">
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-slate-800 truncate">{e.razaoSocial}</div>
+                        <div className="flex items-center gap-1">
+                          <div className="text-xs font-bold text-slate-800 truncate">{e.razaoSocial}</div>
+                          {(!e.latitude || !e.longitude) && (
+                            <AlertCircle size={12} className="text-rose-500" title="Endereço não geocodificado" />
+                          )}
+                        </div>
                         <div className="text-[10px] font-mono text-slate-500 truncate">{e.cidade} - {e.notas?.map((n:any)=>n.numero).join(", ") || e.codigo}</div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button 
-                          onClick={() => centerOnMap(e)} 
-                          title="Ver no mapa"
-                          className="text-slate-400 hover:text-blue-500 transition-colors p-1"
-                        >
-                          <Navigation size={14} />
+                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => focusOnMap(e)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400" title="Ver no mapa">
+                          <Navigation2 size={14} />
                         </button>
-                        <button 
-                          onClick={() => toggleEntrega(e.id)} 
-                          title="Adicionar à rota"
-                          className="text-slate-400 hover:text-orange-500 transition-colors p-1"
-                        >
-                          <MapPin size={14} />
+                        <button onClick={() => toggleEntrega(e.id)} className="p-1.5 rounded bg-orange-100 text-orange-600 hover:bg-orange-200" title="Adicionar à rota">
+                          <Plus size={14} />
                         </button>
                       </div>
                     </div>

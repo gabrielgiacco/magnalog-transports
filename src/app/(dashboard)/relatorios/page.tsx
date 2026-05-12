@@ -218,24 +218,49 @@ export default function RelatoriosPage() {
                 </Card>
 
                 {/* Financeiro breakdown */}
-                <Card>
-                  <div className="font-head text-sm font-bold mb-4">Resumo Financeiro do Mês</div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
-                    {[
-                      { l:"Frete Total", v: data.financeiro?._sum?.valorFrete??0, c:"#10b981", desc:"Soma total de todo o frete no período" },
-                      { l:"Custo Motorista", v: data.financeiro?._sum?.custoMotorista??0, c:"#ef4444", desc:"Soma total de todos os custos com motoristas" },
-                      { l:"Descarga", v: data.financeiro?._sum?.valorDescarga??0, c:"#3b82f6", desc:"Total gasto com taxas de descarga" },
-                      { l:"Armazenagem", v: data.financeiro?._sum?.armazenagem??0, c:"#8b5cf6", desc:"Custos gerados com armazenagem de paletes" },
-                      { l:"Adiantamentos", v: data.financeiro?._sum?.adiantamento??0, c:"#f59e0b", desc:"Total de adiantamentos pagos aos motoristas" },
-                      { l:"Saldo Pendente", v: data.financeiro?._sum?.saldoPendente??0, c:((data.financeiro?._sum?.saldoPendente??0)>0)?"#ef4444":"#10b981", desc:"Total pendente para pagar aos motoristas" },
-                    ].map((item) => (
-                      <div key={item.l} className="text-center p-3 sm:p-4 rounded-xl" title={item.desc} style={{ background:"var(--surface2)" }}>
-                        <div className="font-head text-base sm:text-xl font-black truncate" title={formatCurrency(item.v)} style={{ color:item.c }}>{formatCurrency(item.v)}</div>
-                        <div className="text-[9px] sm:text-[10px] font-mono mt-1 truncate" style={{ color:"var(--text3)" }}>{item.l.toUpperCase()}</div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+                  <Card className="lg:col-span-2">
+                    <div className="font-head text-sm font-bold mb-4">Resumo Financeiro do Mês</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+                      {[
+                        { l:"Frete Total", v: data.financeiro?._sum?.valorFrete??0, c:"#10b981", desc:"Soma total de todo o frete no período" },
+                        { l:"Custo Motorista", v: data.financeiro?._sum?.custoMotorista??0, c:"#ef4444", desc:"Soma total de todos os custos com motoristas" },
+                        { l:"Descarga", v: data.financeiro?._sum?.valorDescarga??0, c:"#3b82f6", desc:"Total gasto com taxas de descarga" },
+                        { l:"Armazenagem", v: data.financeiro?._sum?.armazenagem??0, c:"#8b5cf6", desc:"Custos gerados com armazenagem de paletes" },
+                        { l:"Adiantamentos", v: data.financeiro?._sum?.adiantamento??0, c:"#f59e0b", desc:"Total de adiantamentos pagos aos motoristas" },
+                        { l:"Saldo Pendente", v: data.financeiro?._sum?.saldoPendente??0, c:((data.financeiro?._sum?.saldoPendente??0)>0)?"#ef4444":"#10b981", desc:"Total pendente para pagar aos motoristas" },
+                      ].map((item) => (
+                        <div key={item.l} className="text-center p-3 sm:p-4 rounded-xl" title={item.desc} style={{ background:"var(--surface2)" }}>
+                          <div className="font-head text-sm sm:text-lg font-black truncate" title={formatCurrency(item.v)} style={{ color:item.c }}>{formatCurrency(item.v)}</div>
+                          <div className="text-[9px] sm:text-[10px] font-mono mt-1 truncate" style={{ color:"var(--text3)" }}>{item.l.toUpperCase()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  <Card>
+                    <div className="font-head text-sm font-bold mb-4 flex items-center justify-between">
+                      <span>Maiores Descargas</span>
+                      <DollarSign size={14} className="text-blue-500" />
+                    </div>
+                    <div className="space-y-3">
+                      {data.detalheDescargas?.length > 0 ? (
+                        data.detalheDescargas.map((d: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between gap-2 p-2 rounded-lg" style={{ background: "var(--surface2)" }}>
+                            <div className="min-w-0">
+                              <div className="text-[10px] font-mono font-bold text-blue-600">{d.ref}</div>
+                              <div className="text-[11px] font-semibold truncate" style={{ color: "var(--text)" }}>{d.info}</div>
+                              <div className="text-[9px]" style={{ color: "var(--text3)" }}>{formatDate(d.data)}</div>
+                            </div>
+                            <div className="font-mono text-xs font-black text-blue-600">{formatCurrency(d.valor)}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="py-10 text-center text-xs italic" style={{ color: "var(--text3)" }}>Nenhuma descarga registrada</div>
+                      )}
+                    </div>
+                  </Card>
+                </div>
               </div>
             )}
 
@@ -449,18 +474,18 @@ export default function RelatoriosPage() {
                     {(() => {
                       const items = motoristaDetail.entregas;
                       const totalFrete = items.reduce((s: number, x: any) => s + (x.valorFrete || 0), 0);
-                      const totalMotorista = items.reduce((s: number, x: any) => s + (x.valorMotorista || 0), 0);
-                      const totalAdiantamento = items.reduce((s: number, x: any) => s + (x.adiantamentoMotorista || 0), 0);
-                      const totalSaldo = items.reduce((s: number, x: any) => s + (x.saldoMotorista || 0), 0);
-                      const diretas = items.filter((x: any) => x.tipo === "DIRETA").length;
-                      const rotas = items.filter((x: any) => x.tipo === "ROTA").length;
-                      return [
-                        { l: `${diretas} Diretas / ${rotas} Rotas`, v: String(items.length), c: "#f97316" },
-                        { l: "Frete Total", v: formatCurrency(totalFrete), c: "#10b981" },
-                        { l: "Pago Motorista", v: formatCurrency(totalMotorista), c: "#3b82f6" },
-                        { l: "Adiantamentos", v: formatCurrency(totalAdiantamento), c: "#f59e0b" },
-                        { l: "Saldo Pendente", v: formatCurrency(totalSaldo), c: totalSaldo > 0 ? "#ef4444" : "#10b981" },
-                      ].map((k) => (
+                        const totalDescarga = items.reduce((s: number, x: any) => s + (x.valorDescarga || 0), 0);
+                        const totalSaldo = items.reduce((s: number, x: any) => s + (x.saldoMotorista || 0), 0);
+                        const diretas = items.filter((x: any) => x.tipo === "DIRETA").length;
+                        const rotas = items.filter((x: any) => x.tipo === "ROTA").length;
+                        return [
+                          { l: `${diretas} Diretas / ${rotas} Rotas`, v: String(items.length), c: "#f97316" },
+                          { l: "Frete Total", v: formatCurrency(totalFrete), c: "#10b981" },
+                          { l: "Pago Motorista", v: formatCurrency(totalMotorista), c: "#3b82f6" },
+                          { l: "Descargas", v: formatCurrency(totalDescarga), c: "#8b5cf6" },
+                          { l: "Adiantamentos", v: formatCurrency(totalAdiantamento), c: "#f59e0b" },
+                          { l: "Saldo Pendente", v: formatCurrency(totalSaldo), c: totalSaldo > 0 ? "#ef4444" : "#10b981" },
+                        ].map((k) => (
                         <div key={k.l} className="text-center p-2 sm:p-3 rounded-xl" style={{ background: "var(--surface2)" }}>
                           <div className="font-head text-sm sm:text-lg font-black truncate" style={{ color: k.c }}>{k.v}</div>
                           <div className="text-[8px] sm:text-[9px] font-mono mt-0.5 uppercase truncate" style={{ color: "var(--text3)" }}>{k.l}</div>
@@ -474,7 +499,7 @@ export default function RelatoriosPage() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr>
-                          {["Tipo", "Código", "Cliente / Rota", "Cidade", "Data", "Status", "Peso", "Frete Cliente", "Vlr Motorista", "Adiantamento", "Saldo"].map((h) => (
+                          {["Tipo", "Código", "Cliente / Rota", "Cidade", "Data", "Status", "Peso", "Frete", "Motorista", "Descarga", "Adiant.", "Saldo"].map((h) => (
                             <th key={h} className="text-left px-3 py-2.5 text-[9px] uppercase tracking-wider font-normal font-mono"
                               style={{ color: "var(--text3)", background: "var(--surface2)", borderBottom: "1px solid var(--border)" }}>{h}</th>
                           ))}
@@ -509,6 +534,7 @@ export default function RelatoriosPage() {
                             <td className="px-3 py-2.5 font-mono text-xs" style={{ color: "var(--text2)" }}>{formatWeight(e.pesoTotal)}</td>
                             <td className="px-3 py-2.5 font-mono text-xs" style={{ color: "#10b981" }}>{formatCurrency(e.valorFrete)}</td>
                             <td className="px-3 py-2.5 font-mono text-xs" style={{ color: "#3b82f6" }}>{formatCurrency(e.valorMotorista || 0)}</td>
+                            <td className="px-3 py-2.5 font-mono text-xs" style={{ color: "#8b5cf6" }}>{formatCurrency(e.valorDescarga || 0)}</td>
                             <td className="px-3 py-2.5 font-mono text-xs" style={{ color: "#f59e0b" }}>{formatCurrency(e.adiantamentoMotorista || 0)}</td>
                             <td className="px-3 py-2.5 font-mono text-xs font-bold" style={{ color: (e.saldoMotorista || 0) > 0 ? "#ef4444" : "#10b981" }}>
                               {formatCurrency(e.saldoMotorista || 0)}
@@ -522,6 +548,7 @@ export default function RelatoriosPage() {
                           <td className="px-3 py-3 font-mono text-xs font-bold">{formatWeight(motoristaDetail.entregas.reduce((s: number, x: any) => s + (x.pesoTotal || 0), 0))}</td>
                           <td className="px-3 py-3 font-mono text-xs font-bold" style={{ color: "#10b981" }}>{formatCurrency(motoristaDetail.entregas.reduce((s: number, x: any) => s + (x.valorFrete || 0), 0))}</td>
                           <td className="px-3 py-3 font-mono text-xs font-bold" style={{ color: "#3b82f6" }}>{formatCurrency(motoristaDetail.entregas.reduce((s: number, x: any) => s + (x.valorMotorista || 0), 0))}</td>
+                          <td className="px-3 py-3 font-mono text-xs font-bold" style={{ color: "#8b5cf6" }}>{formatCurrency(motoristaDetail.entregas.reduce((s: number, x: any) => s + (x.valorDescarga || 0), 0))}</td>
                           <td className="px-3 py-3 font-mono text-xs font-bold" style={{ color: "#f59e0b" }}>{formatCurrency(motoristaDetail.entregas.reduce((s: number, x: any) => s + (x.adiantamentoMotorista || 0), 0))}</td>
                           <td className="px-3 py-3 font-mono text-xs font-bold" style={{ color: motoristaDetail.entregas.reduce((s: number, x: any) => s + (x.saldoMotorista || 0), 0) > 0 ? "#ef4444" : "#10b981" }}>
                             {formatCurrency(motoristaDetail.entregas.reduce((s: number, x: any) => s + (x.saldoMotorista || 0), 0))}

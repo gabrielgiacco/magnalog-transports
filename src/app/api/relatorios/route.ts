@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
       }),
       (prisma.rota as any).aggregate({
         where: { data: { gte: inicio, lte: fim } },
-        _sum: { valorMotorista: true, adiantamentoMotorista: true, saldoMotorista: true },
+        _sum: { valorDescarga: true, valorMotorista: true, adiantamentoMotorista: true, saldoMotorista: true },
       }),
       prisma.notaFiscal.count({ where: { createdAt: { gte: inicio, lte: fim } } }),
       prisma.entrega.aggregate({ where, _sum: { volumeTotal: true } }),
@@ -90,6 +90,10 @@ export async function GET(req: NextRequest) {
     const custoMotorista =
       ((finEntregasDiretas._sum as any).valorMotorista || 0) +
       ((finRotas._sum as any).valorMotorista || 0);
+
+    const valorDescargaTotal =
+      ((finEntregasDiretas._sum as any).valorDescarga || 0) +
+      ((finRotas._sum as any).valorDescarga || 0);
 
     const adiantamento =
       ((finEntregasDiretas._sum as any).adiantamentoMotorista || 0) +
@@ -137,6 +141,29 @@ export async function GET(req: NextRequest) {
       armazenagemFaturada = fatArm.reduce((s: number, f: any) => s + f.valorTotal, 0);
     } catch {}
 
+    // Detalhamento de Descargas (Top 5)
+    let detalheDescargas: any[] = [];
+    try {
+      const [descEntregas, descRotas] = await Promise.all([
+        prisma.entrega.findMany({
+          where: { ...where, valorDescarga: { gt: 0 } },
+          select: { codigo: true, razaoSocial: true, valorDescarga: true, dataEntrega: true },
+          orderBy: { valorDescarga: "desc" },
+          take: 5
+        }),
+        prisma.rota.findMany({
+          where: { data: { gte: inicio, lte: fim }, valorDescarga: { gt: 0 } },
+          select: { codigo: true, valorDescarga: true, data: true },
+          orderBy: { valorDescarga: "desc" },
+          take: 5
+        })
+      ]);
+      detalheDescargas = [
+        ...descEntregas.map(d => ({ ref: d.codigo, info: d.razaoSocial, valor: d.valorDescarga, data: d.dataEntrega })),
+        ...descRotas.map(d => ({ ref: d.codigo, info: "Rota Fracionada", valor: d.valorDescarga, data: d.data }))
+      ].sort((a, b) => (b.valor || 0) - (a.valor || 0)).slice(0, 5);
+    } catch {}
+
     // Taxa de entrega
     const entregues = porStatus.filter((s: any) => ["ENTREGUE", "FINALIZADO"].includes(s.status)).reduce((s: number, x: any) => s + x._count, 0);
     const taxaEntrega = entregasCount > 0 ? Math.round((entregues / entregasCount) * 100) : 0;
@@ -149,7 +176,7 @@ export async function GET(req: NextRequest) {
     const financeiro = {
       _sum: {
         valorFrete: receitaFrete,
-        valorDescarga: (finEntregasDiretas._sum as any).valorDescarga || 0,
+        valorDescarga: valorDescargaTotal,
         custoMotorista,
         adiantamento,
         saldoPendente,
@@ -164,7 +191,7 @@ export async function GET(req: NextRequest) {
       volumeTotal: receitaTotal._sum.volumeTotal || 0,
     };
 
-    return NextResponse.json({ tipo, ano, mes, entregas: entregasCount, porStatus, porCidade, financeiro, notas });
+    return NextResponse.json({ tipo, ano, mes, entregas: entregasCount, porStatus, porCidade, financeiro, notas, detalheDescargas });
   }
 
   // ─── Relatório Anual ───────────────────────────────────────────────────────

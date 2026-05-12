@@ -23,8 +23,6 @@ export async function GET(req: NextRequest) {
       where: {
         rotaId: null,
         status: { notIn: ["ENTREGUE", "FINALIZADO", "OCORRENCIA"] },
-        latitude: { not: null },
-        longitude: { not: null }
       },
       select: {
         id: true,
