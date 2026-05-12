@@ -56,9 +56,16 @@ export function AcertoMotoristasTab() {
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
 
+  // New states for Previsão Tab & Bulk Selection
+  const [abaAtiva, setAbaAtiva] = useState<"acertos" | "previsao">("acertos");
+  const [selectedIds, setSelectedIds] = useState<{ id: string, isRota: boolean }[]>([]);
+  const [showBulkPredict, setShowBulkPredict] = useState(false);
+  const [bulkDate, setBulkDate] = useState("");
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "50" });
+    params.set("aba", abaAtiva);
     if (search) params.set("cliente", search);
     if (pendente) params.set("pendente", "true");
     if (dataInicio) params.set("dataInicio", dataInicio);
@@ -70,7 +77,8 @@ export function AcertoMotoristasTab() {
     setTotal(data.total || 0);
     setPages(data.pages || 1);
     setLoading(false);
-  }, [page, search, pendente, dataInicio, dataFim]);
+    setSelectedIds([]); // Clear selection when data changes
+  }, [page, search, pendente, dataInicio, dataFim, abaAtiva]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -142,6 +150,27 @@ export function AcertoMotoristasTab() {
     finally { setSaving(false); }
   }
 
+  async function handleBulkSave() {
+    if (selectedIds.length === 0 || !bulkDate) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/financeiro/agendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: selectedIds,
+          dataPagamentoSaldo: bulkDate,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Pagamentos agendados com sucesso!");
+      setShowBulkPredict(false);
+      setBulkDate("");
+      fetchData();
+    } catch { toast.error("Erro ao agendar pagamentos"); }
+    finally { setSaving(false); }
+  }
+
   const set = (k: string, v: string) => setEditForm((f: any) => ({ ...f, [k]: v }));
 
   const currentSaldoEdit = 
@@ -181,7 +210,23 @@ export function AcertoMotoristasTab() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4 relative">
+        {/* Tabs */}
+        <div className="flex items-center gap-6 border-b" style={{ borderColor: "var(--border)" }}>
+          <button 
+            className={`pb-3 font-head font-bold text-sm transition-colors ${abaAtiva === "acertos" ? "text-rose-600 border-b-2 border-rose-600" : "text-gray-400 hover:text-gray-600"}`}
+            onClick={() => setAbaAtiva("acertos")}
+          >
+            Acertos Pendentes
+          </button>
+          <button 
+            className={`pb-3 font-head font-bold text-sm transition-colors ${abaAtiva === "previsao" ? "text-rose-600 border-b-2 border-rose-600" : "text-gray-400 hover:text-gray-600"}`}
+            onClick={() => setAbaAtiva("previsao")}
+          >
+            Previsões de Pagamento
+          </button>
+        </div>
+
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
           <Card className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4">
@@ -316,12 +361,20 @@ export function AcertoMotoristasTab() {
         <Card className="p-0 overflow-hidden shadow">
           {loading ? <Loading /> : entregas.length === 0 ? <Empty icon="" text="Nenhum acerto de viagem pendente." /> : (
             <>
-            {/* Mobile card list */}
             <div className="block lg:hidden divide-y" style={{ borderColor: "var(--border)" }}>
-              {entregas.map((e) => (
-                <div key={e.id} className={`p-3 active:bg-slate-50 ${e.isDiariaExtra ? "opacity-60" : ""}`}>
+              {entregas.map((e) => {
+                const isSelected = selectedIds.some(s => s.id === e.id);
+                return (
+                <div key={e.id} className={`p-3 transition-colors active:bg-slate-50 ${e.isDiariaExtra ? "opacity-60" : ""} ${isSelected ? "bg-rose-50/40" : ""}`}>
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                      <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer flex-shrink-0"
+                        checked={isSelected}
+                        onChange={(ev) => {
+                          if (ev.target.checked) setSelectedIds(prev => [...prev, { id: e.id, isRota: e.isRota }]);
+                          else setSelectedIds(prev => prev.filter(s => s.id !== e.id));
+                        }}
+                      />
                       <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase flex-shrink-0 ${e.isRota ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-blue-100 text-blue-700 border border-blue-200"}`}>
                         {e.isRota ? "Rota" : "Direta"}
                       </span>
@@ -360,14 +413,23 @@ export function AcertoMotoristasTab() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* Desktop table */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block pb-20">
             <Table>
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
+                  <Th className="w-10 text-center">
+                    <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer"
+                      checked={entregas.length > 0 && selectedIds.length === entregas.length}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedIds(entregas.map(ent => ({ id: ent.id, isRota: ent.isRota })));
+                        else setSelectedIds([]);
+                      }}
+                    />
+                  </Th>
                   <Th>NF / Rota</Th><Th>Motorista</Th>
                   <Th>Data Frete</Th>
                   <Th>Canhoto</Th>
@@ -381,8 +443,19 @@ export function AcertoMotoristasTab() {
                 </tr>
               </thead>
               <tbody>
-                {entregas.map((e) => (
-                  <Tr key={e.id} className={`hover:bg-slate-50 ${e.isDiariaExtra ? "opacity-50" : ""}`}>
+                {entregas.map((e) => {
+                  const isSelected = selectedIds.some(s => s.id === e.id);
+                  return (
+                  <Tr key={e.id} className={`hover:bg-slate-50 transition-colors ${e.isDiariaExtra ? "opacity-50" : ""} ${isSelected ? "bg-rose-50/40" : ""}`}>
+                    <Td className="text-center">
+                      <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer"
+                        checked={isSelected}
+                        onChange={(ev) => {
+                          if (ev.target.checked) setSelectedIds(prev => [...prev, { id: e.id, isRota: e.isRota }]);
+                          else setSelectedIds(prev => prev.filter(s => s.id !== e.id));
+                        }}
+                      />
+                    </Td>
                     <Td>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase ${e.isRota ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-blue-100 text-blue-700 border border-blue-200"}`}>
@@ -447,7 +520,8 @@ export function AcertoMotoristasTab() {
                       </button>
                     </Td>
                   </Tr>
-                ))}
+                  );
+                })}
               </tbody>
             </Table>
             </div>
@@ -455,6 +529,36 @@ export function AcertoMotoristasTab() {
           )}
         </Card>
       </div>
+
+      {/* Floating Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-4 z-50 animate-in slide-in-from-bottom-5">
+          <span className="text-sm font-bold font-mono">{selectedIds.length} selecionados</span>
+          <Button size="sm" onClick={() => setShowBulkPredict(true)} className="bg-rose-500 hover:bg-rose-600 text-white border-none rounded-full px-4">
+            <CalendarDays size={14} className="mr-2" /> Agendar Pagamento
+          </Button>
+          <button onClick={() => setSelectedIds([])} className="w-6 h-6 flex items-center justify-center hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors" title="Limpar Seleção">
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Bulk Predict Modal */}
+      <Modal open={showBulkPredict} onClose={() => setShowBulkPredict(false)} title="Agendar Pagamentos" size="sm">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">Defina a data de previsão de pagamento para as <strong>{selectedIds.length}</strong> viagens selecionadas.</p>
+          <div>
+            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Data de Previsão</label>
+            <Input type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+            <Button variant="ghost" onClick={() => setShowBulkPredict(false)}>Cancelar</Button>
+            <Button onClick={handleBulkSave} disabled={saving || !bulkDate} className="bg-rose-600 hover:bg-rose-700 text-white">
+              {saving ? "Salvando..." : "Confirmar Agendamento"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Fechar Acerto do Terceiro" size="lg">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">

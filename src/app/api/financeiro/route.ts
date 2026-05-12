@@ -17,13 +17,20 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("cliente");
   const dataInicio = searchParams.get("dataInicio");
   const dataFim = searchParams.get("dataFim");
+  const aba = searchParams.get("aba") || "acertos"; // "acertos" ou "previsao"
 
   // Filter for Direct Deliveries (no rota)
   const whereEntrega: any = { 
     rotaId: null,
     status: { notIn: ["PROGRAMADO", "EM_SEPARACAO"] } 
   };
-  if (pendente) whereEntrega.dataPagamentoSaldo = null;
+  
+  if (aba === "previsao") {
+    whereEntrega.dataPagamentoSaldo = { not: null };
+  } else if (pendente) {
+    whereEntrega.dataPagamentoSaldo = null;
+  }
+  
   if (dataInicio || dataFim) {
     whereEntrega.createdAt = {};
     if (dataInicio) whereEntrega.createdAt.gte = new Date(dataInicio);
@@ -44,7 +51,13 @@ export async function GET(req: NextRequest) {
   const whereRota: any = {
     status: { notIn: ["CANCELADA"] }
   };
-  if (pendente) whereRota.dataPagamentoSaldo = null;
+  
+  if (aba === "previsao") {
+    whereRota.dataPagamentoSaldo = { not: null };
+  } else if (pendente) {
+    whereRota.dataPagamentoSaldo = null;
+  }
+
   if (dataInicio || dataFim) {
     whereRota.createdAt = {};
     if (dataInicio) whereRota.createdAt.gte = new Date(dataInicio);
