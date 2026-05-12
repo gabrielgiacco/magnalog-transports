@@ -474,18 +474,20 @@ export default function RelatoriosPage() {
                     {(() => {
                       const items = motoristaDetail.entregas;
                       const totalFrete = items.reduce((s: number, x: any) => s + (x.valorFrete || 0), 0);
-                        const totalDescarga = items.reduce((s: number, x: any) => s + (x.valorDescarga || 0), 0);
-                        const totalSaldo = items.reduce((s: number, x: any) => s + (x.saldoMotorista || 0), 0);
-                        const diretas = items.filter((x: any) => x.tipo === "DIRETA").length;
-                        const rotas = items.filter((x: any) => x.tipo === "ROTA").length;
-                        return [
-                          { l: `${diretas} Diretas / ${rotas} Rotas`, v: String(items.length), c: "#f97316" },
-                          { l: "Frete Total", v: formatCurrency(totalFrete), c: "#10b981" },
-                          { l: "Pago Motorista", v: formatCurrency(totalMotorista), c: "#3b82f6" },
-                          { l: "Descargas", v: formatCurrency(totalDescarga), c: "#8b5cf6" },
-                          { l: "Adiantamentos", v: formatCurrency(totalAdiantamento), c: "#f59e0b" },
-                          { l: "Saldo Pendente", v: formatCurrency(totalSaldo), c: totalSaldo > 0 ? "#ef4444" : "#10b981" },
-                        ].map((k) => (
+                      const totalMotorista = items.reduce((s: number, x: any) => s + (x.valorMotorista || 0), 0);
+                      const totalDescarga = items.reduce((s: number, x: any) => s + (x.valorDescarga || 0), 0);
+                      const totalAdiantamento = items.reduce((s: number, x: any) => s + (x.adiantamento || 0), 0);
+                      const totalSaldo = items.reduce((s: number, x: any) => s + (x.saldoMotorista || 0), 0);
+                      const diretas = items.filter((x: any) => x.tipo === "DIRETA").length;
+                      const rotas = items.filter((x: any) => x.tipo === "ROTA").length;
+                      return [
+                        { l: `${diretas} Diretas / ${rotas} Rotas`, v: String(items.length), c: "#f97316" },
+                        { l: "Frete Total", v: formatCurrency(totalFrete), c: "#10b981" },
+                        { l: "Pago Motorista", v: formatCurrency(totalMotorista), c: "#3b82f6" },
+                        { l: "Descargas", v: formatCurrency(totalDescarga), c: "#8b5cf6" },
+                        { l: "Adiantamentos", v: formatCurrency(totalAdiantamento), c: "#f59e0b" },
+                        { l: "Saldo Pendente", v: formatCurrency(totalSaldo), c: totalSaldo > 0 ? "#ef4444" : "#10b981" },
+                      ].map((k) => (
                         <div key={k.l} className="text-center p-2 sm:p-3 rounded-xl" style={{ background: "var(--surface2)" }}>
                           <div className="font-head text-sm sm:text-lg font-black truncate" style={{ color: k.c }}>{k.v}</div>
                           <div className="text-[8px] sm:text-[9px] font-mono mt-0.5 uppercase truncate" style={{ color: "var(--text3)" }}>{k.l}</div>
