@@ -218,10 +218,11 @@ export async function PATCH(req: NextRequest) {
   if (!current) return NextResponse.json({ error: "Não encontrada" }, { status: 404 });
 
   // Compute balance
-  const vMotorista = valorMotorista ?? current.valorMotorista;
-  const vAdiantamento = adiantamentoMotorista ?? current.adiantamentoMotorista;
-  const vSaida = valorSaida ?? current.valorSaida;
-  const vDescarga = valorDescarga ?? current.valorDescarga;
+  const vMotorista = valorMotorista ?? current.valorMotorista ?? 0;
+  const vAdiantamento = adiantamentoMotorista ?? current.adiantamentoMotorista ?? 0;
+  const vSaida = valorSaida ?? current.valorSaida ?? 0;
+  const vDescarga = valorDescarga ?? current.valorDescarga ?? 0;
+  const vDescontos = descontosMotorista ?? current.descontosMotorista ?? 0;
   
   const saldoFinalMotorista = vMotorista + vDescarga - vAdiantamento - vSaida - vDescontos;
 
