@@ -246,7 +246,7 @@ export async function GET(req: NextRequest) {
       include: {
         entregas: {
           where,
-          select: { status: true, valorFrete: true, pesoTotal: true, rotaId: true, valorMotorista: true, adiantamentoMotorista: true, saldoMotorista: true },
+          select: { status: true, valorFrete: true, pesoTotal: true, rotaId: true, valorMotorista: true, adiantamentoMotorista: true, saldoMotorista: true, valorDescarga: true },
         },
         rotas: {
           where: { data: { gte: inicio, lte: fim } },
@@ -282,7 +282,11 @@ export async function GET(req: NextRequest) {
           m.entregas.filter((e: any) => !e.rotaId).reduce((s: number, e: any) => s + (e.pesoTotal || 0), 0) +
           m.rotas.reduce((s: number, r: any) => s + (r.pesoTotal || 0), 0);
 
-        return { id: m.id, nome: m.nome, totalEntregas, rotas: m.rotas.length, entregues, frete, valorMotorista, adiantamento, saldo, peso, ocorrencias: m.entregas.filter((e: any) => e.status === "OCORRENCIA").length };
+        const descarga =
+          m.entregas.filter((e: any) => !e.rotaId).reduce((s: number, e: any) => s + (e.valorDescarga || 0), 0) +
+          m.rotas.reduce((s: number, r: any) => s + (r.valorDescarga || 0), 0);
+
+        return { id: m.id, nome: m.nome, totalEntregas, rotas: m.rotas.length, entregues, frete, valorMotorista, adiantamento, saldo, peso, descarga, ocorrencias: m.entregas.filter((e: any) => e.status === "OCORRENCIA").length };
       })
       .sort((a: any, b: any) => b.totalEntregas - a.totalEntregas);
 

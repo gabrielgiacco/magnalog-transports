@@ -364,7 +364,7 @@ export default function RelatoriosPage() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr>
-                          {["#","Motorista","Entregas","Rotas","Entregues","Ocorrências","Peso","Frete Cliente","Vlr Motorista","Adiantamento","Saldo","Taxa"].map((h) => (
+                          {["#","Motorista","Entregas","Rotas","Entregues","Ocorrências","Peso","Frete Cliente","Vlr Motorista","Descarga","Adiantamento","Saldo","Taxa"].map((h) => (
                             <th key={h} className="text-left px-3 py-2.5 text-[10px] uppercase tracking-wider font-normal font-mono"
                               style={{ color:"var(--text3)", borderBottom:"1px solid var(--border)" }}>{h}</th>
                           ))}
@@ -393,6 +393,7 @@ export default function RelatoriosPage() {
                               <td className="px-3 py-3 font-mono text-xs" style={{ color:"var(--text2)" }}>{formatWeight(m.peso)}</td>
                               <td className="px-3 py-3 font-mono text-xs" style={{ color:"#10b981" }}>{formatCurrency(m.frete)}</td>
                               <td className="px-3 py-3 font-mono text-xs" style={{ color:"#3b82f6" }}>{formatCurrency(m.valorMotorista)}</td>
+                              <td className="px-3 py-3 font-mono text-xs" style={{ color:"#8b5cf6" }}>{formatCurrency(m.descarga)}</td>
                               <td className="px-3 py-3 font-mono text-xs" style={{ color:"#f59e0b" }}>{formatCurrency(m.adiantamento)}</td>
                               <td className="px-3 py-3 font-mono text-xs font-bold" style={{ color: (m.saldo||0)>0?"#ef4444":"#10b981" }}>{formatCurrency(m.saldo)}</td>
                               <td className="px-3 py-3">
