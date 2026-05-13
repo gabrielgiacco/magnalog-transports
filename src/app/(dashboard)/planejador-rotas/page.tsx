@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
@@ -128,6 +128,8 @@ export default function PlanejadorRotasPage() {
     }
   }
 
+  const mapEntregas = useMemo(() => entregas.filter(e => e.latitude != null && e.longitude != null), [entregas]);
+
   const selectedEntregas = entregas.filter(e => selectedIds.includes(e.id));
   const totalPeso = selectedEntregas.reduce((s, e) => s + (e.pesoTotal || 0), 0);
   const totalVol = selectedEntregas.reduce((s, e) => s + (e.volumeTotal || 0), 0);
@@ -173,7 +175,7 @@ export default function PlanejadorRotasPage() {
           <Card className="h-full w-full p-0 overflow-hidden shadow-md" style={{ border: "1px solid var(--border)" }}>
             {loading ? (
               <div className="w-full h-full flex items-center justify-center"><Loading /></div>
-            ) : entregas.filter(e => e.latitude != null && e.longitude != null).length === 0 ? (
+            ) : mapEntregas.length === 0 ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-500">
                 <Map size={48} className="mb-4 text-slate-300" />
                 <p>Nenhuma entrega disponível com coordenadas.</p>
@@ -183,7 +185,7 @@ export default function PlanejadorRotasPage() {
               </div>
             ) : (
               <RouteMap 
-                entregas={entregas.filter(e => e.latitude != null && e.longitude != null)} 
+                entregas={mapEntregas} 
                 selectedIds={selectedIds} 
                 onToggleEntrega={toggleEntrega} 
                 centerTo={mapCenter || undefined}

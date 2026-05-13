@@ -98,8 +98,8 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, cente
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
       
-      {bounds && !centerTo && <ChangeView bounds={bounds} />}
-      {centerTo && <CenteringView center={centerTo} />}
+      <ChangeView bounds={bounds} />
+      <CenteringView center={centerTo || null} />
 
       {entregas.map((entrega) => {
         const isSelected = selectedIds.includes(entrega.id);
