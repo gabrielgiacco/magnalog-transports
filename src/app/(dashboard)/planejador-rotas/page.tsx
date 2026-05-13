@@ -138,10 +138,10 @@ export default function PlanejadorRotasPage() {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
-      e.razaoSocial.toLowerCase().includes(q) ||
-      e.codigo.toLowerCase().includes(q) ||
-      e.cidade.toLowerCase().includes(q) ||
-      e.notas?.some(n => n.numero.toLowerCase().includes(q))
+      (e.razaoSocial || "").toLowerCase().includes(q) ||
+      (e.codigo || "").toLowerCase().includes(q) ||
+      (e.cidade || "").toLowerCase().includes(q) ||
+      e.notas?.some(n => (n.numero || "").toLowerCase().includes(q))
     );
   });
 
@@ -173,7 +173,7 @@ export default function PlanejadorRotasPage() {
           <Card className="h-full w-full p-0 overflow-hidden shadow-md" style={{ border: "1px solid var(--border)" }}>
             {loading ? (
               <div className="w-full h-full flex items-center justify-center"><Loading /></div>
-            ) : entregas.length === 0 ? (
+            ) : entregas.filter(e => e.latitude != null && e.longitude != null).length === 0 ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-500">
                 <Map size={48} className="mb-4 text-slate-300" />
                 <p>Nenhuma entrega disponível com coordenadas.</p>
@@ -183,7 +183,7 @@ export default function PlanejadorRotasPage() {
               </div>
             ) : (
               <RouteMap 
-                entregas={entregas} 
+                entregas={entregas.filter(e => e.latitude != null && e.longitude != null)} 
                 selectedIds={selectedIds} 
                 onToggleEntrega={toggleEntrega} 
                 centerTo={mapCenter || undefined}
