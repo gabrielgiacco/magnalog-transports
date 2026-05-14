@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -42,14 +42,19 @@ function ChangeView({ bounds }: { bounds: L.LatLngBounds | null }) {
   return null;
 }
 
-// Componente para centralizar o mapa em uma coordenada específica
-function CenteringView({ center }: { center: [number, number] | null }) {
+// Componente para centralizar o mapa em uma entrega específica e abrir o popup
+function FocusController({ focusId, markerRefs }: { focusId?: string, markerRefs: React.MutableRefObject<Record<string, L.Marker | null>> }) {
   const map = useMap();
   useEffect(() => {
-    if (center) {
-      map.setView(center, 16, { animate: true });
+    if (focusId) {
+      const marker = markerRefs.current[focusId];
+      if (marker) {
+        const latLng = marker.getLatLng();
+        map.setView(latLng, 16, { animate: true });
+        setTimeout(() => marker.openPopup(), 300);
+      }
     }
-  }, [center, map]);
+  }, [focusId, map, markerRefs]);
   return null;
 }
 
@@ -71,11 +76,12 @@ interface RouteMapProps {
   entregas: MapEntrega[];
   selectedIds: string[];
   onToggleEntrega: (id: string) => void;
-  centerTo?: [number, number];
+  focusId?: string;
 }
 
-export default function RouteMap({ entregas, selectedIds, onToggleEntrega, centerTo }: RouteMapProps) {
+export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focusId }: RouteMapProps) {
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
+  const markerRefs = useRef<Record<string, L.Marker | null>>({});
 
   useEffect(() => {
     if (entregas.length > 0) {
@@ -88,7 +94,7 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, cente
   const agrupadas = useMemo(() => {
     const map: Record<string, MapEntrega[]> = {};
     entregas.forEach(e => {
-      const key = \`\${e.latitude.toFixed(5)}_\${e.longitude.toFixed(5)}\`;
+      const key = `${e.latitude.toFixed(5)}_${e.longitude.toFixed(5)}`;
       if (!map[key]) map[key] = [];
       map[key].push(e);
     });
@@ -110,13 +116,13 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, cente
       />
       
       <ChangeView bounds={bounds} />
-      <CenteringView center={centerTo || null} />
+      <FocusController focusId={focusId} markerRefs={markerRefs} />
 
       {entregas.map((entrega) => {
         const isSelected = selectedIds.includes(entrega.id);
         
         // Espalhar marcadores sobrepostos em um pequeno círculo
-        const key = \`\${entrega.latitude.toFixed(5)}_\${entrega.longitude.toFixed(5)}\`;
+        const key = `${entrega.latitude.toFixed(5)}_${entrega.longitude.toFixed(5)}`;
         const group = agrupadas[key] || [];
         const indexInGroup = group.findIndex(g => g.id === entrega.id);
         
@@ -135,6 +141,7 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, cente
         return (
           <Marker 
             key={entrega.id} 
+            ref={(r) => { markerRefs.current[entrega.id] = r; }}
             position={position}
             icon={isSelected ? selectedIcon : defaultIcon}
             eventHandlers={{
@@ -163,9 +170,9 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, cente
                 </div>
                 
                 <button 
-                  className={\`mt-3 w-full py-1.5 rounded text-xs font-bold text-white transition-colors \${
+                  className={`mt-3 w-full py-1.5 rounded text-xs font-bold text-white transition-colors ${
                     isSelected ? "bg-red-500 hover:bg-red-600" : "bg-blue-600 hover:bg-blue-700"
-                  }\`}
+                  }`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggleEntrega(entrega.id);

@@ -33,7 +33,7 @@ export default function PlanejadorRotasPage() {
   const [saving, setSaving] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
+  const [focusDelivery, setFocusDelivery] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -77,7 +77,7 @@ export default function PlanejadorRotasPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao geocodificar");
       
-      toast.success(`Concluído! ${data.geocoded} geocodificados, ${data.errors} erros.`, { id: toastId });
+      toast.success(`Concluído! \${data.geocoded} geocodificados, \${data.errors} erros.`, { id: toastId });
       if (data.geocoded > 0) {
         fetchData(); // Recarrega o mapa
       }
@@ -149,9 +149,9 @@ export default function PlanejadorRotasPage() {
 
   function focusOnMap(e: MapEntrega) {
     if (e.latitude && e.longitude) {
-      setMapCenter([e.latitude, e.longitude]);
+      setFocusDelivery(e.id);
       // Reset after a moment to allow re-centering if clicked again
-      setTimeout(() => setMapCenter(null), 1000);
+      setTimeout(() => setFocusDelivery(null), 1000);
     } else {
       toast.error("Esta entrega não possui coordenadas geográficas.");
     }
@@ -188,7 +188,7 @@ export default function PlanejadorRotasPage() {
                 entregas={mapEntregas} 
                 selectedIds={selectedIds} 
                 onToggleEntrega={toggleEntrega} 
-                centerTo={mapCenter || undefined}
+                focusId={focusDelivery || undefined}
               />
             )}
           </Card>
