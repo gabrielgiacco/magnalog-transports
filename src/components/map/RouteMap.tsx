@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -84,6 +84,17 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, cente
     }
   }, [entregas]);
 
+  // Agrupar entregas por mesma coordenada para espalhar marcadores sobrepostos
+  const agrupadas = useMemo(() => {
+    const map: Record<string, MapEntrega[]> = {};
+    entregas.forEach(e => {
+      const key = \`\${e.latitude.toFixed(5)}_\${e.longitude.toFixed(5)}\`;
+      if (!map[key]) map[key] = [];
+      map[key].push(e);
+    });
+    return map;
+  }, [entregas]);
+
   // Centro inicial caso não haja entregas (São Paulo)
   const defaultCenter: [number, number] = [-23.5505, -46.6333];
 
@@ -103,7 +114,23 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, cente
 
       {entregas.map((entrega) => {
         const isSelected = selectedIds.includes(entrega.id);
-        const position: [number, number] = [entrega.latitude, entrega.longitude];
+        
+        // Espalhar marcadores sobrepostos em um pequeno círculo
+        const key = \`\${entrega.latitude.toFixed(5)}_\${entrega.longitude.toFixed(5)}\`;
+        const group = agrupadas[key] || [];
+        const indexInGroup = group.findIndex(g => g.id === entrega.id);
+        
+        let lat = entrega.latitude;
+        let lng = entrega.longitude;
+
+        if (group.length > 1) {
+          const angle = (indexInGroup / group.length) * Math.PI * 2;
+          const radius = 0.00015; // ~15 metros
+          lat += Math.sin(angle) * radius;
+          lng += Math.cos(angle) * radius;
+        }
+
+        const position: [number, number] = [lat, lng];
         
         return (
           <Marker 
@@ -136,9 +163,9 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, cente
                 </div>
                 
                 <button 
-                  className={`mt-3 w-full py-1.5 rounded text-xs font-bold text-white transition-colors ${
+                  className={\`mt-3 w-full py-1.5 rounded text-xs font-bold text-white transition-colors \${
                     isSelected ? "bg-red-500 hover:bg-red-600" : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  }\`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggleEntrega(entrega.id);
