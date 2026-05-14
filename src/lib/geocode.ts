@@ -10,6 +10,43 @@ export interface Coordinates {
 }
 
 /**
+ * Função utilitária para pausar a execução, útil para respeitar limites de taxa (rate limits).
+ * @param ms Milissegundos a aguardar.
+ */
+export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchNominatim(url: URL): Promise<Coordinates | null> {
+  try {
+    // Nominatim requires 1 request per second
+    await delay(1100);
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        "User-Agent": NOMINATIM_USER_AGENT,
+        "Accept-Language": "pt-BR",
+      },
+    });
+
+    if (!response.ok) {
+      console.warn(`[Geocode] Erro HTTP ${response.status} ao buscar ${url.toString()}`);
+      return null;
+    }
+
+    const data = await response.json();
+    if (data && data.length > 0) {
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("[Geocode] Erro na requisição Nominatim:", error);
+    return null;
+  }
+}
+
+/**
  * Converte um endereço em coordenadas geográficas usando OpenStreetMap (Nominatim).
  * @param address - Objeto com os campos do endereço.
  * @returns Coordenadas { lat, lng } ou null se não encontrar ou houver erro.
@@ -22,79 +59,77 @@ export async function geocodeAddress(address: {
   cep?: string | null;
 }): Promise<Coordinates | null> {
   try {
-    // Tenta montar a query mais específica possível
-    const parts = [];
-    
-    // As vezes o endereço vem com número. Se não, pelo menos a rua ajuda
-    if (address.endereco && address.endereco.trim().length > 0) parts.push(address.endereco.trim());
-    if (address.bairro && address.bairro.trim().length > 0) parts.push(address.bairro.trim());
-    if (address.cidade && address.cidade.trim().length > 0) parts.push(address.cidade.trim());
-    if (address.uf && address.uf.trim().length > 0) parts.push(address.uf.trim());
-    
-    // Se não tiver pelo menos cidade e UF, a chance de erro é alta, mas tentamos
-    if (parts.length === 0) return null;
-    
-    parts.push("Brasil"); // Restringe a busca ao Brasil
-    
-    const query = parts.join(", ");
-    const url = new URL(NOMINATIM_URL);
-    url.searchParams.append("q", query);
-    url.searchParams.append("format", "json");
-    url.searchParams.append("limit", "1");
-    // Se tivermos o CEP, podemos passar para ajudar a refinar (embora o q query seja mais flexível)
+    const normalize = (str?: string | null) => {
+      if (!str) return "";
+      return str.trim()
+        .replace(/\bSET\b/gi, "Setor")
+        .replace(/\bJD\b/gi, "Jardim")
+        .replace(/\bVL\b/gi, "Vila")
+        .replace(/\bAV\b/gi, "Avenida")
+        .replace(/\bR\b/gi, "Rua")
+        .replace(/\bRES\b/gi, "Residencial")
+        .replace(/\bCOND\b/gi, "Condominio")
+        .replace(/\bPQ\b/gi, "Parque")
+        .replace(/\bBRANC\b/gi, "Branco");
+    };
 
-    console.log(`[Geocode] Buscando: ${query}`);
+    const endereco = normalize(address.endereco);
+    const bairro = normalize(address.bairro);
+    const cidade = normalize(address.cidade);
+    const uf = normalize(address.uf);
+    const cep = address.cep ? address.cep.replace(/\D/g, "") : "";
 
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        "User-Agent": NOMINATIM_USER_AGENT,
-        "Accept-Language": "pt-BR",
-      },
-      // Nominatim requires caching or rate limiting. For now we just fetch.
-    });
-
-    if (!response.ok) {
-      console.warn(`[Geocode] Erro HTTP ${response.status} ao buscar ${query}`);
-      return null;
+    // 1. Full Address
+    if (endereco && cidade && uf) {
+      const parts = [endereco];
+      if (bairro) parts.push(bairro);
+      parts.push(cidade);
+      parts.push(uf);
+      parts.push("Brasil");
+      const url = new URL(NOMINATIM_URL);
+      url.searchParams.set("q", parts.join(", "));
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      console.log(`[Geocode] Tentativa 1 (Completo): ${parts.join(", ")}`);
+      const coords = await fetchNominatim(url);
+      if (coords) return coords;
     }
 
-    const data = await response.json();
-
-    if (data && data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon),
-      };
+    // 2. Fallback by CEP
+    if (cep && cep.length === 8) {
+      const url = new URL(NOMINATIM_URL);
+      // Nominatim accepts postalcode and country for structured queries
+      url.searchParams.set("postalcode", cep);
+      url.searchParams.set("country", "Brasil");
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      console.log(`[Geocode] Tentativa 2 (CEP): ${cep}`);
+      const coords = await fetchNominatim(url);
+      if (coords) return coords;
     }
-    
-    // Fallback: Se não encontrou com a rua, tenta apenas com cidade e UF
-    if (parts.length > 3) {
-      console.log(`[Geocode] Fallback: buscando apenas por cidade...`);
-      const fallbackParts = [];
-      if (address.cidade) fallbackParts.push(address.cidade);
-      if (address.uf) fallbackParts.push(address.uf);
-      fallbackParts.push("Brasil");
-      
-      const fallbackQuery = fallbackParts.join(", ");
-      url.searchParams.set("q", fallbackQuery);
-      
-      // Respeitar o limite de 1 segundo entre requisições no fallback
-      await new Promise(resolve => setTimeout(resolve, 1100));
-      
-      const fbResponse = await fetch(url.toString(), {
-        headers: { "User-Agent": NOMINATIM_USER_AGENT }
-      });
-      
-      if (fbResponse.ok) {
-        const fbData = await fbResponse.json();
-        if (fbData && fbData.length > 0) {
-          return {
-            lat: parseFloat(fbData[0].lat),
-            lng: parseFloat(fbData[0].lon),
-          };
-        }
-      }
+
+    // 3. Fallback by Bairro
+    if (bairro && cidade && uf) {
+      const parts = [bairro, cidade, uf, "Brasil"];
+      const url = new URL(NOMINATIM_URL);
+      url.searchParams.set("q", parts.join(", "));
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      console.log(`[Geocode] Tentativa 3 (Bairro): ${parts.join(", ")}`);
+      const coords = await fetchNominatim(url);
+      if (coords) return coords;
+    }
+
+    // 4. Fallback by Cidade (Last Resort)
+    if (cidade && uf) {
+      const parts = [cidade, uf, "Brasil"];
+      const url = new URL(NOMINATIM_URL);
+      url.searchParams.set("q", parts.join(", "));
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      console.log(`[Geocode] Tentativa 4 (Cidade): ${parts.join(", ")}`);
+      const coords = await fetchNominatim(url);
+      if (coords) return coords;
     }
 
     return null;
@@ -103,9 +138,3 @@ export async function geocodeAddress(address: {
     return null;
   }
 }
-
-/**
- * Função utilitária para pausar a execução, útil para respeitar limites de taxa (rate limits).
- * @param ms Milissegundos a aguardar.
- */
-export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
