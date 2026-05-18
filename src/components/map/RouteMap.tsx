@@ -69,7 +69,7 @@ export interface MapEntrega {
   longitude: number;
   pesoTotal: number;
   volumeTotal: number;
-  notas?: { numero: string }[];
+  notas?: { numero: string; emitenteRazao?: string }[];
 }
 
 interface RouteMapProps {

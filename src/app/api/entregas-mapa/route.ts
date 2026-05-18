@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
         longitude: true,
         status: true,
         notas: {
-          select: { numero: true, chaveAcesso: true }
+          select: { numero: true, chaveAcesso: true, emitenteRazao: true }
         }
       },
       orderBy: { createdAt: "desc" }

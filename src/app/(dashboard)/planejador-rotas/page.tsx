@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Input, Select, ComboboxMotorista } from "@/components/ui";
-import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation, Navigation2, Plus, AlertCircle } from "lucide-react";
+import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation, Navigation2, Plus, AlertCircle, Filter, X, Package } from "lucide-react";
 import { formatWeight, formatCurrency } from "@/lib/utils";
 import type { MapEntrega } from "@/components/map/RouteMap";
 
@@ -34,6 +34,7 @@ export default function PlanejadorRotasPage() {
   const [geocoding, setGeocoding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [focusDelivery, setFocusDelivery] = useState<string | null>(null);
+  const [selectedFornecedores, setSelectedFornecedores] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -128,14 +129,37 @@ export default function PlanejadorRotasPage() {
     }
   }
 
-  const mapEntregas = useMemo(() => entregas.filter(e => e.latitude != null && e.longitude != null), [entregas]);
+  // Extrair fornecedores únicos de todas as entregas
+  const fornecedoresUnicos = useMemo(() => {
+    const set = new Set<string>();
+    entregas.forEach(e => {
+      e.notas?.forEach(n => {
+        if (n.emitenteRazao) set.add(n.emitenteRazao);
+      });
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [entregas]);
+
+  function toggleFornecedor(nome: string) {
+    setSelectedFornecedores(prev =>
+      prev.includes(nome) ? prev.filter(f => f !== nome) : [...prev, nome]
+    );
+  }
+
+  // Helper: verifica se uma entrega pertence a algum fornecedor selecionado
+  function matchFornecedor(e: MapEntrega) {
+    if (selectedFornecedores.length === 0) return true;
+    return e.notas?.some(n => n.emitenteRazao && selectedFornecedores.includes(n.emitenteRazao)) ?? false;
+  }
+
+  const mapEntregas = useMemo(() => entregas.filter(e => e.latitude != null && e.longitude != null && matchFornecedor(e)), [entregas, selectedFornecedores]);
 
   const selectedEntregas = entregas.filter(e => selectedIds.includes(e.id));
   const totalPeso = selectedEntregas.reduce((s, e) => s + (e.pesoTotal || 0), 0);
   const totalVol = selectedEntregas.reduce((s, e) => s + (e.volumeTotal || 0), 0);
   const totalDescarga = selectedEntregas.reduce((s, e) => s + (e.valorDescarga || 0), 0);
 
-  const disponiveis = entregas.filter(e => !selectedIds.includes(e.id));
+  const disponiveis = entregas.filter(e => !selectedIds.includes(e.id) && matchFornecedor(e));
   const filteredDisponiveis = disponiveis.filter(e => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -171,17 +195,67 @@ export default function PlanejadorRotasPage() {
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Lado Esquerdo: MAPA (70%) */}
-        <div className="flex-1 lg:flex-[7] p-4 relative z-0 h-[50vh] lg:h-auto">
-          <Card className="h-full w-full p-0 overflow-hidden shadow-md" style={{ border: "1px solid var(--border)" }}>
+        <div className="flex-1 lg:flex-[7] flex flex-col p-4 relative z-0 h-[50vh] lg:h-auto gap-3">
+          
+          {/* Filtro de Fornecedores — acima do mapa */}
+          {fornecedoresUnicos.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
+              <div className="flex items-center gap-1.5 text-slate-500 mr-1 shrink-0">
+                <Package size={14} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Fornecedor</span>
+              </div>
+              <div className="h-5 w-px bg-slate-200 shrink-0" />
+              {fornecedoresUnicos.map(nome => {
+                const isActive = selectedFornecedores.includes(nome);
+                // Pegar um nome mais curto/legível para exibir
+                const displayName = nome.split(" ").slice(0, 3).join(" ");
+                const count = entregas.filter(e => e.notas?.some(n => n.emitenteRazao === nome)).length;
+                return (
+                  <button
+                    key={nome}
+                    onClick={() => toggleFornecedor(nome)}
+                    title={nome}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all duration-200 border ${
+                      isActive
+                        ? "bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-500/25"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+                    }`}
+                  >
+                    {displayName}
+                    <span className={`text-[9px] font-mono px-1 py-0.5 rounded ${
+                      isActive ? "bg-orange-600/30 text-orange-100" : "bg-slate-200/80 text-slate-500"
+                    }`}>{count}</span>
+                    {isActive && <X size={10} className="ml-0.5" />}
+                  </button>
+                );
+              })}
+              {selectedFornecedores.length > 0 && (
+                <button
+                  onClick={() => setSelectedFornecedores([])}
+                  className="text-[10px] text-rose-500 hover:text-rose-600 font-semibold ml-1 underline underline-offset-2"
+                >
+                  Limpar filtro
+                </button>
+              )}
+            </div>
+          )}
+
+          <Card className="flex-1 w-full p-0 overflow-hidden shadow-md" style={{ border: "1px solid var(--border)" }}>
             {loading ? (
               <div className="w-full h-full flex items-center justify-center"><Loading /></div>
             ) : mapEntregas.length === 0 ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-500">
                 <Map size={48} className="mb-4 text-slate-300" />
-                <p>Nenhuma entrega disponível com coordenadas.</p>
-                <Button variant="ghost" className="mt-4" onClick={handleGeocodePending}>
-                  Tentar Geocodificar
-                </Button>
+                <p>{selectedFornecedores.length > 0 ? "Nenhuma entrega com coordenadas para os fornecedores selecionados." : "Nenhuma entrega disponível com coordenadas."}</p>
+                {selectedFornecedores.length > 0 ? (
+                  <Button variant="ghost" className="mt-4" onClick={() => setSelectedFornecedores([])}>
+                    Limpar Filtro
+                  </Button>
+                ) : (
+                  <Button variant="ghost" className="mt-4" onClick={handleGeocodePending}>
+                    Tentar Geocodificar
+                  </Button>
+                )}
               </div>
             ) : (
               <RouteMap 
