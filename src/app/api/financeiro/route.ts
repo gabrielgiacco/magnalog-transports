@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     whereEntrega.dataPagamentoSaldo = { not: null };
   } else if (pendente) {
     whereEntrega.saldoMotorista = { gt: 0 };
+    whereEntrega.dataPagamentoSaldo = null;
   }
   
   if (dataInicio || dataFim) {
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
     whereRota.dataPagamentoSaldo = { not: null };
   } else if (pendente) {
     whereRota.saldoMotorista = { gt: 0 };
+    whereRota.dataPagamentoSaldo = null;
   }
 
   if (dataInicio || dataFim) {
@@ -186,14 +188,18 @@ export async function GET(req: NextRequest) {
   }
 
   // Aggregate totals (com valores já ajustados)
-  const totais = viagens.reduce((acc: any, v: any) => ({
-    valorMotorista: (acc.valorMotorista || 0) + v.valorMotorista,
-    adiantamentoMotorista: (acc.adiantamentoMotorista || 0) + (v.adiantamentoMotorista || 0),
-    saldoMotorista: (acc.saldoMotorista || 0) + v.saldoMotorista,
-    valorSaida: (acc.valorSaida || 0) + (v.valorSaida || 0),
-    valorDescarga: (acc.valorDescarga || 0) + (v.valorDescarga || 0),
-    descontosMotorista: (acc.descontosMotorista || 0) + (v.descontosMotorista || 0),
-  }), {});
+  const totais = viagens.reduce((acc: any, v: any) => {
+    // Se o saldo já foi quitado, o saldo pendente restante é 0
+    const saldoPendenteViagem = v.dataPagamentoSaldo ? 0 : v.saldoMotorista;
+    return {
+      valorMotorista: (acc.valorMotorista || 0) + v.valorMotorista,
+      adiantamentoMotorista: (acc.adiantamentoMotorista || 0) + (v.adiantamentoMotorista || 0),
+      saldoMotorista: (acc.saldoMotorista || 0) + saldoPendenteViagem,
+      valorSaida: (acc.valorSaida || 0) + (v.valorSaida || 0),
+      valorDescarga: (acc.valorDescarga || 0) + (v.valorDescarga || 0),
+      descontosMotorista: (acc.descontosMotorista || 0) + (v.descontosMotorista || 0),
+    };
+  }, {});
 
   return NextResponse.json({
     entregas: viagens, // maintain key name for frontend compatibility
