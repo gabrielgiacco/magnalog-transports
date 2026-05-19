@@ -134,157 +134,208 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const body = await req.json();
+  try {
+    const body = await req.json();
 
-  // Recalcular saldo pendente automaticamente
-  const valorFrete = body.valorFrete ?? undefined;
-  const adiantamento = body.adiantamento ?? undefined;
+    // Recalcular saldo pendente automaticamente
+    const valorFrete = body.valorFrete ?? undefined;
+    const adiantamento = body.adiantamento ?? undefined;
 
-  const data: any = { ...body };
+    const data: any = { ...body };
 
-  // Ao finalizar entrega, marcar canhoto como recebido, setar data de entrega e dar baixa nas ocorrências
-  if (data.status === "FINALIZADO") {
-    data.statusCanhoto = "RECEBIDO";
-    if (!data.dataEntrega) data.dataEntrega = new Date();
+    // Ao finalizar entrega, marcar canhoto como recebido, setar data de entrega e dar baixa nas ocorrências
+    if (data.status === "FINALIZADO") {
+      data.statusCanhoto = "RECEBIDO";
+      if (!data.dataEntrega) data.dataEntrega = new Date();
 
-    // Dar baixa automática em todas as ocorrências não resolvidas desta entrega
-    await prisma.ocorrencia.updateMany({
-      where: { entregaId: params.id, resolvida: false },
-      data: {
-        resolvida: true,
-        resolucao: "Baixa automática — entrega finalizada",
+      // Dar baixa automática em todas as ocorrências não resolvidas desta entrega
+      await prisma.ocorrencia.updateMany({
+        where: { entregaId: params.id, resolvida: false },
+        data: {
+          resolvida: true,
+          resolucao: "Baixa automática — entrega finalizada",
+        },
+      });
+    }
+    if (data.status === "ENTREGUE" && !data.dataEntrega) {
+      data.dataEntrega = new Date();
+    }
+
+    // Preservar dataChegada: se veio como vazio/null, remover do payload para não sobrescrever
+    // A dataChegada só deve mudar quando o usuário explicitamente define uma data no formulário de edição
+    const dataChegadaExplicit = data.dataChegada;
+    if (!dataChegadaExplicit || dataChegadaExplicit === "") {
+      delete data.dataChegada;
+    }
+
+    // Transformar strings vazias (UI blank fields) in nulos para o Prisma
+    // Exceto dataChegada que já foi tratada acima
+    Object.keys(data).forEach((key) => {
+      if (key === "dataChegada") return; // já tratado
+      if (data[key] === "") {
+        data[key] = null;
+      }
+    });
+
+    if (data.dataChegada) data.dataChegada = new Date(data.dataChegada);
+    if (data.dataAgendada) data.dataAgendada = new Date(data.dataAgendada);
+    if (data.dataEntrega) data.dataEntrega = new Date(data.dataEntrega);
+    if (data.dataPagamento) data.dataPagamento = new Date(data.dataPagamento);
+    if (data.dataAdiantamento) data.dataAdiantamento = new Date(data.dataAdiantamento);
+    if (data.dataPagamentoSaldo) data.dataPagamentoSaldo = new Date(data.dataPagamentoSaldo);
+
+    if (data.motoristaId) {
+      // Apenas recalcula se não vier explícito na request
+      if (valorFrete === undefined && body.valorMotorista === undefined) {
+        const moto = await prisma.motorista.findUnique({ where: { id: data.motoristaId }, select: { tipo: true, valorDiaria: true } });
+        if (moto) {
+          if (moto.tipo === "FROTA") data.valorMotorista = 0;
+          else if (moto.tipo === "DIARIA") {
+            // Verificar se já existe outra rota ou entrega direta para este motorista na mesma data
+            const entregaAtual = await prisma.entrega.findUnique({ where: { id: params.id }, select: { dataAgendada: true } });
+            const entregaDate = data.dataAgendada || entregaAtual?.dataAgendada || new Date();
+            const diaInicio = new Date(entregaDate); diaInicio.setHours(0,0,0,0);
+            const diaFim = new Date(entregaDate); diaFim.setHours(23,59,59,999);
+            const [rotasMesmoDia, entregasMesmoDia] = await Promise.all([
+              prisma.rota.count({ where: { motoristaId: data.motoristaId, data: { gte: diaInicio, lte: diaFim }, status: { not: "CANCELADA" } } }),
+              prisma.entrega.count({ where: { id: { not: params.id }, motoristaId: data.motoristaId, rotaId: null, dataAgendada: { gte: diaInicio, lte: diaFim }, status: { notIn: ["PROGRAMADO", "EM_SEPARACAO"] } } }),
+            ]);
+            data.valorMotorista = (rotasMesmoDia + entregasMesmoDia) === 0 ? (moto.valorDiaria || 0) : 0;
+          }
+        }
+      }
+    }
+
+    // Calcular saldo automaticamente se frete ou adiantamento mudou
+    if (valorFrete !== undefined || adiantamento !== undefined) {
+      const current = await prisma.entrega.findUnique({ where: { id: params.id } });
+      const frete = valorFrete ?? current?.valorFrete ?? 0;
+      const adt = adiantamento ?? current?.adiantamento ?? 0;
+      data.saldoPendente = frete - adt;
+    }
+
+    // Calcular saldo do motorista automaticamente se valores do motorista mudaram
+    const valorMotorista = body.valorMotorista ?? undefined;
+    const valorSaida = body.valorSaida ?? undefined;
+    const valorDescarga = body.valorDescarga ?? undefined;
+    const adiantamentoMotorista = body.adiantamentoMotorista ?? undefined;
+    const descontosMotorista = body.descontosMotorista ?? undefined;
+
+    if (
+      valorMotorista !== undefined ||
+      valorSaida !== undefined ||
+      valorDescarga !== undefined ||
+      adiantamentoMotorista !== undefined ||
+      descontosMotorista !== undefined
+    ) {
+      const current = await prisma.entrega.findUnique({ where: { id: params.id } });
+      const vMotorista = valorMotorista ?? current?.valorMotorista ?? 0;
+      const vSaida = valorSaida ?? current?.valorSaida ?? 0;
+      const vDescarga = valorDescarga ?? current?.valorDescarga ?? 0;
+      const vAdiantamento = adiantamentoMotorista ?? current?.adiantamentoMotorista ?? 0;
+      const vDescontos = descontosMotorista ?? current?.descontosMotorista ?? 0;
+      data.saldoMotorista = vMotorista + vDescarga - vAdiantamento - vSaida - vDescontos;
+    }
+
+    // Calcular armazenagem automaticamente com base na tabela do cliente
+    {
+      const current = await prisma.entrega.findUnique({ where: { id: params.id } });
+      if (current) {
+        const chegada = data.dataChegada || current.dataChegada;
+        const entregaDate = data.dataEntrega || current.dataEntrega;
+        const paletes = data.quantidadePaletes ?? current.quantidadePaletes ?? 0;
+
+        if (chegada && entregaDate && paletes > 0) {
+          const dias = Math.max(0, Math.floor((new Date(entregaDate).getTime() - new Date(chegada).getTime()) / (1000 * 60 * 60 * 24)));
+          data.diasArmazenagem = dias;
+
+          // Buscar tabela de armazenagem do cliente
+          const tabela = await prisma.tabelaArmazenagem.findUnique({ where: { cnpjCliente: current.cnpj } });
+          if (tabela) {
+            const diasCobrados = Math.max(0, dias - tabela.diasFree);
+            data.valorArmazenagem = diasCobrados * paletes * tabela.valorPaleteDia;
+          }
+        } else if (chegada && entregaDate) {
+          data.diasArmazenagem = Math.max(0, Math.floor((new Date(entregaDate).getTime() - new Date(chegada).getTime()) / (1000 * 60 * 60 * 24)));
+        }
+      }
+    }
+
+    // Remove relational fields that can't be set directly
+    delete data.notas;
+    delete data.motorista;
+    delete data.veiculo;
+    delete data.rota;
+    delete data.cliente;
+    delete data.ocorrencias;
+    delete data._count;
+    delete data.id;
+    delete data.codigo;
+    delete data.createdAt;
+
+    const entrega = await prisma.entrega.update({
+      where: { id: params.id },
+      data,
+      include: {
+        motorista: true,
+        veiculo: true,
+        rota: true,
+        notas: { orderBy: { createdAt: "asc" } },
+        ocorrencias: { orderBy: { createdAt: "desc" } },
       },
     });
-  }
-  if (data.status === "ENTREGUE" && !data.dataEntrega) {
-    data.dataEntrega = new Date();
-  }
 
-  // Preservar dataChegada: se veio como vazio/null, remover do payload para não sobrescrever
-  // A dataChegada só deve mudar quando o usuário explicitamente define uma data no formulário de edição
-  const dataChegadaExplicit = data.dataChegada;
-  if (!dataChegadaExplicit || dataChegadaExplicit === "") {
-    delete data.dataChegada;
-  }
+    // Parse XML of each NF to include products and additional data
+    const notasComProdutos = entrega.notas.map((nf) => {
+      const { produtos, infAdicionais, infFisco, emitente } = parseNFProducts(nf.xmlOriginal);
+      const { xmlOriginal, ...nfSemXml } = nf;
+      return { ...nfSemXml, produtos, infAdicionais, infFisco, emitente };
+    });
 
-  // Transformar strings vazias (UI blank fields) em nulos para o Prisma
-  // Exceto dataChegada que já foi tratada acima
-  Object.keys(data).forEach((key) => {
-    if (key === "dataChegada") return; // já tratado
-    if (data[key] === "") {
-      data[key] = null;
-    }
-  });
+    // Compute armazenagem automatically from TabelaArmazenagem per fornecedor/emitente das NFs
+    let armazenagemCalc: any = null;
+    if (entrega.quantidadePaletes > 0 && entrega.notas.length > 0) {
+      const emitentesCnpjs = Array.from(new Set(entrega.notas.map((n: any) => n.emitenteCnpj).filter(Boolean))) as string[];
+      if (emitentesCnpjs.length > 0) {
+        const tabelas = await prisma.tabelaArmazenagem.findMany({
+          where: { cnpjCliente: { in: emitentesCnpjs } },
+        });
+        if (tabelas.length > 0) {
+          const MS_PER_DAY = 1000 * 60 * 60 * 24;
+          const entrada = entrega.dataChegada || entrega.createdAt;
+          const saida = entrega.dataEntrega || new Date();
+          const dataEntrada = new Date(entrada); dataEntrada.setHours(0, 0, 0, 0);
+          const dataSaida = new Date(saida); dataSaida.setHours(0, 0, 0, 0);
+          const diasDecorridos = Math.max(0, Math.floor((dataSaida.getTime() - dataEntrada.getTime()) / MS_PER_DAY));
 
-  if (data.dataChegada) data.dataChegada = new Date(data.dataChegada);
-  if (data.dataAgendada) data.dataAgendada = new Date(data.dataAgendada);
-  if (data.dataEntrega) data.dataEntrega = new Date(data.dataEntrega);
-  if (data.dataPagamento) data.dataPagamento = new Date(data.dataPagamento);
-  if (data.dataAdiantamento) data.dataAdiantamento = new Date(data.dataAdiantamento);
-  if (data.dataPagamentoSaldo) data.dataPagamentoSaldo = new Date(data.dataPagamentoSaldo);
+          const porFornecedor = tabelas.map((t: any) => {
+            const diasCobraveis = Math.max(0, diasDecorridos - (t.diasFree || 0));
+            const valorCalculado = diasCobraveis * (t.valorPaleteDia || 0) * (entrega.quantidadePaletes || 0);
+            return {
+              cnpjFornecedor: t.cnpjCliente,
+              nomeFornecedor: t.nomeCliente,
+              diasFree: t.diasFree,
+              valorPaleteDia: t.valorPaleteDia,
+              diasCobraveis,
+              valorCalculado,
+            };
+          });
 
-  if (data.motoristaId) {
-    // Apenas recalcula se não vier explícito na request
-    if (valorFrete === undefined && body.valorMotorista === undefined) {
-      const moto = await prisma.motorista.findUnique({ where: { id: data.motoristaId }, select: { tipo: true, valorDiaria: true } });
-      if (moto) {
-        if (moto.tipo === "FROTA") data.valorMotorista = 0;
-        else if (moto.tipo === "DIARIA") {
-          // Verificar se já existe outra rota ou entrega direta para este motorista na mesma data
-          const entregaAtual = await prisma.entrega.findUnique({ where: { id: params.id }, select: { dataAgendada: true } });
-          const entregaDate = data.dataAgendada || entregaAtual?.dataAgendada || new Date();
-          const diaInicio = new Date(entregaDate); diaInicio.setHours(0,0,0,0);
-          const diaFim = new Date(entregaDate); diaFim.setHours(23,59,59,999);
-          const [rotasMesmoDia, entregasMesmoDia] = await Promise.all([
-            prisma.rota.count({ where: { motoristaId: data.motoristaId, data: { gte: diaInicio, lte: diaFim }, status: { not: "CANCELADA" } } }),
-            prisma.entrega.count({ where: { id: { not: params.id }, motoristaId: data.motoristaId, rotaId: null, dataAgendada: { gte: diaInicio, lte: diaFim }, status: { notIn: ["PROGRAMADO", "EM_SEPARACAO"] } } }),
-          ]);
-          data.valorMotorista = (rotasMesmoDia + entregasMesmoDia) === 0 ? (moto.valorDiaria || 0) : 0;
+          armazenagemCalc = {
+            diasDecorridos,
+            emAberto: !entrega.dataEntrega,
+            fornecedores: porFornecedor,
+            valorTotal: porFornecedor.reduce((s: number, f: any) => s + f.valorCalculado, 0),
+          };
         }
       }
     }
+
+    return NextResponse.json({ ...entrega, notas: notasComProdutos, armazenagemCalc });
+  } catch (error: any) {
+    console.error("Erro no PUT /api/entregas/[id]:", error);
+    return NextResponse.json({ error: error.message || "Erro interno ao atualizar a entrega" }, { status: 500 });
   }
-
-  // Calcular saldo automaticamente se frete ou adiantamento mudou
-  if (valorFrete !== undefined || adiantamento !== undefined) {
-    const current = await prisma.entrega.findUnique({ where: { id: params.id } });
-    const frete = valorFrete ?? current?.valorFrete ?? 0;
-    const adt = adiantamento ?? current?.adiantamento ?? 0;
-    data.saldoPendente = frete - adt;
-  }
-
-  // Calcular saldo do motorista automaticamente se valores do motorista mudaram
-  const valorMotorista = body.valorMotorista ?? undefined;
-  const valorSaida = body.valorSaida ?? undefined;
-  const valorDescarga = body.valorDescarga ?? undefined;
-  const adiantamentoMotorista = body.adiantamentoMotorista ?? undefined;
-  const descontosMotorista = body.descontosMotorista ?? undefined;
-
-  if (
-    valorMotorista !== undefined ||
-    valorSaida !== undefined ||
-    valorDescarga !== undefined ||
-    adiantamentoMotorista !== undefined ||
-    descontosMotorista !== undefined
-  ) {
-    const current = await prisma.entrega.findUnique({ where: { id: params.id } });
-    const vMotorista = valorMotorista ?? current?.valorMotorista ?? 0;
-    const vSaida = valorSaida ?? current?.valorSaida ?? 0;
-    const vDescarga = valorDescarga ?? current?.valorDescarga ?? 0;
-    const vAdiantamento = adiantamentoMotorista ?? current?.adiantamentoMotorista ?? 0;
-    const vDescontos = descontosMotorista ?? current?.descontosMotorista ?? 0;
-    data.saldoMotorista = vMotorista + vDescarga - vAdiantamento - vSaida - vDescontos;
-  }
-
-  // Calcular armazenagem automaticamente com base na tabela do cliente
-  {
-    const current = await prisma.entrega.findUnique({ where: { id: params.id } });
-    if (current) {
-      const chegada = data.dataChegada || current.dataChegada;
-      const entregaDate = data.dataEntrega || current.dataEntrega;
-      const paletes = data.quantidadePaletes ?? current.quantidadePaletes ?? 0;
-
-      if (chegada && entregaDate && paletes > 0) {
-        const dias = Math.max(0, Math.floor((new Date(entregaDate).getTime() - new Date(chegada).getTime()) / (1000 * 60 * 60 * 24)));
-        data.diasArmazenagem = dias;
-
-        // Buscar tabela de armazenagem do cliente
-        const tabela = await prisma.tabelaArmazenagem.findUnique({ where: { cnpjCliente: current.cnpj } });
-        if (tabela) {
-          const diasCobrados = Math.max(0, dias - tabela.diasFree);
-          data.valorArmazenagem = diasCobrados * paletes * tabela.valorPaleteDia;
-        }
-      } else if (chegada && entregaDate) {
-        data.diasArmazenagem = Math.max(0, Math.floor((new Date(entregaDate).getTime() - new Date(chegada).getTime()) / (1000 * 60 * 60 * 24)));
-      }
-    }
-  }
-
-  // Remove relational fields that can't be set directly
-  delete data.notas;
-  delete data.motorista;
-  delete data.veiculo;
-  delete data.rota;
-  delete data.cliente;
-  delete data.ocorrencias;
-  delete data._count;
-  delete data.id;
-  delete data.codigo;
-  delete data.createdAt;
-
-  const entrega = await prisma.entrega.update({
-    where: { id: params.id },
-    data,
-    include: {
-      motorista: true,
-      veiculo: true,
-      rota: true,
-      notas: true,
-      ocorrencias: true,
-    },
-  });
-
-  return NextResponse.json(entrega);
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {

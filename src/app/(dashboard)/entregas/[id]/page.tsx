@@ -123,15 +123,20 @@ export default function EntregaDetailPage() {
         }),
       });
       const updated = await res.json();
+      if (!res.ok) {
+        throw new Error(updated.error || updated.message || "Erro retornado pelo servidor");
+      }
       setEntrega(updated);
       setShowEdit(false);
       toast.success("Entrega atualizada");
 
-      if (editForm.status === "FINALIZADO" && entrega.status !== "FINALIZADO") {
+      if (editForm.status === "FINALIZADO" && entrega?.status !== "FINALIZADO") {
         setShowQualityPrompt(true);
       }
-    } catch { toast.error("Erro ao salvar"); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      console.error("Erro ao salvar entrega:", err);
+      toast.error(err.message || "Erro ao salvar");
+    } finally { setSaving(false); }
   }
 
   async function handleOcorrencia() {
@@ -448,15 +453,15 @@ export default function EntregaDetailPage() {
                   {entrega.armazenagemCalc ? (
                     <>
                       <div className="flex justify-between items-center bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-100">
-                        <span className="text-[10px] font-bold">ARMAZENAGEM {entrega.armazenagemCalc.emAberto ? "(em curso)" : ""}</span>
-                        <span className="font-mono text-xs">{formatCurrency(entrega.armazenagemCalc.valorTotal)}</span>
+                        <span className="text-[10px] font-bold">ARMAZENAGEM {entrega.armazenagemCalc?.emAberto ? "(em curso)" : ""}</span>
+                        <span className="font-mono text-xs">{formatCurrency(entrega.armazenagemCalc?.valorTotal)}</span>
                       </div>
                       <div className="text-[10px]" style={{ color: "var(--text3)" }}>
-                        {entrega.armazenagemCalc.diasDecorridos} dia(s) · {entrega.quantidadePaletes || 0} palete(s)
+                        {entrega.armazenagemCalc?.diasDecorridos} dia(s) · {entrega.quantidadePaletes || 0} palete(s)
                       </div>
-                      {entrega.armazenagemCalc.fornecedores.map((f: any) => (
-                        <div key={f.cnpjFornecedor} className="text-[9px] font-mono pl-2 border-l-2 border-amber-200" style={{ color: "var(--text3)" }}>
-                          <span className="font-bold" style={{ color: "var(--text2)" }}>{f.nomeFornecedor}</span>
+                      {entrega.armazenagemCalc?.fornecedores?.map((f: any) => (
+                        <div key={f.cnpjFornecedor || f.cnpjCliente} className="text-[9px] font-mono pl-2 border-l-2 border-amber-200" style={{ color: "var(--text3)" }}>
+                          <span className="font-bold" style={{ color: "var(--text2)" }}>{f.nomeFornecedor || f.nomeCliente}</span>
                           {" · "}{f.diasFree} dias free · {formatCurrency(f.valorPaleteDia)}/pal/dia · {f.diasCobraveis} cobrável(is) → <span className="text-amber-700 font-bold">{formatCurrency(f.valorCalculado)}</span>
                         </div>
                       ))}
@@ -832,9 +837,9 @@ function Field({ label, value, mono, color }: { label: string; value?: string | 
 
 function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: string) => void }) {
   const [expanded, setExpanded] = useState(false);
-  const hasProdutos = nf.produtos && nf.produtos.length > 0;
-  const hasInfoAdicional = nf.infAdicionais && nf.infAdicionais.trim();
-  const hasEmitente = nf.emitente && nf.emitente.razaoSocial;
+  const hasProdutos = nf?.produtos && nf.produtos.length > 0;
+  const hasInfoAdicional = nf?.infAdicionais && nf.infAdicionais.trim();
+  const hasEmitente = nf?.emitente && nf.emitente.razaoSocial;
 
   return (
     <Card className="p-0 overflow-hidden">
@@ -849,11 +854,11 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-sm font-bold" style={{ color: "var(--accent)" }}>NF {nf.numero}</span>
-              {nf.serie && <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--surface2)", color: "var(--text3)" }}>Série {nf.serie}</span>}
+              <span className="text-sm font-bold" style={{ color: "var(--accent)" }}>NF {nf?.numero}</span>
+              {nf?.serie && <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: "var(--surface2)", color: "var(--text3)" }}>Série {nf.serie}</span>}
             </div>
             <div className="text-xs truncate" style={{ color: "var(--text2)" }}>
-              {nf.emitenteRazao || "Fornecedor não informado"}
+              {nf?.emitenteRazao || "Fornecedor não informado"}
             </div>
           </div>
 
@@ -861,20 +866,20 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
           <div className="hidden md:flex items-center gap-6 flex-shrink-0">
             <div className="text-center">
               <div className="text-[9px] font-mono uppercase text-slate-400">Volumes</div>
-              <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{nf.volumes || 0}</div>
+              <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{nf?.volumes || 0}</div>
             </div>
             <div className="text-center">
               <div className="text-[9px] font-mono uppercase text-slate-400">Peso</div>
-              <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{formatWeight(nf.pesoBruto)}</div>
+              <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{formatWeight(nf?.pesoBruto)}</div>
             </div>
             <div className="text-center">
               <div className="text-[9px] font-mono uppercase text-slate-400">Valor NF</div>
-              <div className="text-sm font-bold font-mono text-emerald-600">{formatCurrency(nf.valorNota)}</div>
+              <div className="text-sm font-bold font-mono text-emerald-600">{formatCurrency(nf?.valorNota)}</div>
             </div>
             {hasProdutos && (
               <div className="text-center">
                 <div className="text-[9px] font-mono uppercase text-slate-400">Itens</div>
-                <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{nf.produtos.length}</div>
+                <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{nf?.produtos?.length}</div>
               </div>
             )}
           </div>
@@ -888,8 +893,8 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
       {/* Mobile summary stats */}
       <div className="flex md:hidden items-center gap-4 px-4 pb-3 -mt-1">
         <span className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
-          {nf.volumes || 0} vol · {formatWeight(nf.pesoBruto)} · {formatCurrency(nf.valorNota)}
-          {hasProdutos && ` · ${nf.produtos.length} itens`}
+          {nf?.volumes || 0} vol · {formatWeight(nf?.pesoBruto)} · {formatCurrency(nf?.valorNota)}
+          {hasProdutos && ` · ${nf?.produtos?.length} itens`}
         </span>
       </div>
 
@@ -907,13 +912,13 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
                     <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">Fornecedor / Emitente</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Razão Social" value={nf.emitente.razaoSocial} />
-                    {nf.emitente.fantasia && nf.emitente.fantasia !== "undefined" && <Field label="Nome Fantasia" value={nf.emitente.fantasia} />}
-                    <Field label="CNPJ" value={formatCNPJ(nf.emitente.cnpj)} mono />
-                    {nf.emitente.ie && nf.emitente.ie !== "undefined" && <Field label="Inscrição Estadual" value={nf.emitente.ie} mono />}
-                    <Field label="Cidade / UF" value={`${nf.emitente.cidade}${nf.emitente.uf ? ` — ${nf.emitente.uf}` : ""}`} />
-                    {nf.emitente.endereco && nf.emitente.endereco.trim() && <Field label="Endereço" value={`${nf.emitente.endereco}${nf.emitente.bairro ? `, ${nf.emitente.bairro}` : ""}`} />}
-                    {nf.emitente.telefone && nf.emitente.telefone !== "undefined" && <Field label="Telefone" value={nf.emitente.telefone} />}
+                    <Field label="Razão Social" value={nf?.emitente?.razaoSocial} />
+                    {nf?.emitente?.fantasia && nf.emitente.fantasia !== "undefined" && <Field label="Nome Fantasia" value={nf.emitente.fantasia} />}
+                    <Field label="CNPJ" value={formatCNPJ(nf?.emitente?.cnpj)} mono />
+                    {nf?.emitente?.ie && nf.emitente.ie !== "undefined" && <Field label="Inscrição Estadual" value={nf.emitente.ie} mono />}
+                    <Field label="Cidade / UF" value={`${nf?.emitente?.cidade || ""}${nf?.emitente?.uf ? ` — ${nf.emitente.uf}` : ""}`} />
+                    {nf?.emitente?.endereco && nf.emitente.endereco.trim() && <Field label="Endereço" value={`${nf.emitente.endereco}${nf.emitente.bairro ? `, ${nf.emitente.bairro}` : ""}`} />}
+                    {nf?.emitente?.telefone && nf.emitente.telefone !== "undefined" && <Field label="Telefone" value={nf.emitente.telefone} />}
                   </div>
                 </div>
               )}
@@ -925,18 +930,18 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
                   <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">Dados da Nota Fiscal</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Número" value={nf.numero} mono />
-                  <Field label="Série" value={nf.serie} mono />
-                  <Field label="Data Emissão" value={formatDate(nf.dataEmissao)} mono />
-                  <div className="cursor-pointer group col-span-2" onClick={(e) => { e.stopPropagation(); onViewDanfe(nf.id); }}>
+                  <Field label="Número" value={nf?.numero} mono />
+                  <Field label="Série" value={nf?.serie} mono />
+                  <Field label="Data Emissão" value={formatDate(nf?.dataEmissao)} mono />
+                  <div className="cursor-pointer group col-span-2" onClick={(e) => { e.stopPropagation(); onViewDanfe(nf?.id); }}>
                     <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 mb-0.5">Chave de Acesso</div>
                     <div className="text-xs font-mono font-medium text-blue-500 group-hover:text-blue-400 group-hover:underline transition-colors flex items-center gap-1.5">
-                      {nf.chaveAcesso} <FileText size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {nf?.chaveAcesso} <FileText size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </div>
-                  <Field label="Volumes" value={String(nf.volumes || 0)} mono />
-                  <Field label="Peso Bruto" value={formatWeight(nf.pesoBruto)} mono />
-                  <Field label="Valor Total NF" value={formatCurrency(nf.valorNota)} color="#10b981" />
+                  <Field label="Volumes" value={String(nf?.volumes || 0)} mono />
+                  <Field label="Peso Bruto" value={formatWeight(nf?.pesoBruto)} mono />
+                  <Field label="Valor Total NF" value={formatCurrency(nf?.valorNota)} color="#10b981" />
                 </div>
               </div>
             </div>
@@ -948,7 +953,7 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
                   <div className="flex items-center gap-2 mb-3">
                     <Box size={13} className="text-slate-400" />
                     <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">
-                      Produtos / Serviços ({nf.produtos.length})
+                      Produtos / Serviços ({nf?.produtos?.length})
                     </span>
                   </div>
                   <div className="overflow-x-auto rounded-lg border" style={{ borderColor: "var(--border)" }}>
@@ -965,33 +970,36 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
                         </tr>
                       </thead>
                       <tbody>
-                        {nf.produtos.map((p: any, idx: number) => (
-                          <tr key={idx} style={{ borderTop: idx > 0 ? "1px solid var(--border)" : "none" }}
-                            className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-2.5 py-2 font-mono text-slate-400">{idx + 1}</td>
-                            <td className="px-2.5 py-2">
-                              <div className="font-medium leading-tight" style={{ color: "var(--text)" }}>{p.descricao}</div>
-                              {p.codigo && <div className="text-[9px] font-mono text-slate-400 mt-0.5">Cód: {p.codigo}</div>}
-                            </td>
-                            <td className="px-2.5 py-2 font-mono text-slate-500">{p.ncm}</td>
-                            <td className="px-2.5 py-2 text-right font-mono" style={{ color: "var(--text)" }}>
-                              {p.quantidade % 1 === 0 ? p.quantidade : p.quantidade.toFixed(2)}
-                            </td>
-                            <td className="px-2.5 py-2 font-mono text-slate-500">{p.unidade}</td>
-                            <td className="px-2.5 py-2 text-right font-mono text-slate-500">
-                              {formatCurrency(p.valorUnitario)}
-                            </td>
-                            <td className="px-2.5 py-2 text-right font-mono font-bold text-emerald-600">
-                              {formatCurrency(p.valorTotal)}
-                            </td>
-                          </tr>
-                        ))}
+                        {nf?.produtos?.map((p: any, idx: number) => {
+                          const qtd = typeof p?.quantidade === "number" ? p.quantidade : parseFloat(p?.quantidade || "0") || 0;
+                          return (
+                            <tr key={idx} style={{ borderTop: idx > 0 ? "1px solid var(--border)" : "none" }}
+                              className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-2.5 py-2 font-mono text-slate-400">{idx + 1}</td>
+                              <td className="px-2.5 py-2">
+                                <div className="font-medium leading-tight" style={{ color: "var(--text)" }}>{p?.descricao || "—"}</div>
+                                {p?.codigo && <div className="text-[9px] font-mono text-slate-400 mt-0.5">Cód: {p.codigo}</div>}
+                              </td>
+                              <td className="px-2.5 py-2 font-mono text-slate-500">{p?.ncm || "—"}</td>
+                              <td className="px-2.5 py-2 text-right font-mono" style={{ color: "var(--text)" }}>
+                                {qtd % 1 === 0 ? qtd : qtd.toFixed(2)}
+                              </td>
+                              <td className="px-2.5 py-2 font-mono text-slate-500">{p?.unidade || "—"}</td>
+                              <td className="px-2.5 py-2 text-right font-mono text-slate-500">
+                                {formatCurrency(p?.valorUnitario)}
+                              </td>
+                              <td className="px-2.5 py-2 text-right font-mono font-bold text-emerald-600">
+                                {formatCurrency(p?.valorTotal)}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       <tfoot>
                         <tr style={{ borderTop: "2px solid var(--border)", background: "var(--surface2)" }}>
                           <td colSpan={6} className="px-2.5 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Total Produtos</td>
                           <td className="px-2.5 py-2 text-right font-mono font-bold text-emerald-700">
-                            {formatCurrency(nf.produtos.reduce((s: number, p: any) => s + p.valorTotal, 0))}
+                            {formatCurrency(nf?.produtos?.reduce((s: number, p: any) => s + (p?.valorTotal || 0), 0))}
                           </td>
                         </tr>
                       </tfoot>
@@ -1017,12 +1025,12 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
                 <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">Dados Adicionais</span>
               </div>
               <div className="p-3 rounded-lg text-xs leading-relaxed whitespace-pre-wrap" style={{ background: "var(--surface2)", color: "var(--text2)", border: "1px solid var(--border)" }}>
-                {nf.infAdicionais}
+                {nf?.infAdicionais}
               </div>
             </div>
           )}
 
-          {nf.infFisco && nf.infFisco.trim() && (
+          {nf?.infFisco && nf.infFisco.trim() && (
             <div className="px-4 pb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Info size={13} className="text-slate-400" />
