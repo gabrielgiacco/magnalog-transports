@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   if (aba === "previsao") {
     whereEntrega.dataPagamentoSaldo = { not: null };
   } else if (pendente) {
-    whereEntrega.dataPagamentoSaldo = null;
+    whereEntrega.saldoMotorista = { gt: 0 };
   }
   
   if (dataInicio || dataFim) {
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
   if (aba === "previsao") {
     whereRota.dataPagamentoSaldo = { not: null };
   } else if (pendente) {
-    whereRota.dataPagamentoSaldo = null;
+    whereRota.saldoMotorista = { gt: 0 };
   }
 
   if (dataInicio || dataFim) {
