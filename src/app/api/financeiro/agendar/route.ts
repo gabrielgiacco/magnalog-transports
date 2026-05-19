@@ -15,11 +15,11 @@ export async function POST(req: NextRequest) {
   try {
     const { items, dataPagamentoSaldo } = await req.json();
 
-    if (!Array.isArray(items) || items.length === 0 || !dataPagamentoSaldo) {
+    if (!Array.isArray(items) || items.length === 0 || dataPagamentoSaldo === undefined) {
       return NextResponse.json({ error: "Parâmetros inválidos" }, { status: 400 });
     }
 
-    const dateStr = new Date(dataPagamentoSaldo);
+    const dateStr = dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null;
 
     const rotasIds = items.filter((i: any) => i.isRota).map((i: any) => i.id);
     const entregasIds = items.filter((i: any) => !i.isRota).map((i: any) => i.id);

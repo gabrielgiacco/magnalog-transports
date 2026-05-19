@@ -171,6 +171,27 @@ export function AcertoMotoristasTab() {
     finally { setSaving(false); }
   }
 
+  async function handleBulkRemove() {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Tem certeza que deseja remover a previsão de pagamento de ${selectedIds.length} viagem(ns)?`)) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/financeiro/agendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: selectedIds,
+          dataPagamentoSaldo: null, // Remove prediction
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Previsões removidas com sucesso!");
+      setSelectedIds([]);
+      fetchData();
+    } catch { toast.error("Erro ao remover previsões"); }
+    finally { setSaving(false); }
+  }
+
   const set = (k: string, v: string) => setEditForm((f: any) => ({ ...f, [k]: v }));
 
   const currentSaldoEdit = 
@@ -535,7 +556,10 @@ export function AcertoMotoristasTab() {
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-4 z-50 animate-in slide-in-from-bottom-5">
           <span className="text-sm font-bold font-mono">{selectedIds.length} selecionados</span>
           <Button size="sm" onClick={() => setShowBulkPredict(true)} className="bg-rose-500 hover:bg-rose-600 text-white border-none rounded-full px-4">
-            <CalendarDays size={14} className="mr-2" /> Agendar Pagamento
+            <CalendarDays size={14} className="mr-2" /> Agendar
+          </Button>
+          <Button size="sm" onClick={handleBulkRemove} disabled={saving} className="bg-gray-700 hover:bg-gray-600 text-white border-none rounded-full px-4">
+            Remover Previsão
           </Button>
           <button onClick={() => setSelectedIds([])} className="w-6 h-6 flex items-center justify-center hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors" title="Limpar Seleção">
             ×
