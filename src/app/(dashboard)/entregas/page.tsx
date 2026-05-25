@@ -27,6 +27,7 @@ const FILTER_OPTIONS = [
   { value: "cidade", label: "Cidade", placeholder: "Ex: São Paulo", type: "text" },
   { value: "clienteNome", label: "Cliente", placeholder: "Razão social ou CNPJ", type: "text" },
   { value: "fornecedor", label: "Fornecedor", placeholder: "Buscar por remetente", type: "text" },
+  { value: "endereco", label: "Endereço", placeholder: "Rua, Av, etc.", type: "text" },
   { value: "nf", label: "NF (Nota Fiscal)", placeholder: "Número da NF", type: "text" },
   { value: "anotacoesNf", label: "Dados Adicionais da NF", placeholder: "Buscar nos dados adicionais", type: "text" },
   { value: "uf", label: "UF", placeholder: "Ex: SP", type: "text" },
@@ -88,7 +89,7 @@ export default function EntregasPage() {
   // Build initial filters from URL query params (e.g. /entregas?status=OCORRENCIA)
   function getFiltersFromURL(): DynamicFilter[] | null {
     const urlFilters: DynamicFilter[] = [];
-    const supportedParams = ["status", "cidade", "clienteNome", "fornecedor", "uf", "motorista", "volume", "nf", "anotacoesNf"];
+    const supportedParams = ["status", "cidade", "clienteNome", "fornecedor", "endereco", "uf", "motorista", "volume", "nf", "anotacoesNf"];
     for (const param of supportedParams) {
       const values = searchParams.getAll(param);
       for (const val of values) {
@@ -341,7 +342,7 @@ export default function EntregasPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar NF, cidade, cliente, motorista..."
+                placeholder="Buscar NF, cidade, endereço, cliente, motorista..."
                 className="w-full pl-9 pr-9 py-2 rounded-lg text-sm outline-none"
                 style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
               />

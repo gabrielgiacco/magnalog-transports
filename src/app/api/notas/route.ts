@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
       { numero: { contains: q } },
       { emitenteRazao: { contains: q, mode: "insensitive" } },
       { destinatarioRazao: { contains: q, mode: "insensitive" } },
+      { endereco: { contains: q, mode: "insensitive" } },
+      { bairro: { contains: q, mode: "insensitive" } },
+      { cep: { contains: q, mode: "insensitive" } },
       { chaveAcesso: { contains: q } },
     ];
   }

@@ -38,6 +38,9 @@ export async function GET(req: NextRequest) {
       { destinatarioRazao: { contains: busca, mode: "insensitive" } },
       { emitenteRazao: { contains: busca, mode: "insensitive" } },
       { cidade: { contains: busca, mode: "insensitive" } },
+      { endereco: { contains: busca, mode: "insensitive" } },
+      { bairro: { contains: busca, mode: "insensitive" } },
+      { cep: { contains: busca, mode: "insensitive" } },
       { chaveAcesso: { contains: busca } },
     ];
     const digits = busca.replace(/\D/g, "");

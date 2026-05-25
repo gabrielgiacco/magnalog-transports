@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
     const volumes = searchParams.getAll("volume").filter(Boolean);
     const ufs = searchParams.getAll("uf").filter(Boolean);
     const motoristas = searchParams.getAll("motorista").filter(Boolean);
+    const enderecos = searchParams.getAll("endereco").filter(Boolean);
 
     const where: any = {};
     // AND array to combine multiple filter groups
@@ -63,6 +64,9 @@ export async function GET(req: NextRequest) {
       const orConditions: any[] = [
         { razaoSocial: { contains: cliente, mode: "insensitive" } },
         { cidade: { contains: cliente, mode: "insensitive" } },
+        { endereco: { contains: cliente, mode: "insensitive" } },
+        { bairro: { contains: cliente, mode: "insensitive" } },
+        { cep: { contains: cliente, mode: "insensitive" } },
         { codigo: { contains: cliente, mode: "insensitive" } },
         { notas: { some: { numero: { contains: cliente } } } },
         { notas: { some: { emitenteRazao: { contains: cliente, mode: "insensitive" } } } },
@@ -144,6 +148,15 @@ export async function GET(req: NextRequest) {
     } else if (motoristas.length > 1) {
       andConditions.push({
         OR: motoristas.map((m) => ({ motorista: { nome: { contains: m, mode: "insensitive" } } })),
+      });
+    }
+
+    // Endereço filter: multiple values → OR
+    if (enderecos.length === 1) {
+      andConditions.push({ endereco: { contains: enderecos[0], mode: "insensitive" } });
+    } else if (enderecos.length > 1) {
+      andConditions.push({
+        OR: enderecos.map((e) => ({ endereco: { contains: e, mode: "insensitive" } })),
       });
     }
 

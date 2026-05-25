@@ -140,7 +140,14 @@ export function GlobalSearch() {
                         <span className="font-mono text-[11px] w-20 flex-shrink-0" style={{ color: "var(--accent)" }}>
                           {e.notas && e.notas.length > 0 ? e.notas.map((n: any) => n.numero).join(", ") : e.codigo}
                         </span>
-                        <span className="text-sm flex-1 truncate">{e.razaoSocial}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">{e.razaoSocial}</div>
+                          {e.endereco && (
+                            <div className="text-[11px] truncate" style={{ color: "var(--text3)" }}>
+                              {e.endereco}
+                            </div>
+                          )}
+                        </div>
                         <span className="text-xs flex-shrink-0" style={{ color: "var(--text3)" }}>{e.cidade}</span>
                         <StatusBadge status={e.status} />
                       </button>
