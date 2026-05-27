@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Loading, Button, Modal } from "@/components/ui";
+import toast from "react-hot-toast";
 import { formatCurrency, formatWeight, formatDate } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -31,7 +32,14 @@ export default function RelatoriosPage() {
   const [mes, setMes] = useState(now.getMonth() + 1);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [motoristaDetail, setMotoristaDetail] = useState<{ open: boolean; nome: string; entregas: any[]; loading: boolean }>({ open: false, nome: "", entregas: [], loading: false });
+  const [motoristaDetail, setMotoristaDetail] = useState<{ open: boolean; id: string; nome: string; entregas: any[]; loading: boolean }>({ open: false, id: "", nome: "", entregas: [], loading: false });
+
+  // States do Relatório de Acerto
+  const [motoristasList, setMotoristasList] = useState<any[]>([]);
+  const [selectedMotoristaId, setSelectedMotoristaId] = useState("");
+  const [selectedPeriodo, setSelectedPeriodo] = useState("semana");
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -62,19 +70,84 @@ export default function RelatoriosPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Carregar motoristas ativos
+  useEffect(() => {
+    fetch("/api/motoristas?ativo=true")
+      .then((res) => res.json())
+      .then((data) => setMotoristasList(data || []))
+      .catch((err) => console.error("Erro ao buscar motoristas:", err));
+  }, []);
+
   const anos = Array.from({ length: 4 }, (_, i) => now.getFullYear() - i);
 
   async function handleMotoristaClick(motoristaId: string, nome: string) {
-    setMotoristaDetail({ open: true, nome, entregas: [], loading: true });
+    setMotoristaDetail({ open: true, id: motoristaId, nome, entregas: [], loading: true });
     try {
       const inicio = new Date(ano, mes - 1, 1).toISOString();
       const fim = new Date(ano, mes, 0, 23, 59, 59).toISOString();
       const res = await fetch(`/api/relatorios/motorista?motoristaId=${motoristaId}&inicio=${inicio}&fim=${fim}`);
       const entregas = await res.json();
-      setMotoristaDetail({ open: true, nome, entregas, loading: false });
+      setMotoristaDetail({ open: true, id: motoristaId, nome, entregas, loading: false });
     } catch {
       setMotoristaDetail((prev) => ({ ...prev, loading: false }));
     }
+  }
+
+  function handleGerarRelatorioAcerto() {
+    if (!selectedMotoristaId) {
+      toast.error("Selecione um motorista");
+      return;
+    }
+
+    let inicioStr = "";
+    let fimStr = "";
+
+    const hoje = new Date();
+
+    if (selectedPeriodo === "semana") {
+      const d = hoje.getDay();
+      const seg = new Date(hoje);
+      seg.setDate(hoje.getDate() - (d === 0 ? 6 : d - 1));
+      seg.setHours(0,0,0,0);
+      const dom = new Date(seg);
+      dom.setDate(seg.getDate() + 6);
+      dom.setHours(23,59,59,999);
+      inicioStr = seg.toISOString();
+      fimStr = dom.toISOString();
+    } else if (selectedPeriodo === "semana_passada") {
+      const d = hoje.getDay();
+      const seg = new Date(hoje);
+      seg.setDate(hoje.getDate() - (d === 0 ? 6 : d - 1) - 7);
+      seg.setHours(0,0,0,0);
+      const dom = new Date(seg);
+      dom.setDate(seg.getDate() + 6);
+      dom.setHours(23,59,59,999);
+      inicioStr = seg.toISOString();
+      fimStr = dom.toISOString();
+    } else if (selectedPeriodo === "mes") {
+      const y = hoje.getFullYear();
+      const m = hoje.getMonth();
+      const ini = new Date(y, m, 1, 0, 0, 0, 0);
+      const fim = new Date(y, m + 1, 0, 23, 59, 59, 999);
+      inicioStr = ini.toISOString();
+      fimStr = fim.toISOString();
+    } else if (selectedPeriodo === "mes_passada") {
+      const y = hoje.getFullYear();
+      const m = hoje.getMonth();
+      const ini = new Date(y, m - 1, 1, 0, 0, 0, 0);
+      const fim = new Date(y, m, 0, 23, 59, 59, 999);
+      inicioStr = ini.toISOString();
+      fimStr = fim.toISOString();
+    } else if (selectedPeriodo === "personalizado") {
+      if (!dataInicio || !dataFim) {
+        toast.error("Selecione as datas de início e fim");
+        return;
+      }
+      inicioStr = new Date(dataInicio + "T00:00:00").toISOString();
+      fimStr = new Date(dataFim + "T23:59:59").toISOString();
+    }
+
+    window.open(`/imprimir/acerto-motorista?motoristaId=${selectedMotoristaId}&inicio=${inicioStr}&fim=${fimStr}`, "_blank");
   }
 
   return (
@@ -313,6 +386,79 @@ export default function RelatoriosPage() {
             {/* ─── MOTORISTAS ─────────────────────────────────────────────── */}
             {tab === "motoristas" && data && (
               <div className="space-y-4 sm:space-y-5">
+                {/* Gerador de Relatório de Acerto */}
+                <Card className="p-4 sm:p-5">
+                  <div className="font-head text-sm font-bold mb-3 sm:mb-4 flex items-center gap-2">
+                    <Truck size={16} className="text-orange-500" />
+                    <span>Geração de Relatório de Acerto para Assinatura</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 items-end">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold" style={{ color: "var(--text2)" }}>Selecionar Motorista</label>
+                      <select
+                        value={selectedMotoristaId}
+                        onChange={(e) => setSelectedMotoristaId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                      >
+                        <option value="">Selecione...</option>
+                        {motoristasList.map((m: any) => (
+                          <option key={m.id} value={m.id}>{m.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold" style={{ color: "var(--text2)" }}>Período</label>
+                      <select
+                        value={selectedPeriodo}
+                        onChange={(e) => setSelectedPeriodo(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                      >
+                        <option value="semana">Esta Semana</option>
+                        <option value="semana_passada">Semana Passada</option>
+                        <option value="mes">Este Mês</option>
+                        <option value="mes_passada">Mês Passado</option>
+                        <option value="personalizado">Período Personalizado</option>
+                      </select>
+                    </div>
+
+                    {selectedPeriodo === "personalizado" ? (
+                      <>
+                        <div className="flex flex-col gap-1.5 animate-fadeIn">
+                          <label className="text-xs font-semibold" style={{ color: "var(--text2)" }}>De</label>
+                          <input
+                            type="date"
+                            value={dataInicio}
+                            onChange={(e) => setDataInicio(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg text-sm outline-none"
+                            style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5 animate-fadeIn">
+                          <label className="text-xs font-semibold" style={{ color: "var(--text2)" }}>Até</label>
+                          <input
+                            type="date"
+                            value={dataFim}
+                            onChange={(e) => setDataFim(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-lg text-sm outline-none"
+                            style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="md:col-span-2 hidden md:block" />
+                    )}
+
+                    <div className={selectedPeriodo === "personalizado" ? "md:col-span-4 flex justify-end" : "md:col-span-2 flex justify-end"}>
+                      <Button onClick={handleGerarRelatorioAcerto} className="w-full md:w-auto">
+                        <Download size={14} className="mr-1.5" /> Gerar para Impressão
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+
                 {/* Mobile card list */}
                 <Card className="lg:hidden">
                   <div className="font-head text-sm font-bold mb-4">Ranking — {MESES[mes-1]}/{ano}</div>
@@ -456,10 +602,19 @@ export default function RelatoriosPage() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setMotoristaDetail({ open: false, nome: "", entregas: [], loading: false })}
-                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                <X size={18} className="text-slate-400" />
-              </button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" onClick={() => {
+                  const inicio = new Date(ano, mes - 1, 1, 0, 0, 0, 0).toISOString();
+                  const fim = new Date(ano, mes, 0, 23, 59, 59, 999).toISOString();
+                  window.open(`/imprimir/acerto-motorista?motoristaId=${motoristaDetail.id}&inicio=${inicio}&fim=${fim}`, "_blank");
+                }}>
+                  <Download size={12} className="mr-1" /> Imprimir Acerto
+                </Button>
+                <button onClick={() => setMotoristaDetail({ open: false, id: "", nome: "", entregas: [], loading: false })}
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <X size={18} className="text-slate-400" />
+                </button>
+              </div>
             </div>
 
             {/* Body */}
