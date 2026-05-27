@@ -240,8 +240,11 @@ export default function AgendamentosPage() {
                     <tr>
                       <Th>Data Agendada</Th>
                       <Th>Status</Th>
+                      <Th>Fornecedor</Th>
                       <Th>NF / Cliente</Th>
                       <Th>Cidade / UF</Th>
+                      <Th>Peso</Th>
+                      <Th>Paletes</Th>
                       <Th>Motorista</Th>
                       <Th></Th>
                     </tr>
@@ -250,6 +253,9 @@ export default function AgendamentosPage() {
                     {entregas.map((e) => {
                       const dataStr = e.dataAgendada ? new Date(e.dataAgendada).toISOString().split("T")[0] : null;
                       const atrasada = dataStr && dataStr < hojeStr && !["ENTREGUE", "FINALIZADO"].includes(e.status);
+                      const fornecedor = e.notas && e.notas.length > 0 
+                        ? Array.from(new Set(e.notas.filter((n: any) => n.emitenteRazao).map((n: any) => n.emitenteRazao))).join(", ") || "—"
+                        : "—";
                       return (
                         <Tr key={e.id} onClick={() => router.push(`/entregas/${e.id}`)}
                           className={atrasada ? "border-l-4" : ""}
@@ -262,12 +268,21 @@ export default function AgendamentosPage() {
                           </Td>
                           <Td><StatusBadge status={e.status} /></Td>
                           <Td>
+                            <span className="text-xs text-[var(--text2)] truncate max-w-[150px] inline-block" title={fornecedor}>{fornecedor}</span>
+                          </Td>
+                          <Td>
                             <div className="font-semibold text-sm leading-tight text-[var(--text)] mb-0.5">{e.razaoSocial}</div>
                             <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
                               {e.notas && e.notas.length > 0 ? e.notas.map((n: any) => n.numero).join(", ") : e.codigo} • {formatCNPJ(e.cnpj)}
                             </div>
                           </Td>
                           <Td><span className="text-xs text-[var(--text2)]">{e.cidade}{e.uf ? ` — ${e.uf}` : ""}</span></Td>
+                          <Td><span className="text-xs font-mono text-[var(--text2)]">{formatWeight(e.pesoTotal)}</span></Td>
+                          <Td>
+                            <span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: "rgba(249,115,22,0.1)", color: "#f97316" }}>
+                              {e.quantidadePaletes || 0}
+                            </span>
+                          </Td>
                           <Td><span className="text-xs text-[var(--text2)]">{e.motorista?.nome || <span style={{ color: "var(--text3)" }}>Não alocado</span>}</span></Td>
                           <Td className="text-right">
                             <button className="p-1.5 rounded-lg hover:opacity-70 transition-all bg-[var(--surface2)] text-[var(--text2)]"
@@ -345,20 +360,26 @@ export default function AgendamentosPage() {
                           {day}
                         </div>
                         <div className="flex-1 space-y-0.5 overflow-hidden">
-                          {dayEntregas.slice(0, MAX_SHOW).map((e) => (
-                            <div key={e.id}
-                              onClick={(ev) => { ev.stopPropagation(); router.push(`/entregas/${e.id}`); }}
-                              className="px-1.5 py-1 rounded text-[10px] font-medium leading-tight truncate cursor-pointer hover:opacity-80 transition-opacity"
-                              style={{
-                                background: ["ENTREGUE", "FINALIZADO"].includes(e.status) ? "rgba(16,185,129,.1)" : dateStr < hojeStr ? "rgba(239,68,68,.08)" : "rgba(59,130,246,.08)",
-                                color: ["ENTREGUE", "FINALIZADO"].includes(e.status) ? "#10b981" : dateStr < hojeStr ? "#ef4444" : "#3b82f6",
-                                border: `1px solid ${["ENTREGUE", "FINALIZADO"].includes(e.status) ? "rgba(16,185,129,.2)" : dateStr < hojeStr ? "rgba(239,68,68,.15)" : "rgba(59,130,246,.15)"}`,
-                              }}
-                              title={e.razaoSocial}
-                            >
-                              {e.razaoSocial}
-                            </div>
-                          ))}
+                          {dayEntregas.slice(0, MAX_SHOW).map((e) => {
+                            const fornecedor = e.notas && e.notas.length > 0 
+                              ? Array.from(new Set(e.notas.filter((n: any) => n.emitenteRazao).map((n: any) => n.emitenteRazao))).join(", ") || "—"
+                              : "—";
+                            const titleStr = `${e.razaoSocial}\nFornecedor: ${fornecedor}\nPeso: ${formatWeight(e.pesoTotal)}\nPaletes: ${e.quantidadePaletes || 0}`;
+                            return (
+                              <div key={e.id}
+                                onClick={(ev) => { ev.stopPropagation(); router.push(`/entregas/${e.id}`); }}
+                                className="px-1.5 py-1 rounded text-[10px] font-medium leading-tight truncate cursor-pointer hover:opacity-80 transition-opacity"
+                                style={{
+                                  background: ["ENTREGUE", "FINALIZADO"].includes(e.status) ? "rgba(16,185,129,.1)" : dateStr < hojeStr ? "rgba(239,68,68,.08)" : "rgba(59,130,246,.08)",
+                                  color: ["ENTREGUE", "FINALIZADO"].includes(e.status) ? "#10b981" : dateStr < hojeStr ? "#ef4444" : "#3b82f6",
+                                  border: `1px solid ${["ENTREGUE", "FINALIZADO"].includes(e.status) ? "rgba(16,185,129,.2)" : dateStr < hojeStr ? "rgba(239,68,68,.15)" : "rgba(59,130,246,.15)"}`,
+                                }}
+                                title={titleStr}
+                              >
+                                {e.razaoSocial}
+                              </div>
+                            );
+                          })}
                           {dayEntregas.length > MAX_SHOW && (
                             <button
                               onClick={(ev) => { ev.stopPropagation(); setSelectedDay({ day, entregas: dayEntregas }); }}
@@ -394,30 +415,46 @@ export default function AgendamentosPage() {
               </span>
             </div>
             <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-              {selectedDay.entregas.map((e) => (
-                <div key={e.id}
-                  onClick={() => { setSelectedDay(null); router.push(`/entregas/${e.id}`); }}
-                  className="p-3 rounded-xl cursor-pointer hover:shadow-md transition-all"
-                  style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
-                  <div className="flex items-start justify-between mb-1">
-                    <span className="text-sm font-semibold leading-tight flex-1 mr-2">{e.razaoSocial}</span>
-                    <StatusBadge status={e.status} />
-                  </div>
-                  <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--text3)" }}>
-                    {e.motorista?.nome && (
+              {selectedDay.entregas.map((e) => {
+                const fornecedor = e.notas && e.notas.length > 0 
+                  ? Array.from(new Set(e.notas.filter((n: any) => n.emitenteRazao).map((n: any) => n.emitenteRazao))).join(", ") || "—"
+                  : "—";
+                return (
+                  <div key={e.id}
+                    onClick={() => { setSelectedDay(null); router.push(`/entregas/${e.id}`); }}
+                    className="p-3 rounded-xl cursor-pointer hover:shadow-md transition-all"
+                    style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                    <div className="flex items-start justify-between mb-1">
+                      <span className="text-sm font-semibold leading-tight flex-1 mr-2">{e.razaoSocial}</span>
+                      <StatusBadge status={e.status} />
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--text3)" }}>
+                      {e.motorista?.nome && (
+                        <span className="flex items-center gap-1">
+                          <span>👤</span> {e.motorista.nome}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
-                        <span>👤</span> {e.motorista.nome}
+                        <span>📍</span> {e.cidade}{e.uf ? `, ${e.uf}` : ""}
                       </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <span>📍</span> {e.cidade}{e.uf ? `, ${e.uf}` : ""}
-                    </span>
-                    {e.notas && e.notas.length > 0 && (
-                      <span className="font-mono">NF {e.notas.map((n: any) => n.numero).join(", ")}</span>
-                    )}
+                      {e.notas && e.notas.length > 0 && (
+                        <span className="font-mono">NF {e.notas.map((n: any) => n.numero).join(", ")}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] mt-1.5 pt-1.5 border-t border-[var(--border)]" style={{ color: "var(--text2)" }}>
+                      <span className="flex items-center gap-1">
+                        <span className="font-semibold text-[var(--text3)]">Fornecedor:</span> {fornecedor}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-semibold text-[var(--text3)]">Peso:</span> {formatWeight(e.pesoTotal)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-semibold text-[var(--text3)]">Paletes:</span> {e.quantidadePaletes || 0}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
