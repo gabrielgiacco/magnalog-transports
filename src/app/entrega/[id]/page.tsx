@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { formatDate } from "@/lib/utils";
 
 const STATUS_STEPS = [
   { key: "PROGRAMADO",   label: "Programado",    icon: "📋", desc: "Entrega programada no sistema" },
@@ -29,7 +30,7 @@ export default function EntregaTrackingPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
+  const fmtDate = (d: any) => formatDate(d);
 
   const currentIdx = STATUS_STEPS.findIndex(s => s.key === entrega?.status);
 
