@@ -55,6 +55,7 @@ export default function AvariasPage() {
   const [filterTipo, setFilterTipo] = useState("");
   const [filterFase, setFilterFase] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [searchDev, setSearchDev] = useState("");
 
   // Devolucoes (grouped by avaria)
   const [devGroups, setDevGroups] = useState<{ avaria: any; nfds: any[] }[]>([]);
@@ -265,8 +266,21 @@ export default function AvariasPage() {
     finally { setImportingNFD(false); }
   }
 
+  const filteredDevGroups = devGroups.filter(g => {
+    if (!searchDev.trim()) return true;
+    const q = searchDev.toLowerCase().trim();
+    if (g.avaria.codigo?.toLowerCase().includes(q)) return true;
+    if (g.avaria.descricao?.toLowerCase().includes(q)) return true;
+    return g.nfds.some((d: any) =>
+      d.numero?.toLowerCase().includes(q) ||
+      d.emitenteRazao?.toLowerCase().includes(q) ||
+      d.emitenteCnpj?.includes(q) ||
+      d.chaveAcesso?.includes(q)
+    );
+  });
+
   // Flat list of all NFDs across groups (for selection/bulk actions)
-  const allDevolucoes = devGroups.flatMap(g => g.nfds);
+  const allDevolucoes = filteredDevGroups.flatMap(g => g.nfds);
 
   function toggleDevId(devId: string) {
     setSelectedDevIds(prev => prev.includes(devId) ? prev.filter(x => x !== devId) : [...prev, devId]);
@@ -565,9 +579,20 @@ export default function AvariasPage() {
             </Button>
           </div>
 
-          {loadingDev ? <Loading /> : devGroups.length === 0 ? <Empty icon="📦" text="Nenhuma NF de devolução importada" /> : (
+          {/* Barra de Pesquisa de Devoluções */}
+          <Card className="p-3 sm:p-4">
+            <div className="relative w-full">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
+              <input value={searchDev} onChange={e => setSearchDev(e.target.value)}
+                placeholder="Buscar por NF de devolução, código de avaria, emitente ou CNPJ..."
+                className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+            </div>
+          </Card>
+
+          {loadingDev ? <Loading /> : filteredDevGroups.length === 0 ? <Empty icon="📦" text="Nenhuma devolução encontrada" /> : (
             <div className="space-y-3">
-              {devGroups.map(group => {
+              {filteredDevGroups.map(group => {
                 const isExpanded = expandedDevGroups.includes(group.avaria.id);
                 const totalValor = group.nfds.reduce((s: number, d: any) => s + (d.valorNota || 0), 0);
                 const emitente = group.nfds[0]?.emitenteRazao || "—";
