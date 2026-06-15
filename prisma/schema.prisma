@@ -103,7 +103,8 @@ model Veiculo {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   motorista    Motorista?  @relation(fields: [motoristaId], references: [id])
-  entregas     Entrega[]
+  entregas     Entrega[]   @relation("VeiculoPrincipal")
+  entregasCompl Entrega[]  @relation("VeiculoComplementar")
   rotas        Rota[]
 }
 
@@ -120,7 +121,8 @@ model Motorista {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   veiculos     Veiculo[]
-  entregas     Entrega[]
+  entregas     Entrega[] @relation("MotoristaPrincipal")
+  entregasCompl Entrega[] @relation("MotoristaComplementar")
   rotas        Rota[]
   avarias      Avaria[]
 }
@@ -202,6 +204,8 @@ model Entrega {
   dataEntrega      DateTime?
   motoristaId      String?
   veiculoId        String?
+  motoristaComplId String?
+  veiculoComplId   String?
   rotaId           String?
   chaveAcesso      String?       @db.Text
   pesoTotal        Float         @default(0)
@@ -225,6 +229,16 @@ model Entrega {
   dataPagamentoSaldo    DateTime?             // Quitação do Terceiro
   statusCanhoto         String    @default("PENDENTE") // PENDENTE ou RECEBIDO
 
+  // Custo e Acerto do Motorista Complementar
+  valorMotoristaCompl        Float     @default(0)
+  valorSaidaCompl            Float     @default(0)
+  adiantamentoMotoristaCompl Float     @default(0)
+  descontosMotoristaCompl    Float     @default(0)
+  saldoMotoristaCompl        Float     @default(0)
+  dataAdiantamentoCompl      DateTime?
+  dataPagamentoSaldoCompl    DateTime?
+  statusCanhotoCompl         String    @default("PENDENTE")
+
   // Legado (se ainda em uso)
   adiantamento     Float     @default(0)
   dataPagamento    DateTime?
@@ -232,8 +246,10 @@ model Entrega {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   cliente          Cliente?      @relation(fields: [clienteId], references: [id])
-  motorista        Motorista?    @relation(fields: [motoristaId], references: [id])
-  veiculo          Veiculo?      @relation(fields: [veiculoId], references: [id])
+  motorista        Motorista?    @relation("MotoristaPrincipal", fields: [motoristaId], references: [id])
+  veiculo          Veiculo?      @relation("VeiculoPrincipal", fields: [veiculoId], references: [id])
+  motoristaCompl   Motorista?    @relation("MotoristaComplementar", fields: [motoristaComplId], references: [id])
+  veiculoCompl     Veiculo?      @relation("VeiculoComplementar", fields: [veiculoComplId], references: [id])
   rota             Rota?         @relation(fields: [rotaId], references: [id])
   faturaId         String?
   fatura           Fatura?       @relation(fields: [faturaId], references: [id])

@@ -52,6 +52,16 @@ const BLANK_FORM = {
   dataChegada: "", dataAgendada: "", motoristaId: "", veiculoId: "",
   valorFrete: "", valorDescarga: "", valorArmazenagem: "", adiantamento: "",
   observacoes: "", status: "PROGRAMADO",
+  // Complementar:
+  motoristaComplId: "",
+  veiculoComplId: "",
+  valorMotoristaCompl: "",
+  valorSaidaCompl: "",
+  adiantamentoMotoristaCompl: "",
+  descontosMotoristaCompl: "",
+  dataAdiantamentoCompl: "",
+  dataPagamentoSaldoCompl: "",
+  statusCanhotoCompl: "PENDENTE",
 };
 
 function SortTh({ col, label, sortBy, sortOrder, onSort }: {
@@ -196,6 +206,7 @@ export default function EntregasPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ ...BLANK_FORM });
   const [saving, setSaving] = useState(false);
+  const [showComplFields, setShowComplFields] = useState(false);
   const [motoristas, setMotoristas] = useState<any[]>([]);
   const [veiculos, setVeiculos] = useState<any[]>([]);
 
@@ -267,12 +278,23 @@ export default function EntregasPage() {
           valorDescarga: parseFloat(form.valorDescarga) || 0,
           valorArmazenagem: parseFloat(form.valorArmazenagem) || 0,
           adiantamento: parseFloat(form.adiantamento) || 0,
+          // Complementar:
+          motoristaComplId: form.motoristaComplId || null,
+          veiculoComplId: form.veiculoComplId || null,
+          valorMotoristaCompl: parseFloat(form.valorMotoristaCompl) || 0,
+          valorSaidaCompl: parseFloat(form.valorSaidaCompl) || 0,
+          adiantamentoMotoristaCompl: parseFloat(form.adiantamentoMotoristaCompl) || 0,
+          descontosMotoristaCompl: parseFloat(form.descontosMotoristaCompl) || 0,
+          dataAdiantamentoCompl: form.dataAdiantamentoCompl || null,
+          dataPagamentoSaldoCompl: form.dataPagamentoSaldoCompl || null,
+          statusCanhotoCompl: form.statusCanhotoCompl || "PENDENTE",
         }),
       });
       if (!res.ok) throw new Error(await res.text());
       toast.success("Entrega criada!");
       setShowModal(false);
       setForm({ ...BLANK_FORM });
+      setShowComplFields(false);
       fetchEntregas();
     } catch (e: any) {
       toast.error(e.message);
@@ -676,8 +698,7 @@ export default function EntregasPage() {
         </Card>
       </div>
 
-      {/* Modal Nova Entrega */}
-      <Modal open={showModal} onClose={() => { setShowModal(false); setForm({ ...BLANK_FORM }); }} title="Nova Entrega" size="lg">
+      <Modal open={showModal} onClose={() => { setShowModal(false); setForm({ ...BLANK_FORM }); setShowComplFields(false); }} title="Nova Entrega" size="lg">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <Input label="CNPJ *" value={form.cnpj} onChange={(e) => set("cnpj", e.target.value)} placeholder="00.000.000/0000-00" />
           <Input label="Razão Social *" value={form.razaoSocial} onChange={(e) => set("razaoSocial", e.target.value)} />
@@ -694,6 +715,117 @@ export default function EntregasPage() {
             <option value="">Selecionar...</option>
             {veiculos.map((v) => <option key={v.id} value={v.id}>{v.placa} — {v.tipo}</option>)}
           </Select>
+
+          {!showComplFields ? (
+            <div className="sm:col-span-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full justify-center border-dashed border-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-900"
+                onClick={() => setShowComplFields(true)}
+              >
+                <Plus size={14} className="mr-2" /> Adicionar Motorista Complementar (Carga Complementar)
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="sm:col-span-2 flex items-center justify-between py-2 border-b text-[10px] font-bold text-slate-400 uppercase">
+                <span>Motorista Complementar</span>
+                <button
+                  type="button"
+                  className="text-red-500 hover:text-red-700 text-xs font-semibold normal-case"
+                  onClick={() => {
+                    set("motoristaComplId", "");
+                    set("veiculoComplId", "");
+                    set("valorMotoristaCompl", "");
+                    set("valorSaidaCompl", "");
+                    set("adiantamentoMotoristaCompl", "");
+                    set("descontosMotoristaCompl", "");
+                    set("dataAdiantamentoCompl", "");
+                    set("dataPagamentoSaldoCompl", "");
+                    set("statusCanhotoCompl", "PENDENTE");
+                    setShowComplFields(false);
+                  }}
+                >
+                  Remover
+                </button>
+              </div>
+              
+              <ComboboxMotorista
+                motoristas={motoristas}
+                veiculos={veiculos}
+                value={form.motoristaComplId}
+                onChange={(id) => set("motoristaComplId", id)}
+                onAutoFillVeiculo={(vid) => set("veiculoComplId", vid)}
+                label="Motorista Complementar"
+              />
+              <Select
+                label="Veículo Complementar"
+                value={form.veiculoComplId}
+                onChange={(e) => set("veiculoComplId", e.target.value)}
+              >
+                <option value="">Selecionar...</option>
+                {veiculos.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.placa} — {v.tipo}
+                  </option>
+                ))}
+              </Select>
+
+              <Input
+                label="Valor Combinado Complementar"
+                type="number"
+                value={form.valorMotoristaCompl}
+                onChange={(e) => set("valorMotoristaCompl", e.target.value)}
+                placeholder="0,00"
+              />
+              <Input
+                label="Pedágio/Saída Complementar"
+                type="number"
+                value={form.valorSaidaCompl}
+                onChange={(e) => set("valorSaidaCompl", e.target.value)}
+                placeholder="0,00"
+              />
+              <Input
+                label="Adiantamento Complementar"
+                type="number"
+                value={form.adiantamentoMotoristaCompl}
+                onChange={(e) => set("adiantamentoMotoristaCompl", e.target.value)}
+                placeholder="0,00"
+              />
+              <Input
+                label="Descontos Complementar"
+                type="number"
+                value={form.descontosMotoristaCompl}
+                onChange={(e) => set("descontosMotoristaCompl", e.target.value)}
+                placeholder="0,00"
+              />
+              
+              <Input
+                label="Data Adiantamento Compl."
+                type="date"
+                value={form.dataAdiantamentoCompl}
+                onChange={(e) => set("dataAdiantamentoCompl", e.target.value)}
+              />
+              <Input
+                label="Data Pagamento Saldo Compl."
+                type="date"
+                value={form.dataPagamentoSaldoCompl}
+                onChange={(e) => set("dataPagamentoSaldoCompl", e.target.value)}
+              />
+              
+              <Select
+                label="Status do Canhoto Compl."
+                value={form.statusCanhotoCompl}
+                onChange={(e) => set("statusCanhotoCompl", e.target.value)}
+                className="sm:col-span-2"
+              >
+                <option value="PENDENTE">Pendente</option>
+                <option value="RECEBIDO">Recebido</option>
+                <option value="COM_RESSALVA">Com Ressalva</option>
+              </Select>
+            </>
+          )}
 
           <div className="sm:col-span-2">
             <div className="text-[10px] font-mono uppercase tracking-widest mb-3" style={{ color: "var(--text3)", borderTop: "1px solid var(--border)", paddingTop: "12px" }}>Financeiro</div>

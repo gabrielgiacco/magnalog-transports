@@ -48,12 +48,12 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    function formatCityName(str: string) {
+    const formatCityName = (str: string) => {
       return str.toLowerCase().split(' ').map(word => {
         if (["de", "da", "do", "das", "dos"].includes(word)) return word;
         return word.charAt(0).toUpperCase() + word.slice(1);
       }).join(' ');
-    }
+    };
 
     const cidadeMap = new Map<string, number>();
     for (const item of rawPorCidade) {

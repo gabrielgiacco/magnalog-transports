@@ -11,14 +11,27 @@ const formatCNPJ = (cnpj: string) => {
   return cnpj;
 };
 
-export default async function CartaFretePage({ params }: { params: { tipo: string; id: string } }) {
+export default async function CartaFretePage({
+  params,
+  searchParams,
+}: {
+  params: { tipo: string; id: string };
+  searchParams?: { motorista?: string };
+}) {
   const { tipo, id } = params;
+  const isCompl = searchParams?.motorista === "complementar";
   let data: any = null;
 
   if (tipo === "entrega") {
     data = await prisma.entrega.findUnique({
       where: { id },
-      include: { motorista: true, veiculo: true, notas: true },
+      include: {
+        motorista: true,
+        veiculo: true,
+        motoristaCompl: true,
+        veiculoCompl: true,
+        notas: true,
+      },
     });
   } else if (tipo === "rota") {
     data = await prisma.rota.findUnique({
@@ -56,14 +69,14 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
   const sumPesos = notas.reduce((acc: number, n: any) => acc + (n.pesoBruto || 0), 0);
   const notasStr = notas.map((n: any) => n.numero).join(", ");
 
-  const m = data.motorista || {};
-  const v = data.veiculo || {};
+  const m = isCompl ? (data.motoristaCompl || {}) : (data.motorista || {});
+  const v = isCompl ? (data.veiculoCompl || {}) : (data.veiculo || {});
 
-  const freteCombinado = data.valorMotorista || 0;
-  const adiantamento = data.adiantamentoMotorista || 0;
-  const pedagios = data.valorSaida || 0;
-  const descontos = data.descontosMotorista || 0;
-  const saldo = data.saldoMotorista || 0;
+  const freteCombinado = isCompl ? (data.valorMotoristaCompl || 0) : (data.valorMotorista || 0);
+  const adiantamento = isCompl ? (data.adiantamentoMotoristaCompl || 0) : (data.adiantamentoMotorista || 0);
+  const pedagios = isCompl ? (data.valorSaidaCompl || 0) : (data.valorSaida || 0);
+  const descontos = isCompl ? (data.descontosMotoristaCompl || 0) : (data.descontosMotorista || 0);
+  const saldo = isCompl ? (data.saldoMotoristaCompl || 0) : (data.saldoMotorista || 0);
 
   return (
     <div className="bg-white min-h-screen text-black w-full p-4 print:p-0">
@@ -71,7 +84,7 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
         
         {/* Helper print button visible only on screen */}
         <div className="absolute -top-12 right-0 print:hidden">
-          <button onClick="window.print()" className="bg-blue-600 text-white px-4 py-2 rounded font-bold shadow hover:bg-blue-700">Imprimir Carta Frete</button>
+          <button id="btn-print-carta-frete" className="bg-blue-600 text-white px-4 py-2 rounded font-bold shadow hover:bg-blue-700">Imprimir Carta Frete</button>
         </div>
 
         {/* Global border */}
@@ -95,7 +108,7 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
             </div>
             {/* Document Info */}
             <div className="w-[35%] flex flex-col">
-              <div className="font-bold text-xl p-1 border-b border-black">N° {data.codigo || data.id.slice(-6).toUpperCase()}</div>
+              <div className="font-bold text-xl p-1 border-b border-black">N° {data.codigo || data.id.slice(-6).toUpperCase()}{isCompl ? " (COMPLEMENTAR)" : ""}</div>
               <div className="font-bold p-1 border-b border-black">1. VIA - MOTORISTA</div>
               <div className="flex p-1">
                 <div className="w-1/2"><span className="font-bold">DATA EMISSÃO:</span></div>
@@ -134,7 +147,7 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
               <div className="p-1 border-b border-black flex">
                 <span className="font-bold w-32">Unidade Embarque:</span> MGL
               </div>
-              <div className="font-bold text-center border-b border-black bg-gray-200">RECIBO DE ADIANTAMENTO</div>
+              <div className="font-bold text-center border-b border-black bg-gray-200">RECIBO DE ADIANTAMENTO {isCompl ? "COMPLEMENTAR" : ""}</div>
               <div className="p-2 text-[10px]">
                 Declaro que recebi da empresa emitente deste documento o valor de <strong>{formatCurrency(adiantamento)}</strong>
               </div>
@@ -244,7 +257,7 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
             {/* Left Financial Box */}
             <div className="w-[45%] flex flex-col border-r-[2px] border-black">
               {/* Composição Header */}
-              <div className="text-center font-bold border-b-[2px] border-black bg-gray-200">COMPOSIÇÃO FRETE MOTORISTA</div>
+              <div className="text-center font-bold border-b-[2px] border-black bg-gray-200">COMPOSIÇÃO FRETE MOTORISTA {isCompl ? "COMPLEMENTAR" : ""}</div>
               {/* Combinado / Peso / Tolerancia */}
               <div className="flex text-center font-bold border-b-[2px] border-black">
                 <div className="w-[40%] border-r border-black">FRETE COMBINADO R$</div>
@@ -295,9 +308,10 @@ export default async function CartaFretePage({ params }: { params: { tipo: strin
 
       {/* Script client side to auto trigger print and fix the button */}
       <script dangerouslySetInnerHTML={{ __html: `
-        document.querySelectorAll('button[onClick="window.print()"]').forEach(b => {
-          b.onclick = function() { window.print(); }
-        });
+        const btn = document.getElementById("btn-print-carta-frete");
+        if (btn) {
+          btn.onclick = function() { window.print(); }
+        }
       `}} />
     </div>
   );

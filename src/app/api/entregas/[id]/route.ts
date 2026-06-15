@@ -71,6 +71,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     include: {
       motorista: true,
       veiculo: true,
+      motoristaCompl: true,
+      veiculoCompl: true,
       rota: true,
       notas: { orderBy: { createdAt: "asc" } },
       ocorrencias: { orderBy: { createdAt: "desc" } },
@@ -183,6 +185,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.dataPagamento) data.dataPagamento = new Date(data.dataPagamento);
     if (data.dataAdiantamento) data.dataAdiantamento = new Date(data.dataAdiantamento);
     if (data.dataPagamentoSaldo) data.dataPagamentoSaldo = new Date(data.dataPagamentoSaldo);
+    if (data.dataAdiantamentoCompl) data.dataAdiantamentoCompl = new Date(data.dataAdiantamentoCompl);
+    if (data.dataPagamentoSaldoCompl) data.dataPagamentoSaldoCompl = new Date(data.dataPagamentoSaldoCompl);
 
     if (data.motoristaId) {
       // Apenas recalcula se não vier explícito na request
@@ -237,6 +241,26 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data.saldoMotorista = vMotorista + vDescarga - vAdiantamento - vSaida - vDescontos;
     }
 
+    // Calcular saldo do complementar
+    const valorMotoristaCompl = body.valorMotoristaCompl ?? undefined;
+    const valorSaidaCompl = body.valorSaidaCompl ?? undefined;
+    const adiantamentoMotoristaCompl = body.adiantamentoMotoristaCompl ?? undefined;
+    const descontosMotoristaCompl = body.descontosMotoristaCompl ?? undefined;
+
+    if (
+      valorMotoristaCompl !== undefined ||
+      valorSaidaCompl !== undefined ||
+      adiantamentoMotoristaCompl !== undefined ||
+      descontosMotoristaCompl !== undefined
+    ) {
+      const current = await prisma.entrega.findUnique({ where: { id: params.id } });
+      const vMotoristaCompl = valorMotoristaCompl ?? current?.valorMotoristaCompl ?? 0;
+      const vSaidaCompl = valorSaidaCompl ?? current?.valorSaidaCompl ?? 0;
+      const vAdiantamentoCompl = adiantamentoMotoristaCompl ?? current?.adiantamentoMotoristaCompl ?? 0;
+      const vDescontosCompl = descontosMotoristaCompl ?? current?.descontosMotoristaCompl ?? 0;
+      data.saldoMotoristaCompl = vMotoristaCompl - vAdiantamentoCompl - vSaidaCompl - vDescontosCompl;
+    }
+
     // Calcular armazenagem automaticamente com base na tabela do cliente
     {
       const current = await prisma.entrega.findUnique({ where: { id: params.id } });
@@ -279,6 +303,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       include: {
         motorista: true,
         veiculo: true,
+        motoristaCompl: true,
+        veiculoCompl: true,
         rota: true,
         notas: { orderBy: { createdAt: "asc" } },
         ocorrencias: { orderBy: { createdAt: "desc" } },

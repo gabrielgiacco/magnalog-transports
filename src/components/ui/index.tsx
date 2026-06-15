@@ -210,10 +210,11 @@ export function KpiCard({ label, value, sub, icon, color = "#f97316", trend }: {
 
 // ─── Combobox Motorista ───────────────────────────────────────────────────────
 export function ComboboxMotorista({
-  motoristas, veiculos, value, onChange, onAutoFillVeiculo
+  motoristas, veiculos, value, onChange, onAutoFillVeiculo, label = "Motorista"
 }: {
   motoristas: any[]; veiculos: any[]; value: string;
   onChange: (id: string) => void; onAutoFillVeiculo: (veiculoId: string) => void;
+  label?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -230,7 +231,7 @@ export function ComboboxMotorista({
 
   return (
     <div className="flex flex-col gap-1.5 w-full relative">
-      <label className="text-[10px] uppercase tracking-widest font-mono" style={{ color: "var(--text3)" }}>Motorista</label>
+      <label className="text-[10px] uppercase tracking-widest font-mono" style={{ color: "var(--text3)" }}>{label}</label>
       <div 
         className="w-full px-3 py-2 rounded-lg text-sm border cursor-text transition-all flex items-center justify-between gap-1"
         style={{ background: "var(--surface2)", borderColor: open ? "var(--accent)" : "var(--border)", color: "var(--text)", fontFamily: "'Inter', sans-serif" }}

@@ -69,6 +69,7 @@ export interface MapEntrega {
   longitude: number;
   pesoTotal: number;
   volumeTotal: number;
+  valorDescarga?: number;
   notas?: { numero: string; emitenteRazao?: string }[];
 }
 

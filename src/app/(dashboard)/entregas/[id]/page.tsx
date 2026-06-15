@@ -33,6 +33,7 @@ export default function EntregaDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showComplFields, setShowComplFields] = useState(false);
   const [showOcorrencia, setShowOcorrencia] = useState(false);
   const [motoristas, setMotoristas] = useState<any[]>([]);
   const [veiculos, setVeiculos] = useState<any[]>([]);
@@ -83,6 +84,16 @@ export default function EntregaDetailPage() {
       dataPagamentoSaldo: e.dataPagamentoSaldo ? e.dataPagamentoSaldo.slice(0, 10) : "",
       statusCanhoto: e.statusCanhoto || "PENDENTE",
       observacoes: e.observacoes || "", status: e.status,
+      // Complementar:
+      motoristaComplId: e.motoristaComplId || "",
+      veiculoComplId: e.veiculoComplId || "",
+      valorMotoristaCompl: String(e.valorMotoristaCompl || 0),
+      valorSaidaCompl: String(e.valorSaidaCompl || 0),
+      adiantamentoMotoristaCompl: String(e.adiantamentoMotoristaCompl || 0),
+      descontosMotoristaCompl: String(e.descontosMotoristaCompl || 0),
+      dataAdiantamentoCompl: e.dataAdiantamentoCompl ? e.dataAdiantamentoCompl.slice(0, 10) : "",
+      dataPagamentoSaldoCompl: e.dataPagamentoSaldoCompl ? e.dataPagamentoSaldoCompl.slice(0, 10) : "",
+      statusCanhotoCompl: e.statusCanhotoCompl || "PENDENTE",
     };
   }
 
@@ -125,6 +136,16 @@ export default function EntregaDetailPage() {
           descontosMotorista: parseFloat(editForm.descontosMotorista) || 0,
           dataAdiantamento: editForm.dataAdiantamento || null,
           dataPagamentoSaldo: editForm.dataPagamentoSaldo || null,
+          // Complementar:
+          motoristaComplId: editForm.motoristaComplId || null,
+          veiculoComplId: editForm.veiculoComplId || null,
+          valorMotoristaCompl: parseFloat(editForm.valorMotoristaCompl) || 0,
+          valorSaidaCompl: parseFloat(editForm.valorSaidaCompl) || 0,
+          adiantamentoMotoristaCompl: parseFloat(editForm.adiantamentoMotoristaCompl) || 0,
+          descontosMotoristaCompl: parseFloat(editForm.descontosMotoristaCompl) || 0,
+          dataAdiantamentoCompl: editForm.dataAdiantamentoCompl || null,
+          dataPagamentoSaldoCompl: editForm.dataPagamentoSaldoCompl || null,
+          statusCanhotoCompl: editForm.statusCanhotoCompl || "PENDENTE",
         }),
       });
       const updated = await res.json();
@@ -350,13 +371,22 @@ export default function EntregaDetailPage() {
               <ChevronLeft size={14} /> Voltar
             </Button>
             {!isReadOnly && (
-              <Button variant="ghost" size="sm" onClick={() => { setEditForm(formatForEdit(entrega)); setShowEdit(true); }}>
+              <Button variant="ghost" size="sm" onClick={() => {
+                setEditForm(formatForEdit(entrega));
+                setShowComplFields(!!entrega.motoristaComplId);
+                setShowEdit(true);
+              }}>
                 <Copy size={14} /> Editar
               </Button>
             )}
             <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}`, '_blank')}>
               <Printer size={14} /> Carta Frete
             </Button>
+            {entrega.motoristaComplId && (
+              <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}?motorista=complementar`, '_blank')}>
+                <Printer size={14} /> Carta Frete Compl.
+              </Button>
+            )}
             {!isReadOnly && entrega.status !== "OCORRENCIA" && entrega.status !== "FINALIZADO" && (
               <Button variant="danger" size="sm" onClick={() => setShowOcorrencia(true)}>
                 <AlertCircle size={14} /> Ocorrência
@@ -675,6 +705,113 @@ export default function EntregaDetailPage() {
               <option value="">Selecionar...</option>
               {veiculos.map((v) => <option key={v.id} value={v.id}>{v.placa} — {v.tipo}</option>)}
             </Select>
+
+            {!showComplFields ? (
+              <div className="col-span-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full justify-center border-dashed border-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-900"
+                  onClick={() => setShowComplFields(true)}
+                >
+                  <Plus size={14} className="mr-2" /> Adicionar Motorista Complementar (Carga Complementar)
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="col-span-2 flex items-center justify-between py-2 border-b text-[10px] font-bold text-slate-400 uppercase">
+                  <span>Motorista Complementar</span>
+                  <button
+                    type="button"
+                    className="text-red-500 hover:text-red-700 text-xs font-semibold normal-case"
+                    onClick={() => {
+                      set("motoristaComplId", "");
+                      set("veiculoComplId", "");
+                      set("valorMotoristaCompl", "0");
+                      set("valorSaidaCompl", "0");
+                      set("adiantamentoMotoristaCompl", "0");
+                      set("descontosMotoristaCompl", "0");
+                      set("dataAdiantamentoCompl", "");
+                      set("dataPagamentoSaldoCompl", "");
+                      set("statusCanhotoCompl", "PENDENTE");
+                      setShowComplFields(false);
+                    }}
+                  >
+                    Remover
+                  </button>
+                </div>
+                
+                <ComboboxMotorista
+                  motoristas={motoristas}
+                  veiculos={veiculos}
+                  value={editForm.motoristaComplId}
+                  onChange={(id) => set("motoristaComplId", id)}
+                  onAutoFillVeiculo={(vid) => set("veiculoComplId", vid)}
+                  label="Motorista Complementar"
+                />
+                <Select
+                  label="Veículo Complementar"
+                  value={editForm.veiculoComplId}
+                  onChange={(e) => set("veiculoComplId", e.target.value)}
+                >
+                  <option value="">Selecionar...</option>
+                  {veiculos.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.placa} — {v.tipo}
+                    </option>
+                  ))}
+                </Select>
+
+                <Input
+                  label="Valor Combinado Complementar"
+                  type="number"
+                  value={editForm.valorMotoristaCompl}
+                  onChange={(e) => set("valorMotoristaCompl", e.target.value)}
+                />
+                <Input
+                  label="Pedágio/Saída Complementar"
+                  type="number"
+                  value={editForm.valorSaidaCompl}
+                  onChange={(e) => set("valorSaidaCompl", e.target.value)}
+                />
+                <Input
+                  label="Adiantamento Complementar"
+                  type="number"
+                  value={editForm.adiantamentoMotoristaCompl}
+                  onChange={(e) => set("adiantamentoMotoristaCompl", e.target.value)}
+                />
+                <Input
+                  label="Descontos Complementar"
+                  type="number"
+                  value={editForm.descontosMotoristaCompl}
+                  onChange={(e) => set("descontosMotoristaCompl", e.target.value)}
+                />
+                
+                <Input
+                  label="Data Adiantamento Compl."
+                  type="date"
+                  value={editForm.dataAdiantamentoCompl}
+                  onChange={(e) => set("dataAdiantamentoCompl", e.target.value)}
+                />
+                <Input
+                  label="Data Pagamento Saldo Compl."
+                  type="date"
+                  value={editForm.dataPagamentoSaldoCompl}
+                  onChange={(e) => set("dataPagamentoSaldoCompl", e.target.value)}
+                />
+                
+                <Select
+                  label="Status do Canhoto Compl."
+                  value={editForm.statusCanhotoCompl}
+                  onChange={(e) => set("statusCanhotoCompl", e.target.value)}
+                  className="col-span-2"
+                >
+                  <option value="PENDENTE">Pendente</option>
+                  <option value="RECEBIDO">Recebido</option>
+                  <option value="COM_RESSALVA">Com Ressalva</option>
+                </Select>
+              </>
+            )}
             <Select label="Status" value={editForm.status} onChange={(e) => set("status", e.target.value)}>
               {STATUS_FLOW.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
               <option value="OCORRENCIA">Ocorrência</option>

@@ -82,10 +82,22 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
       select: {
         id: true, codigo: true, razaoSocial: true, cidade: true, status: true,
+        valorFrete: true,
         valorMotorista: true, valorSaida: true, valorDescarga: true, adiantamentoMotorista: true, dataAdiantamento: true,
         descontosMotorista: true, saldoMotorista: true, dataPagamentoSaldo: true, statusCanhoto: true,
         dataEntrega: true, dataAgendada: true,
         motoristaId: true, motorista: { select: { nome: true, tipo: true, valorDiaria: true } },
+        motoristaComplId: true,
+        motoristaCompl: { select: { nome: true, tipo: true, valorDiaria: true } },
+        veiculoComplId: true,
+        valorMotoristaCompl: true,
+        valorSaidaCompl: true,
+        adiantamentoMotoristaCompl: true,
+        descontosMotoristaCompl: true,
+        saldoMotoristaCompl: true,
+        dataAdiantamentoCompl: true,
+        dataPagamentoSaldoCompl: true,
+        statusCanhotoCompl: true,
         notas: { select: { numero: true } },
         _count: { select: { notas: true } },
         createdAt: true,
@@ -105,14 +117,51 @@ export async function GET(req: NextRequest) {
   ]);
 
   // Combine into a single list
-  const viagens: any[] = [
-    ...entregasDiretas.map((e: any) => ({
+  const viagensList: any[] = [];
+  
+  for (const e of entregasDiretas) {
+    viagensList.push({
       ...e,
       isRota: false,
       motoristaTipo: e.motorista?.tipo || null,
       motoristaValorDiaria: e.motorista?.valorDiaria || 0,
       dataRef: e.dataAgendada || e.dataEntrega || e.createdAt,
-    })),
+    });
+
+    if (e.motoristaComplId && e.motoristaCompl) {
+      viagensList.push({
+        id: e.id,
+        isComplementar: true,
+        codigo: `${e.codigo} (COMPLEMENTAR)`,
+        razaoSocial: `${e.razaoSocial} (Compl.)`,
+        cidade: e.cidade,
+        status: e.status,
+        valorFrete: 0,
+        valorMotorista: e.valorMotoristaCompl || 0,
+        valorSaida: e.valorSaidaCompl || 0,
+        valorDescarga: 0,
+        adiantamentoMotorista: e.adiantamentoMotoristaCompl || 0,
+        dataAdiantamento: e.dataAdiantamentoCompl,
+        descontosMotorista: e.descontosMotoristaCompl || 0,
+        saldoMotorista: e.saldoMotoristaCompl || 0,
+        dataPagamentoSaldo: e.dataPagamentoSaldoCompl,
+        statusCanhoto: e.statusCanhotoCompl,
+        motoristaId: e.motoristaComplId,
+        motorista: e.motoristaCompl,
+        motoristaTipo: e.motoristaCompl?.tipo || null,
+        motoristaValorDiaria: e.motoristaCompl?.valorDiaria || 0,
+        isRota: false,
+        notas: e.notas,
+        _count: e._count,
+        dataEntrega: e.dataEntrega,
+        dataRef: e.dataAgendada || e.dataEntrega || e.createdAt,
+        createdAt: e.createdAt,
+      });
+    }
+  }
+
+  const viagens: any[] = [
+    ...viagensList,
     ...rotas.map((r: any) => ({
       id: r.id,
       codigo: r.codigo,
@@ -222,6 +271,7 @@ export async function PATCH(req: NextRequest) {
   const { 
     id, 
     isRota,
+    isComplementar,
     adiantamentoMotorista, dataAdiantamento, 
     descontosMotorista, 
     dataPagamentoSaldo, 
@@ -231,6 +281,95 @@ export async function PATCH(req: NextRequest) {
     valorDescarga,
     dataFrete
   } = body;
+
+  if (isComplementar) {
+    const current = await prisma.entrega.findUnique({ where: { id }, include: { motoristaCompl: true } });
+    if (!current) return NextResponse.json({ error: "Não encontrada" }, { status: 404 });
+
+    const vMotorista = valorMotorista ?? current.valorMotoristaCompl ?? 0;
+    const vAdiantamento = adiantamentoMotorista ?? current.adiantamentoMotoristaCompl ?? 0;
+    const vSaida = valorSaida ?? current.valorSaidaCompl ?? 0;
+    const vDescontos = descontosMotorista ?? current.descontosMotoristaCompl ?? 0;
+    
+    const saldoFinalMotorista = vMotorista - vAdiantamento - vSaida - vDescontos;
+
+    const updateData: any = {
+      ...(valorMotorista !== undefined && { valorMotoristaCompl: valorMotorista }),
+      ...(valorSaida !== undefined && { valorSaidaCompl: valorSaida }),
+      ...(adiantamentoMotorista !== undefined && { adiantamentoMotoristaCompl: adiantamentoMotorista }),
+      ...(dataAdiantamento !== undefined && { dataAdiantamentoCompl: dataAdiantamento ? new Date(dataAdiantamento) : null }),
+      ...(descontosMotorista !== undefined && { descontosMotoristaCompl: descontosMotorista }),
+      ...(dataPagamentoSaldo !== undefined && { dataPagamentoSaldoCompl: dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null }),
+      ...(statusCanhoto !== undefined && { statusCanhotoCompl: statusCanhoto }),
+      saldoMotoristaCompl: saldoFinalMotorista,
+    };
+
+    if (dataFrete !== undefined && dataFrete) {
+      updateData.dataAgendada = new Date(dataFrete);
+    }
+
+    const result = await prisma.entrega.update({
+      where: { id },
+      data: updateData,
+    });
+
+    try {
+      const motoristaNome = current.motoristaCompl?.nome || "Motorista Compl.";
+      const catFrota = await prisma.categoriaFinanceira.findFirst({
+        where: { nome: "Frota / Terceiros" },
+        include: { subcategorias: true }
+      });
+
+      if (catFrota) {
+        const getSub = (name: string) => catFrota.subcategorias.find(s => s.nome === name)?.id || null;
+
+        const syncLancamento = async (desc: string, val: number, dtPg: Date | null, subName: string, extraDesc: string = "") => {
+          if (val <= 0 && !dtPg) return;
+          const subId = getSub(subName);
+          
+          const existing = await prisma.lancamentoFinanceiro.findFirst({
+            where: {
+              descricao: { startsWith: desc },
+              entregaId: id
+            }
+          });
+
+          const data = {
+            descricao: `${desc} ${extraDesc}`,
+            tipo: "DESPESA" as const,
+            valor: val,
+            dataVencimento: current.dataEntrega || current.createdAt,
+            dataPagamento: dtPg,
+            status: dtPg ? ("PAGO" as const) : ("PENDENTE" as const),
+            categoriaId: catFrota.id,
+            subcategoriaId: subId,
+            favorecido: motoristaNome,
+            entregaId: id
+          };
+
+          if (existing) {
+            await prisma.lancamentoFinanceiro.update({ where: { id: existing.id }, data });
+          } else if (val > 0) {
+            await prisma.lancamentoFinanceiro.create({ data });
+          }
+        };
+
+        if (saldoFinalMotorista > 0 || dataPagamentoSaldo) {
+           await syncLancamento("Acerto Motorista Compl. -", saldoFinalMotorista, dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null, "Pagamento Motorista", `${current.codigo} (Compl.)`);
+        }
+        if (vAdiantamento > 0 || dataAdiantamento) {
+           await syncLancamento("Adiantamento Motorista Compl. -", vAdiantamento, dataAdiantamento ? new Date(dataAdiantamento) : null, "Adiantamento Motorista", `${current.codigo} (Compl.)`);
+        }
+        if (vSaida > 0) {
+           await syncLancamento("Saída/Pedágio Compl. -", vSaida, dataPagamentoSaldo ? new Date(dataPagamentoSaldo) : null, "Vale / Pedágio", `${current.codigo} (Compl.)`);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao sincronizar ERP complementar", e);
+    }
+
+    return NextResponse.json(result);
+  }
 
   const model = isRota ? prisma.rota : prisma.entrega;
   const current = await (model as any).findUnique({ where: { id }, include: { motorista: true } });

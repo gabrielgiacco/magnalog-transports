@@ -333,7 +333,9 @@ export default function PlanejadorRotasPage() {
                         <div className="flex items-center gap-1">
                           <div className="text-xs font-bold text-slate-800 truncate">{e.razaoSocial}</div>
                           {(!e.latitude || !e.longitude) && (
-                            <AlertCircle size={12} className="text-rose-500" title="Endereço não geocodificado" />
+                            <span title="Endereço não geocodificado">
+                              <AlertCircle size={12} className="text-rose-500" />
+                            </span>
                           )}
                         </div>
                         <div className="text-[10px] font-mono text-slate-500 truncate">{e.cidade} - {e.notas?.map((n:any)=>n.numero).join(", ") || e.codigo}</div>
