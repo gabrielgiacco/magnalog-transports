@@ -44,6 +44,11 @@ export default function EntregaDetailPage() {
   const [danfeModal, setDanfeModal] = useState<{ open: boolean; xml: string | null; loading: boolean; fullscreen: boolean }>({ open: false, xml: null, loading: false, fullscreen: false });
   const [showQualityPrompt, setShowQualityPrompt] = useState(false);
 
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [resolucaoTexto, setResolucaoTexto] = useState("");
+  const [statusFinalEntrega, setStatusFinalEntrega] = useState("FINALIZADO");
+  const [salvandoResolucao, setSalvandoResolucao] = useState(false);
+
   // Add NFs modal
   const [showAddNF, setShowAddNF] = useState(false);
   const [notasDisp, setNotasDisp] = useState<any[]>([]);
@@ -173,6 +178,54 @@ export default function EntregaDetailPage() {
     } catch (err: any) {
       toast.error(err.message || "Erro ao gerar");
       setSaving(false);
+    }
+  }
+
+  async function handleResolveOcorrencia() {
+    if (!resolucaoTexto.trim()) {
+      toast.error("Insira uma observação para a resolução");
+      return;
+    }
+    setSalvandoResolucao(true);
+    try {
+      const ultimaOcorr = entrega.ocorrencias?.find((o: any) => !o.resolvida);
+      if (!ultimaOcorr) {
+        toast.error("Nenhuma ocorrência em aberto encontrada");
+        return;
+      }
+
+      // 1. Atualizar a ocorrência
+      const resOcorr = await fetch(`/api/entregas/${id}/ocorrencia`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ocorrenciaId: ultimaOcorr.id,
+          resolucao: resolucaoTexto
+        })
+      });
+
+      if (!resOcorr.ok) throw new Error("Erro ao salvar resolução da ocorrência");
+
+      // 2. Atualizar o status da entrega
+      const resEntrega = await fetch(`/api/entregas/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: statusFinalEntrega
+        })
+      });
+
+      if (!resEntrega.ok) throw new Error("Erro ao atualizar status da entrega");
+
+      toast.success("Ocorrência resolvida com sucesso!");
+      setShowResolveModal(false);
+      setResolucaoTexto("");
+      const updated = await fetch(`/api/entregas/${id}`).then((r) => r.json());
+      setEntrega(updated);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao resolver ocorrência");
+    } finally {
+      setSalvandoResolucao(false);
     }
   }
 
@@ -337,6 +390,9 @@ export default function EntregaDetailPage() {
                  <div className="flex gap-2">
                    <Button size="sm" variant="ghost" className="border-red-200 text-red-700 bg-white hover:bg-red-50" onClick={handleReentrega} disabled={saving}>
                      Gerar Reentrega (Duplicar)
+                   </Button>
+                   <Button size="sm" variant="ghost" className="border-green-200 text-green-700 bg-white hover:bg-green-50" onClick={() => { setResolucaoTexto(""); setStatusFinalEntrega("FINALIZADO"); setShowResolveModal(true); }} disabled={saving}>
+                     Resolver Ocorrência
                    </Button>
                    <Button size="sm" onClick={() => handleStatusChange("EM_ROTA")} disabled={saving}>
                      Retomar como Em Rota
@@ -805,6 +861,32 @@ export default function EntregaDetailPage() {
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
           <Button variant="ghost" onClick={() => setShowOcorrencia(false)}>Cancelar</Button>
           <Button variant="danger" onClick={handleOcorrencia} loading={saving}>Registrar</Button>
+        </div>
+      </Modal>
+
+      {/* RESOLVE OCORRENCIA MODAL */}
+      <Modal open={showResolveModal} onClose={() => { setShowResolveModal(false); }} title="Resolver Ocorrência" size="md">
+        <div className="space-y-4">
+          <div className="p-3 rounded-xl flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600">
+            <AlertTriangle size={18} className="flex-shrink-0" />
+            <p className="text-sm">
+              Ao solucionar a ocorrência, defina o status final e registre as observações da resolução (se gerou reentrega, se foi devolvida, etc.).
+            </p>
+          </div>
+
+          <Select label="Status Final da Entrega" value={statusFinalEntrega} onChange={e => setStatusFinalEntrega(e.target.value)}>
+            <option value="FINALIZADO">Finalizado (Cobrança normal / Reentrega faturada)</option>
+            <option value="ENTREGUE">Entregue (Resolvido com o cliente no local)</option>
+            <option value="EM_ROTA">Em Rota (Retomar viagem)</option>
+          </Select>
+
+          <Textarea label="Observação da Resolução / Ocorrência Solucionada *" rows={3} value={resolucaoTexto} onChange={e => setResolucaoTexto(e.target.value)}
+            placeholder="Ex: Gerou reentrega sob NF 12345 / Devolvido ao cliente por recusa / Aguardando redespacho..." />
+
+          <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+            <Button variant="ghost" onClick={() => { setShowResolveModal(false); }}>Cancelar</Button>
+            <Button onClick={handleResolveOcorrencia} loading={salvandoResolucao}>Confirmar Resolução</Button>
+          </div>
         </div>
       </Modal>
     </>

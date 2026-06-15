@@ -34,7 +34,7 @@ const TIPO_COLORS: Record<string, string> = {
   DEVOLUCAO: "#eab308", SEM_PEDIDO: "#6b7280",
 };
 
-type TabView = "dashboard" | "registros" | "devolucoes";
+type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias";
 
 export default function AvariasPage() {
   const router = useRouter();
@@ -56,6 +56,18 @@ export default function AvariasPage() {
   const [filterFase, setFilterFase] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [searchDev, setSearchDev] = useState("");
+
+  // Ocorrencias
+  const [entregasOcorrencias, setEntregasOcorrencias] = useState<any[]>([]);
+  const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
+  const [searchOcorrencia, setSearchOcorrencia] = useState("");
+  const [debouncedSearchOcorrencia, setDebouncedSearchOcorrencia] = useState("");
+
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [resolvendoEntrega, setResolvendoEntrega] = useState<any>(null);
+  const [resolucaoTexto, setResolucaoTexto] = useState("");
+  const [statusFinalEntrega, setStatusFinalEntrega] = useState("FINALIZADO");
+  const [salvandoResolucao, setSalvandoResolucao] = useState(false);
 
   // Devolucoes (grouped by avaria)
   const [devGroups, setDevGroups] = useState<{ avaria: any; nfds: any[] }[]>([]);
@@ -97,6 +109,11 @@ export default function AvariasPage() {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearchOcorrencia(searchOcorrencia), 400);
+    return () => clearTimeout(t);
+  }, [searchOcorrencia]);
 
   // Fetch dashboard
   const fetchResumo = useCallback(async () => {
@@ -149,9 +166,74 @@ export default function AvariasPage() {
     finally { setLoadingDev(false); }
   }, []);
 
+  const fetchOcorrencias = useCallback(async () => {
+    setLoadingOcorrencias(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedSearchOcorrencia) params.set("q", debouncedSearchOcorrencia);
+      const res = await fetch(`/api/entregas/ocorrencias?${params}`);
+      const data = await res.json();
+      setEntregasOcorrencias(data.entregas || []);
+    } catch {
+      toast.error("Erro ao carregar ocorrências");
+    } finally {
+      setLoadingOcorrencias(false);
+    }
+  }, [debouncedSearchOcorrencia]);
+
+  async function handleResolveOcorrencia() {
+    if (!resolucaoTexto.trim()) {
+      toast.error("Insira uma observação para a resolução");
+      return;
+    }
+    setSalvandoResolucao(true);
+    try {
+      const ultimaOcorr = resolvendoEntrega.ocorrencias?.find((o: any) => !o.resolvida);
+      if (!ultimaOcorr) {
+        toast.error("Nenhuma ocorrência em aberto encontrada");
+        return;
+      }
+
+      // 1. Atualizar a ocorrência
+      const resOcorr = await fetch(`/api/entregas/${resolvendoEntrega.id}/ocorrencia`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ocorrenciaId: ultimaOcorr.id,
+          resolucao: resolucaoTexto
+        })
+      });
+
+      if (!resOcorr.ok) throw new Error("Erro ao salvar resolução da ocorrência");
+
+      // 2. Atualizar o status da entrega
+      const resEntrega = await fetch(`/api/entregas/${resolvendoEntrega.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: statusFinalEntrega
+        })
+      });
+
+      if (!resEntrega.ok) throw new Error("Erro ao atualizar status da entrega");
+
+      toast.success("Ocorrência resolvida com sucesso!");
+      setShowResolveModal(false);
+      setResolucaoTexto("");
+      setResolvendoEntrega(null);
+      fetchOcorrencias();
+      fetchResumo();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao resolver ocorrência");
+    } finally {
+      setSalvandoResolucao(false);
+    }
+  }
+
   useEffect(() => { fetchResumo(); fetch("/api/motoristas?ativo=true").then(r => r.json()).then(setMotoristas); }, []);
   useEffect(() => { if (tab === "registros") fetchAvarias(); }, [fetchAvarias, tab]);
   useEffect(() => { if (tab === "devolucoes") fetchDevolucoes(); }, [tab]);
+  useEffect(() => { if (tab === "ocorrencias") fetchOcorrencias(); }, [tab, fetchOcorrencias]);
 
   // Entrega search for create form
   useEffect(() => {
@@ -355,6 +437,7 @@ export default function AvariasPage() {
             { key: "dashboard", label: "Dashboard", icon: BarChart2 },
             { key: "registros", label: "Registros", icon: List },
             { key: "devolucoes", label: "Devoluções", icon: FileText },
+            { key: "ocorrencias", label: "Ocorrências", icon: AlertTriangle },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === t.key ? "bg-orange-500/10 text-orange-500 shadow-sm" : "text-[var(--text2)] hover:bg-[var(--surface)]"}`}>
@@ -793,6 +876,193 @@ export default function AvariasPage() {
           )}
           </>
         )}
+
+        {/* OCORRÊNCIAS TAB */}
+        {tab === "ocorrencias" && (
+          <>
+            <Card className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center">
+                <div className="relative flex-1 w-full">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
+                  <input value={searchOcorrencia} onChange={e => setSearchOcorrencia(e.target.value)}
+                    placeholder="Buscar por NF, código de entrega, cliente, motorista..."
+                    className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none"
+                    style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+                </div>
+                <Button variant="ghost" size="sm" onClick={fetchOcorrencias} className="flex-shrink-0">
+                  <RefreshCw size={13} /> Atualizar
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="p-0 overflow-hidden">
+              {loadingOcorrencias ? <Loading /> : entregasOcorrencias.length === 0 ? <Empty icon="⚠️" text="Nenhuma entrega com ocorrência registrada" /> : (
+                <>
+                  {/* Mobile list */}
+                  <div className="block md:hidden divide-y" style={{ borderColor: "var(--border)" }}>
+                    {entregasOcorrencias.map(e => {
+                      const ultimaOcorr = e.ocorrencias && e.ocorrencias[0];
+                      const isFalha = e.codigo?.endsWith(" (FALHA)") || (e.observacoes && e.observacoes.includes("Tentativa Falha das NFs:"));
+                      const resolvido = ultimaOcorr ? ultimaOcorr.resolvida : true;
+                      
+                      // Extrair notas se existirem ou de observacoes
+                      let nfsExibicao = "";
+                      if (e.notas && e.notas.length > 0) {
+                        nfsExibicao = e.notas.map((n: any) => `NF ${n.numero}`).join(", ");
+                      } else if (e.observacoes && e.observacoes.includes("Tentativa Falha das NFs:")) {
+                        const match = e.observacoes.match(/Tentativa Falha das NFs:\s*([^\n\r]+)/);
+                        if (match && match[1]) {
+                          nfsExibicao = `NF ${match[1].trim()} (Falha anterior)`;
+                        }
+                      }
+                      if (!nfsExibicao) nfsExibicao = e.codigo;
+
+                      return (
+                        <div key={e.id} className="p-3 hover:bg-[#1e293b]/50 transition-colors" style={{ borderBottom: "1px solid var(--border)" }}>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <span className="font-mono text-xs font-bold" style={{ color: "var(--accent)" }}>{nfsExibicao}</span>
+                                {isFalha && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/30">
+                                    Reentrega Gerada
+                                  </span>
+                                )}
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${resolvido ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30" : "bg-orange-500/10 text-orange-500 border border-orange-500/30"}`}>
+                                  {resolvido ? "Solucionada" : "Pendente"}
+                                </span>
+                              </div>
+                              <div className="text-xs font-semibold truncate">{e.razaoSocial}</div>
+                            </div>
+                            <button className="p-1 rounded hover:bg-[var(--surface2)]" onClick={() => router.push(`/entregas/${e.id}`)}>
+                              <Eye size={14} style={{ color: "var(--text2)" }} />
+                            </button>
+                          </div>
+                          
+                          {ultimaOcorr && (
+                            <div className="mb-2 p-2 rounded bg-[var(--surface2)] text-xs border border-[var(--border)]">
+                              <div className="flex justify-between font-semibold mb-1 text-[10px]" style={{ color: "var(--text2)" }}>
+                                <span>Ocorrência: {ultimaOcorr.tipo}</span>
+                                <span className="font-mono">{formatDate(ultimaOcorr.createdAt)}</span>
+                              </div>
+                              <p style={{ color: "var(--text2)" }}>{ultimaOcorr.descricao}</p>
+                              {ultimaOcorr.resolucao && (
+                                <div className="mt-1.5 pt-1.5 border-t border-[var(--border)] text-[11px] text-emerald-600">
+                                  <strong>Resolução:</strong> {ultimaOcorr.resolucao}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-[10px]" style={{ color: "var(--text3)" }}>
+                            <span>{e.cidade} · {e.motorista?.nome || "Sem motorista"}</span>
+                            {!resolvido && (
+                              <Button size="sm" onClick={() => { setResolvendoEntrega(e); setResolucaoTexto(""); setStatusFinalEntrega("FINALIZADO"); setShowResolveModal(true); }}>
+                                Resolver
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop table */}
+                  <div className="hidden md:block">
+                    <Table>
+                      <thead>
+                        <tr>
+                          <Th>NFs / Código</Th>
+                          <Th>Cliente</Th>
+                          <Th>Cidade / UF</Th>
+                          <Th>Motorista</Th>
+                          <Th>Última Ocorrência</Th>
+                          <Th>Status</Th>
+                          <Th>Observação / Resolução</Th>
+                          <Th></Th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {entregasOcorrencias.map(e => {
+                          const ultimaOcorr = e.ocorrencias && e.ocorrencias[0];
+                          const isFalha = e.codigo?.endsWith(" (FALHA)") || (e.observacoes && e.observacoes.includes("Tentativa Falha das NFs:"));
+                          const resolvido = ultimaOcorr ? ultimaOcorr.resolvida : true;
+                          
+                          // Extrair notas se existirem ou de observacoes
+                          let nfsExibicao = "";
+                          if (e.notas && e.notas.length > 0) {
+                            nfsExibicao = e.notas.map((n: any) => `NF ${n.numero}`).join(", ");
+                          } else if (e.observacoes && e.observacoes.includes("Tentativa Falha das NFs:")) {
+                            const match = e.observacoes.match(/Tentativa Falha das NFs:\s*([^\n\r]+)/);
+                            if (match && match[1]) {
+                              nfsExibicao = `NF ${match[1].trim()} (Falha)`;
+                            }
+                          }
+                          if (!nfsExibicao) nfsExibicao = e.codigo;
+
+                          return (
+                            <Tr key={e.id}>
+                              <Td>
+                                <div className="font-mono text-xs font-bold leading-tight" style={{ color: "var(--accent)" }}>{nfsExibicao}</div>
+                                {isFalha && (
+                                  <div className="mt-1">
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/30">
+                                      Reentrega Gerada
+                                    </span>
+                                  </div>
+                                )}
+                              </Td>
+                              <Td>
+                                <div className="text-xs font-semibold">{e.razaoSocial}</div>
+                                <div className="text-[9px] font-mono" style={{ color: "var(--text3)" }}>{formatCNPJ(e.cnpj)}</div>
+                              </Td>
+                              <Td><span className="text-xs" style={{ color: "var(--text2)" }}>{e.cidade}{e.uf ? ` — ${e.uf}` : ""}</span></Td>
+                              <Td><span className="text-xs" style={{ color: "var(--text2)" }}>{e.motorista?.nome || "—"}</span></Td>
+                              <Td>
+                                {ultimaOcorr ? (
+                                  <div className="max-w-xs">
+                                    <div className="text-[10px] font-bold text-red-500">{ultimaOcorr.tipo}</div>
+                                    <div className="text-xs text-slate-500 truncate" title={ultimaOcorr.descricao}>{ultimaOcorr.descricao}</div>
+                                    <div className="text-[9px] text-slate-400 font-mono">{formatDate(ultimaOcorr.createdAt)}</div>
+                                  </div>
+                                ) : "—"}
+                              </Td>
+                              <Td>
+                                <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${resolvido ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30" : "bg-orange-500/10 text-orange-500 border border-orange-500/30"}`}>
+                                  {resolvido ? "Solucionada" : "Pendente"}
+                                </span>
+                              </Td>
+                              <Td>
+                                {ultimaOcorr?.resolucao ? (
+                                  <span className="text-xs text-emerald-600 font-medium">{ultimaOcorr.resolucao}</span>
+                                ) : (
+                                  <span className="text-xs italic" style={{ color: "var(--text3)" }}>—</span>
+                                )}
+                              </Td>
+                              <Td>
+                                <div className="flex items-center gap-1.5">
+                                  {!resolvido && (
+                                    <Button size="sm" onClick={() => { setResolvendoEntrega(e); setResolucaoTexto(""); setStatusFinalEntrega("FINALIZADO"); setShowResolveModal(true); }}>
+                                      Resolver
+                                    </Button>
+                                  )}
+                                  <button className="p-1.5 rounded-lg hover:opacity-70 transition-all" style={{ background: "var(--surface2)", color: "var(--text2)" }}
+                                    onClick={() => router.push(`/entregas/${e.id}`)}>
+                                    <Eye size={13} />
+                                  </button>
+                                </div>
+                              </Td>
+                            </Tr>
+                          );
+                        })}
+                      </tbody>
+                    </Table>
+                  </div>
+                </>
+              )}
+            </Card>
+          </>
+        )}
       </div>
 
       {/* BULK SAÍDA MODAL */}
@@ -1059,6 +1329,42 @@ export default function AvariasPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* RESOLVE OCORRENCIA MODAL */}
+      <Modal open={showResolveModal} onClose={() => { setShowResolveModal(false); setResolvendoEntrega(null); }} title="Resolver Ocorrência" size="md">
+        <div className="space-y-4">
+          <div className="p-3 rounded-xl flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600">
+            <AlertTriangle size={18} className="flex-shrink-0" />
+            <p className="text-sm">
+              Ao solucionar a ocorrência, defina o status final e registre as observações da resolução (se gerou reentrega, se foi devolvida, etc.).
+            </p>
+          </div>
+
+          {resolvendoEntrega && (
+            <div className="p-3 rounded-lg text-xs space-y-1" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+              <div className="font-semibold text-[10px] uppercase tracking-wider text-slate-400">Dados da Entrega</div>
+              <div>Cliente: <strong>{resolvendoEntrega.razaoSocial}</strong></div>
+              {resolvendoEntrega.ocorrencias?.[0] && (
+                <div>Ocorrência Atual: <strong>{resolvendoEntrega.ocorrencias[0].tipo}</strong> - {resolvendoEntrega.ocorrencias[0].descricao}</div>
+              )}
+            </div>
+          )}
+
+          <Select label="Status Final da Entrega" value={statusFinalEntrega} onChange={e => setStatusFinalEntrega(e.target.value)}>
+            <option value="FINALIZADO">Finalizado (Cobrança normal / Reentrega faturada)</option>
+            <option value="ENTREGUE">Entregue (Resolvido com o cliente no local)</option>
+            <option value="EM_ROTA">Em Rota (Retomar viagem)</option>
+          </Select>
+
+          <Textarea label="Observação da Resolução / Ocorrência Solucionada *" rows={3} value={resolucaoTexto} onChange={e => setResolucaoTexto(e.target.value)}
+            placeholder="Ex: Gerou reentrega sob NF 12345 / Devolvido ao cliente por recusa / Aguardando redespacho..." />
+
+          <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+            <Button variant="ghost" onClick={() => { setShowResolveModal(false); setResolvendoEntrega(null); }}>Cancelar</Button>
+            <Button onClick={handleResolveOcorrencia} loading={salvandoResolucao}>Confirmar Resolução</Button>
+          </div>
+        </div>
       </Modal>
     </>
   );
