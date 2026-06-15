@@ -515,8 +515,14 @@ export default function EntregaDetailPage() {
                   <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Operação</span>
                 </div>
                 <div className="space-y-3">
-                  <Field label="Motorista" value={entrega.motorista?.nome} />
-                  <Field label="Veículo" value={entrega.veiculo ? `${entrega.veiculo.placa} — ${entrega.veiculo.tipo}` : "—"} />
+                  <Field label={entrega.motoristaCompl ? "Motorista (Principal)" : "Motorista"} value={entrega.motorista?.nome} />
+                  <Field label={entrega.motoristaCompl ? "Veículo (Principal)" : "Veículo"} value={entrega.veiculo ? `${entrega.veiculo.placa} — ${entrega.veiculo.tipo}` : "—"} />
+                  {entrega.motoristaCompl && (
+                    <>
+                      <Field label="Motorista Complementar" value={entrega.motoristaCompl.nome} color="#f97316" />
+                      <Field label="Veículo Complementar" value={entrega.veiculoCompl ? `${entrega.veiculoCompl.placa} — ${entrega.veiculoCompl.tipo}` : "—"} color="#f97316" />
+                    </>
+                  )}
                   <Field label="Rota" value={entrega.rota?.codigo} mono />
                   <Field label="Paletes" value={entrega.quantidadePaletes > 0 ? String(entrega.quantidadePaletes) : "—"} />
                   <Field label="Data Chegada" value={formatDate(entrega.dataChegada)} mono />
