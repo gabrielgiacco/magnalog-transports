@@ -272,10 +272,34 @@ export async function POST(req: NextRequest) {
         valorArmazenagem: body.valorArmazenagem || 0,
         adiantamento: body.adiantamento || 0,
         saldoPendente: (body.valorFrete || 0) - (body.adiantamento || 0),
+        
+        // Motorista Principal Financeiro
+        valorMotorista: body.valorMotorista || 0,
+        valorSaida: body.valorSaida || 0,
+        adiantamentoMotorista: body.adiantamentoMotorista || 0,
+        descontosMotorista: body.descontosMotorista || 0,
+        saldoMotorista: (body.valorMotorista || 0) + (body.valorDescarga || 0) - (body.adiantamentoMotorista || 0) - (body.valorSaida || 0) - (body.descontosMotorista || 0),
+        dataAdiantamento: body.dataAdiantamento ? new Date(body.dataAdiantamento) : null,
+        dataPagamentoSaldo: body.dataPagamentoSaldo ? new Date(body.dataPagamentoSaldo) : null,
+        statusCanhoto: body.statusCanhoto || "PENDENTE",
+
+        // Motorista Complementar Financeiro
+        motoristaComplId: body.motoristaComplId || null,
+        veiculoComplId: body.veiculoComplId || null,
+        valorMotoristaCompl: body.valorMotoristaCompl || 0,
+        valorSaidaCompl: body.valorSaidaCompl || 0,
+        adiantamentoMotoristaCompl: body.adiantamentoMotoristaCompl || 0,
+        descontosMotoristaCompl: body.descontosMotoristaCompl || 0,
+        saldoMotoristaCompl: (body.valorMotoristaCompl || 0) - (body.adiantamentoMotoristaCompl || 0) - (body.valorSaidaCompl || 0) - (body.descontosMotoristaCompl || 0),
+        dataAdiantamentoCompl: body.dataAdiantamentoCompl ? new Date(body.dataAdiantamentoCompl) : null,
+        dataPagamentoSaldoCompl: body.dataPagamentoSaldoCompl ? new Date(body.dataPagamentoSaldoCompl) : null,
+        statusCanhotoCompl: body.statusCanhotoCompl || "PENDENTE",
       },
       include: {
         motorista: true,
         veiculo: true,
+        motoristaCompl: true,
+        veiculoCompl: true,
         notas: true,
       },
     });

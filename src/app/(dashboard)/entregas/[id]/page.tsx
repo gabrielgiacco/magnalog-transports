@@ -823,9 +823,17 @@ export default function EntregaDetailPage() {
             </Select>
             
             <Input label="Qtd Paletes" type="number" value={editForm.quantidadePaletes} onChange={(e) => set("quantidadePaletes", e.target.value)} />
-            <div className="col-span-2 py-2 border-b text-[10px] font-bold text-slate-400 uppercase">Valores</div>
-            <Input label="Valor Frete Cliente" type="number" value={editForm.valorFrete} onChange={(e) => set("valorFrete", e.target.value)} />
+            <div className="col-span-2 py-2 border-b text-[10px] font-bold text-slate-400 uppercase">Valores e Financeiro (Motorista Principal)</div>
+            <Input label="Valor Frete Cliente" type="number" value={editForm.valorFrete} onChange={(e) => set("valorFrete", e.target.value)} className="col-span-2" />
+            
             <Input label="Valor Combinado Motorista" type="number" value={editForm.valorMotorista} onChange={(e) => set("valorMotorista", e.target.value)} />
+            <Input label="Pedágio/Saída Motorista" type="number" value={editForm.valorSaida} onChange={(e) => set("valorSaida", e.target.value)} />
+            <Input label="Adiantamento Motorista" type="number" value={editForm.adiantamentoMotorista} onChange={(e) => set("adiantamentoMotorista", e.target.value)} />
+            <Input label="Descontos Motorista" type="number" value={editForm.descontosMotorista} onChange={(e) => set("descontosMotorista", e.target.value)} />
+            
+            <Input label="Data Adiantamento Motorista" type="date" value={editForm.dataAdiantamento} onChange={(e) => set("dataAdiantamento", e.target.value)} />
+            <Input label="Data Pagamento Saldo Motorista" type="date" value={editForm.dataPagamentoSaldo} onChange={(e) => set("dataPagamentoSaldo", e.target.value)} />
+
             <Textarea label="Observações" value={editForm.observacoes} onChange={(e) => set("observacoes", e.target.value)} className="col-span-2" />
          </div>
          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">

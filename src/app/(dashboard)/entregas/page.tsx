@@ -52,6 +52,14 @@ const BLANK_FORM = {
   dataChegada: "", dataAgendada: "", motoristaId: "", veiculoId: "",
   valorFrete: "", valorDescarga: "", valorArmazenagem: "", adiantamento: "",
   observacoes: "", status: "PROGRAMADO",
+  // Motorista Principal:
+  valorMotorista: "",
+  valorSaida: "",
+  adiantamentoMotorista: "",
+  descontosMotorista: "",
+  dataAdiantamento: "",
+  dataPagamentoSaldo: "",
+  statusCanhoto: "PENDENTE",
   // Complementar:
   motoristaComplId: "",
   veiculoComplId: "",
@@ -278,6 +286,14 @@ export default function EntregasPage() {
           valorDescarga: parseFloat(form.valorDescarga) || 0,
           valorArmazenagem: parseFloat(form.valorArmazenagem) || 0,
           adiantamento: parseFloat(form.adiantamento) || 0,
+          // Motorista Principal:
+          valorMotorista: parseFloat(form.valorMotorista) || 0,
+          valorSaida: parseFloat(form.valorSaida) || 0,
+          adiantamentoMotorista: parseFloat(form.adiantamentoMotorista) || 0,
+          descontosMotorista: parseFloat(form.descontosMotorista) || 0,
+          dataAdiantamento: form.dataAdiantamento || null,
+          dataPagamentoSaldo: form.dataPagamentoSaldo || null,
+          statusCanhoto: form.statusCanhoto || "PENDENTE",
           // Complementar:
           motoristaComplId: form.motoristaComplId || null,
           veiculoComplId: form.veiculoComplId || null,
@@ -828,12 +844,29 @@ export default function EntregasPage() {
           )}
 
           <div className="sm:col-span-2">
-            <div className="text-[10px] font-mono uppercase tracking-widest mb-3" style={{ color: "var(--text3)", borderTop: "1px solid var(--border)", paddingTop: "12px" }}>Financeiro</div>
+            <div className="text-[10px] font-mono uppercase tracking-widest mb-3" style={{ color: "var(--text3)", borderTop: "1px solid var(--border)", paddingTop: "12px" }}>Financeiro (Faturamento Cliente)</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Input label="Valor Frete" type="number" step="0.01" value={form.valorFrete} onChange={(e) => set("valorFrete", e.target.value)} placeholder="0,00" />
               <Input label="Descarga" type="number" step="0.01" value={form.valorDescarga} onChange={(e) => set("valorDescarga", e.target.value)} placeholder="0,00" />
               <Input label="Armazenagem" type="number" step="0.01" value={form.valorArmazenagem} onChange={(e) => set("valorArmazenagem", e.target.value)} placeholder="0,00" />
               <Input label="Adiantamento" type="number" step="0.01" value={form.adiantamento} onChange={(e) => set("adiantamento", e.target.value)} placeholder="0,00" />
+            </div>
+          </div>
+
+          <div className="sm:col-span-2">
+            <div className="text-[10px] font-mono uppercase tracking-widest mb-3" style={{ color: "var(--text3)", borderTop: "1px solid var(--border)", paddingTop: "12px" }}>Financeiro (Motorista Principal)</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Input label="Valor Combinado Motorista" type="number" step="0.01" value={form.valorMotorista} onChange={(e) => set("valorMotorista", e.target.value)} placeholder="0,00" />
+              <Input label="Pedágio/Saída Motorista" type="number" step="0.01" value={form.valorSaida} onChange={(e) => set("valorSaida", e.target.value)} placeholder="0,00" />
+              <Input label="Adiantamento Motorista" type="number" step="0.01" value={form.adiantamentoMotorista} onChange={(e) => set("adiantamentoMotorista", e.target.value)} placeholder="0,00" />
+              <Input label="Descontos Motorista" type="number" step="0.01" value={form.descontosMotorista} onChange={(e) => set("descontosMotorista", e.target.value)} placeholder="0,00" />
+              <Input label="Data Adiantamento Motorista" type="date" value={form.dataAdiantamento} onChange={(e) => set("dataAdiantamento", e.target.value)} className="col-span-2 sm:col-span-2" />
+              <Input label="Data Pagamento Saldo Motorista" type="date" value={form.dataPagamentoSaldo} onChange={(e) => set("dataPagamentoSaldo", e.target.value)} className="col-span-2 sm:col-span-2" />
+              <Select label="Status do Canhoto" value={form.statusCanhoto} onChange={(e) => set("statusCanhoto", e.target.value)} className="col-span-2 sm:col-span-4">
+                <option value="PENDENTE">Pendente</option>
+                <option value="RECEBIDO">Recebido</option>
+                <option value="COM_RESSALVA">Com Ressalva</option>
+              </Select>
             </div>
           </div>
 
