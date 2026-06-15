@@ -102,9 +102,30 @@ export default function EntregaTrackingPage() {
               </div>
 
               {entrega.motorista && (
-                <div className="mt-4 pt-4 flex items-center gap-2 text-sm" style={{ borderTop: "1px solid var(--border)" }}>
-                  <span style={{ color: "var(--text3)" }}>🚛 Motorista:</span>
-                  <span style={{ color: "var(--text2)" }}>{entrega.motorista.nome}</span>
+                <div className="mt-4 pt-4 flex flex-col gap-2 text-sm border-t" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center gap-2">
+                    <span style={{ color: "var(--text3)" }}>🚛 Motorista {entrega.motoristaCompl ? "(Principal)" : ""}:</span>
+                    <span style={{ color: "var(--text2)" }} className="font-semibold">{entrega.motorista.nome}</span>
+                    {entrega.veiculo?.placa && (
+                      <span className="text-xs px-2 py-0.5 rounded font-mono bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        {entrega.veiculo.placa}
+                      </span>
+                    )}
+                  </div>
+                  {entrega.motoristaCompl && (
+                    <div className="flex items-center gap-2">
+                      <span style={{ color: "#f97316" }}>🚛 Motorista Complementar:</span>
+                      <span style={{ color: "var(--text2)" }} className="font-semibold">{entrega.motoristaCompl.nome}</span>
+                      {entrega.veiculoCompl?.placa && (
+                        <span className="text-xs px-2 py-0.5 rounded font-mono bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400 border border-orange-100 dark:border-orange-900/35">
+                          {entrega.veiculoCompl.placa}
+                        </span>
+                      )}
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 uppercase tracking-widest font-mono">
+                        Complemento
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

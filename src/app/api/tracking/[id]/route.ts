@@ -26,6 +26,9 @@ export async function GET(
         dataAgendada: true,
         dataEntrega: true,
         motorista: { select: { nome: true } },
+        veiculo: { select: { placa: true } },
+        motoristaCompl: { select: { nome: true } },
+        veiculoCompl: { select: { placa: true } },
         notas: {
           select: {
             id: true,
