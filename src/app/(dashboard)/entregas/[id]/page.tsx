@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, StatusBadge, Modal, Input, Select, Textarea, ComboboxMotorista } from "@/components/ui";
 import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/utils";
-import { Copy, FileText, History, Package, MapPin, Truck, ChevronLeft, Calendar, User, Clock, CheckCircle2, AlertCircle, Trash2, ShieldCheck, DollarSign, Scissors, ChevronDown, ChevronUp, Box, Info, Weight, Layers, AlertTriangle, Printer, Maximize2, Minimize2, Plus, Search } from "lucide-react";
+import { Copy, FileText, History, Package, MapPin, Truck, ChevronLeft, Calendar, User, Clock, CheckCircle2, AlertCircle, Trash2, ShieldCheck, DollarSign, Scissors, ChevronDown, ChevronUp, Box, Info, Weight, Layers, AlertTriangle, Printer, Maximize2, Minimize2, Plus, Search, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
@@ -622,7 +622,16 @@ export default function EntregaDetailPage() {
                       <div key={oc.id} className="p-3 rounded-lg bg-red-50 border border-red-100">
                          <div className="flex items-center justify-between mb-1">
                            <span className="text-xs font-bold text-red-600">{oc.tipo}</span>
-                           <span className="text-[10px] text-slate-400">{formatDate(oc.createdAt)}</span>
+                           <div className="flex items-center gap-1.5">
+                             <span className="text-[10px] text-slate-400">{formatDate(oc.createdAt)}</span>
+                             <button
+                               onClick={() => router.push("/avarias?tab=ocorrencias")}
+                               className="p-1 px-1.5 rounded bg-white text-red-600 hover:bg-red-50 transition-all flex items-center gap-1 text-[9px] font-bold border border-red-200"
+                               title="Ver Painel de Ocorrências"
+                             >
+                               Ver Painel <ExternalLink size={9} />
+                             </button>
+                           </div>
                          </div>
                          <p className="text-xs text-slate-600">{oc.descricao}</p>
                       </div>

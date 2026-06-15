@@ -22,7 +22,7 @@ const navItems = [
   { href: "/financeiro", label: "Financeiro", icon: DollarSign, roles: ["ADMIN","FINANCEIRO"] },
   { href: "/faturamento", label: "Faturamento", icon: Wallet, roles: ["ADMIN","FINANCEIRO"] },
   { href: "/relatorios", label: "Relatórios", icon: BarChart2, roles: ["ADMIN","FINANCEIRO"] },
-  { href: "/avarias", label: "Avarias", icon: AlertTriangle, roles: ["ADMIN","OPERACIONAL","CONFERENTE"] },
+  { href: "/avarias", label: "Avarias e Ocorrências", icon: AlertTriangle, roles: ["ADMIN","OPERACIONAL","CONFERENTE"] },
   { href: "/paletes", label: "Paletes", icon: Layers, roles: ["ADMIN","OPERACIONAL","FINANCEIRO"] },
   { href: "/qualidade", label: "Qualidade", icon: ShieldCheck, roles: ["ADMIN"] },
   { href: "/portal", label: "Portal Cliente", icon: Globe, roles: ["ADMIN","CLIENTE"] },

@@ -40,6 +40,16 @@ export default function AvariasPage() {
   const router = useRouter();
   const [tab, setTab] = useState<TabView>("dashboard");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab");
+      if (t && ["dashboard", "registros", "devolucoes", "ocorrencias"].includes(t)) {
+        setTab(t as TabView);
+      }
+    }
+  }, []);
+
   // Dashboard
   const [resumo, setResumo] = useState<any>(null);
   const [loadingResumo, setLoadingResumo] = useState(true);
@@ -427,7 +437,7 @@ export default function AvariasPage() {
 
   return (
     <>
-      <Topbar title="Avarias" subtitle="Controle de mercadorias com ocorrência"
+      <Topbar title="Avarias e Ocorrências" subtitle="Controle de mercadorias com ocorrência"
         actions={<Button size="sm" onClick={() => { resetForm(); setShowCreate(true); }}><Plus size={14} /> <span className="hidden sm:inline">Nova Avaria</span><span className="sm:hidden">Nova</span></Button>} />
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">

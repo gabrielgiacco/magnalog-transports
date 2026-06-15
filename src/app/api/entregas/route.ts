@@ -52,6 +52,16 @@ export async function GET(req: NextRequest) {
       where.status = { notIn: ["FINALIZADO"] };
     }
 
+    // Excluir entregas com todas as ocorrências resolvidas da listagem principal
+    andConditions.push({
+      NOT: {
+        AND: [
+          { ocorrencias: { some: {} } },
+          { ocorrencias: { none: { resolvida: false } } }
+        ]
+      }
+    });
+
     // Status filter: multiple values → OR (show any matching status)
     if (statusList.length === 1) {
       where.status = statusList[0];
