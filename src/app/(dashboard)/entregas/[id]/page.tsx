@@ -563,10 +563,25 @@ export default function EntregaDetailPage() {
                       {entrega.quantidadePaletes} palete(s) · nenhum fornecedor desta entrega tem tabela de armazenagem cadastrada
                     </div>
                   ) : null}
-                  <div className="text-[10px] font-bold text-slate-400 uppercase mt-2">Custo Motorista (Terceiro)</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mt-4">
+                    {entrega.motoristaCompl ? "Custo Motorista Principal" : "Custo Motorista (Terceiro)"}
+                  </div>
                   <Field label="Valor Combinado" value={formatCurrency(entrega.valorMotorista)} color="#f97316" />
                   <Field label="Saldo a Pagar" value={formatCurrency(entrega.saldoMotorista)} color={entrega.saldoMotorista > 0 ? "#f97316" : "#10b981"} />
-                  <StatusBadge status={entrega.statusCanhoto} />
+                  <div className="mt-1">
+                    <StatusBadge status={entrega.statusCanhoto} />
+                  </div>
+
+                  {entrega.motoristaCompl && (
+                    <>
+                      <div className="text-[10px] font-bold text-orange-500 uppercase mt-4">Custo Motorista Complementar</div>
+                      <Field label="Valor Combinado Complementar" value={formatCurrency(entrega.valorMotoristaCompl)} color="#f97316" />
+                      <Field label="Saldo a Pagar Complementar" value={formatCurrency(entrega.saldoMotoristaCompl)} color={entrega.saldoMotoristaCompl > 0 ? "#f97316" : "#10b981"} />
+                      <div className="mt-1">
+                        <StatusBadge status={entrega.statusCanhotoCompl} />
+                      </div>
+                    </>
+                  )}
                 </div>
               </Card>
             </div>
