@@ -27,10 +27,29 @@ export async function GET(req: NextRequest) {
   const skip = (page - 1) * limit;
   const busca = searchParams.get("numero");
   const status = searchParams.get("status");
+  const emitente = searchParams.get("emitente");
+  const cidade = searchParams.get("cidade");
+  const dataEmissao = searchParams.get("dataEmissao");
 
   const where: any = {
     emitenteCnpj: { in: cnpjs },
   };
+
+  if (emitente) {
+    where.emitenteRazao = { contains: emitente, mode: "insensitive" };
+  }
+
+  if (cidade) {
+    where.cidade = { contains: cidade, mode: "insensitive" };
+  }
+
+  if (dataEmissao) {
+    const start = new Date(dataEmissao);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(dataEmissao);
+    end.setUTCHours(23, 59, 59, 999);
+    where.dataEmissao = { gte: start, lte: end };
+  }
 
   if (busca) {
     const orConditions: any[] = [
