@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
   const destinatario = searchParams.get("destinatario");
   const volumes = searchParams.get("volumes");
   const peso = searchParams.get("peso");
+  const dataAgendada = searchParams.get("dataAgendada");
   const dataChegada = searchParams.get("dataChegada");
   const dataEntrega = searchParams.get("dataEntrega");
 
@@ -101,6 +102,14 @@ export async function GET(req: NextRequest) {
     } else {
       entregaFilters.status = status;
     }
+  }
+
+  if (dataAgendada) {
+    const start = new Date(dataAgendada);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(dataAgendada);
+    end.setUTCHours(23, 59, 59, 999);
+    entregaFilters.dataAgendada = { gte: start, lte: end };
   }
 
   if (dataChegada) {

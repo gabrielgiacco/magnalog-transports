@@ -32,6 +32,7 @@ export default function PortalPage() {
   const [filterPeso, setFilterPeso] = useState("");
   const [filterDataChegada, setFilterDataChegada] = useState("");
   const [filterDataEntrega, setFilterDataEntrega] = useState("");
+  const [filterDataAgendada, setFilterDataAgendada] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,6 +69,7 @@ export default function PortalPage() {
     if (filterDestinatario) params.set("destinatario", filterDestinatario);
     if (filterVolumes) params.set("volumes", filterVolumes);
     if (filterPeso) params.set("peso", filterPeso);
+    if (filterDataAgendada) params.set("dataAgendada", filterDataAgendada);
     if (filterDataChegada) params.set("dataChegada", filterDataChegada);
     if (filterDataEntrega) params.set("dataEntrega", filterDataEntrega);
     
@@ -78,7 +80,7 @@ export default function PortalPage() {
     setPages(data.pages || 1);
     setStats(data.stats || { EM_SEPARACAO: 0, OCORRENCIA: 0, FINALIZADAS: 0, EM_ROTA: 0 });
     setLoading(false);
-  }, [page, debouncedSearch, filterStatus, filterEmitente, filterCidade, filterDataEmissao, filterDestinatario, filterVolumes, filterPeso, filterDataChegada, filterDataEntrega]);
+  }, [page, debouncedSearch, filterStatus, filterEmitente, filterCidade, filterDataEmissao, filterDestinatario, filterVolumes, filterPeso, filterDataAgendada, filterDataChegada, filterDataEntrega]);
 
   useEffect(() => { if (session) fetchData(); }, [session, fetchData]);
 
@@ -175,7 +177,7 @@ export default function PortalPage() {
         </div>
 
         {/* Active Filters Badges */}
-        {(filterEmitente || filterCidade || filterDataEmissao || filterDestinatario || filterVolumes || filterPeso || filterDataChegada || filterDataEntrega || debouncedSearch) && (
+        {(filterEmitente || filterCidade || filterDataEmissao || filterDestinatario || filterVolumes || filterPeso || filterDataChegada || filterDataEntrega || filterDataAgendada || debouncedSearch) && (
           <div className="flex flex-wrap gap-2 mb-5 items-center">
             <span className="text-xs" style={{ color: "var(--text3)" }}>Filtros ativos:</span>
             {debouncedSearch && (
@@ -220,6 +222,12 @@ export default function PortalPage() {
                 <button onClick={() => { setFilterDataEmissao(""); setPage(1); }} className="hover:opacity-70 text-blue-400"><X size={10} /></button>
               </span>
             )}
+            {filterDataAgendada && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs" style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", color: "var(--text)" }}>
+                <span>Agendamento: {formatDate(filterDataAgendada)}</span>
+                <button onClick={() => { setFilterDataAgendada(""); setPage(1); }} className="hover:opacity-70 text-blue-400"><X size={10} /></button>
+              </span>
+            )}
             {filterDataChegada && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs" style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)", color: "var(--text)" }}>
                 <span>Chegada: {formatDate(filterDataChegada)}</span>
@@ -239,6 +247,7 @@ export default function PortalPage() {
               setFilterVolumes(""); 
               setFilterPeso(""); 
               setFilterDataEmissao(""); 
+              setFilterDataAgendada("");
               setFilterDataChegada(""); 
               setFilterDataEntrega(""); 
               setSearch("");
@@ -509,6 +518,58 @@ export default function PortalPage() {
                     <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
+                        <span>Agendamento</span>
+                        <button onClick={() => setOpenDropdown(openDropdown === "agendamento" ? null : "agendamento")}
+                          className={`hover:text-white transition-colors p-0.5 rounded ${filterDataAgendada ? "text-blue-400" : "text-gray-500"}`}>
+                          <Filter size={10} />
+                        </button>
+                      </div>
+                      {openDropdown === "agendamento" && (
+                        <div className="absolute right-4 md:left-4 top-full mt-1 w-56 rounded-xl p-3 z-50 text-xs shadow-2xl border"
+                          style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}>
+                          <div className="font-semibold px-1 py-1 mb-2 border-b" style={{ borderColor: "var(--border)" }}>Filtrar Agendamento</div>
+                          
+                          <div className="flex flex-col gap-1.5 mb-2">
+                            <span className="text-[10px] text-gray-400">Selecionar data:</span>
+                            <input 
+                              type="date" 
+                              value={filterDataAgendada}
+                              onChange={(e) => { 
+                                setFilterDataAgendada(e.target.value); 
+                                setOpenDropdown(null);
+                                setPage(1); 
+                              }}
+                              className="w-full px-2 py-1.5 rounded-lg outline-none text-xs border"
+                              style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }}
+                            />
+                          </div>
+
+                          <div className="text-[10px] text-gray-400 mb-1 border-t pt-1.5" style={{ borderColor: "var(--border)" }}>Datas na página:</div>
+                          <div className="max-h-32 overflow-y-auto flex flex-col gap-0.5 font-mono">
+                            {Array.from(new Set(notas.map(n => {
+                              if (!n.entrega?.dataAgendada) return null;
+                              const d = new Date(n.entrega.dataAgendada);
+                              return typeof n.entrega.dataAgendada === "string" ? n.entrega.dataAgendada.split('T')[0] : d.toISOString().split('T')[0];
+                            }))).filter(Boolean).map((dt: any) => (
+                              <button key={dt} onClick={() => { setFilterDataAgendada(dt); setOpenDropdown(null); setPage(1); }}
+                                className="w-full text-left px-2 py-1 rounded-lg hover:bg-blue-600 hover:text-white transition-colors">
+                                {formatDate(dt)}
+                              </button>
+                            ))}
+                          </div>
+                          {filterDataAgendada && (
+                            <button onClick={() => { setFilterDataAgendada(""); setOpenDropdown(null); setPage(1); }}
+                              className="w-full mt-2 pt-2 border-t text-center hover:underline text-red-400" style={{ borderColor: "var(--border)" }}>
+                              Limpar Filtro
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </th>
+
+                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                      style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
+                      <div className="flex items-center gap-1.5">
                         <span>Chegada</span>
                         <button onClick={() => setOpenDropdown(openDropdown === "chegada" ? null : "chegada")}
                           className={`hover:text-white transition-colors p-0.5 rounded ${filterDataChegada ? "text-blue-400" : "text-gray-500"}`}>
@@ -683,6 +744,18 @@ export default function PortalPage() {
                       </td>
                       <td className="px-4 py-3 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
                         onClick={() => {
+                          if (n.entrega?.dataAgendada) {
+                            const d = new Date(n.entrega.dataAgendada);
+                            const dateStr = typeof n.entrega.dataAgendada === "string" ? n.entrega.dataAgendada.split('T')[0] : d.toISOString().split('T')[0];
+                            setFilterDataAgendada(dateStr);
+                            setPage(1);
+                          }
+                        }}
+                        style={{ color: "var(--text3)" }}>
+                        {n.entrega?.dataAgendada ? formatDate(n.entrega.dataAgendada) : "—"}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
+                        onClick={() => {
                           if (n.entrega?.dataChegada) {
                             const d = new Date(n.entrega.dataChegada);
                             const dateStr = typeof n.entrega.dataChegada === "string" ? n.entrega.dataChegada.split('T')[0] : d.toISOString().split('T')[0];
@@ -699,7 +772,6 @@ export default function PortalPage() {
                             <div className="font-mono text-[10px]" style={{ color: "var(--text3)" }}>
                               {n.entrega.notas && n.entrega.notas.length > 0 ? n.entrega.notas.map((nt: any) => nt.numero).join(", ") : n.entrega.codigo}
                             </div>
-                            {n.entrega.dataAgendada && <div className="text-[10px]" style={{ color: "var(--text2)" }}>Ag.: {formatDate(n.entrega.dataAgendada)}</div>}
                             {n.entrega.dataEntrega && (
                               <div className="text-[10px] cursor-pointer hover:underline hover:text-blue-400" 
                                 onClick={() => {
