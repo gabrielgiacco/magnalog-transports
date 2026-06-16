@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, StatusBadge, Modal, Input, Table, Th, Td, Tr, Select } from "@/components/ui";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { RefreshCw, Edit2, Search, DollarSign, Clock, CheckCircle, Download, FileSignature, AlertCircle, HandCoins, CalendarDays, Pencil } from "lucide-react";
+import { RefreshCw, Edit2, Search, DollarSign, Clock, CheckCircle, Download, FileSignature, AlertCircle, HandCoins, CalendarDays, Pencil, ArrowUp, ArrowDown } from "lucide-react";
 
 type PeriodoPreset = "todos" | "semanal" | "quinzenal" | "mensal";
 
@@ -74,6 +74,10 @@ export function AcertoMotoristasTab() {
   const [filterDataPgto, setFilterDataPgto] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "50" });
@@ -142,6 +146,67 @@ export function AcertoMotoristasTab() {
       if (formatted !== filterDataPgto) return false;
     }
     return true;
+  });
+
+  // Sort filtered deliveries locally on frontend
+  const sortedEntregas = [...filteredEntregas].sort((a, b) => {
+    if (!sortColumn || !sortDirection) return 0;
+
+    let valA: any = "";
+    let valB: any = "";
+
+    switch (sortColumn) {
+      case "motorista":
+        valA = a.motorista?.nome || "";
+        valB = b.motorista?.nome || "";
+        break;
+      case "dataFrete":
+        valA = a.dataEntrega || a.dataAgendada || "";
+        valB = b.dataEntrega || b.dataAgendada || "";
+        break;
+      case "freteCombinado":
+        valA = a.valorMotorista ?? 0;
+        valB = b.valorMotorista ?? 0;
+        break;
+      case "valesSaida":
+        valA = a.valorSaida ?? 0;
+        valB = b.valorSaida ?? 0;
+        break;
+      case "descarga":
+        valA = a.valorDescarga ?? 0;
+        valB = b.valorDescarga ?? 0;
+        break;
+      case "adiantamento":
+        valA = a.adiantamentoMotorista ?? 0;
+        valB = b.adiantamentoMotorista ?? 0;
+        break;
+      case "desconto":
+        valA = a.descontosMotorista ?? 0;
+        valB = b.descontosMotorista ?? 0;
+        break;
+      case "saldo":
+        valA = a.saldoMotorista ?? 0;
+        valB = b.saldoMotorista ?? 0;
+        break;
+      case "dataPgto":
+        valA = a.dataPagamentoSaldo || "";
+        valB = b.dataPagamentoSaldo || "";
+        break;
+      default:
+        return 0;
+    }
+
+    if (typeof valA === "string" && typeof valB === "string") {
+      return sortDirection === "asc"
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    }
+
+    if (typeof valA === "number" && typeof valB === "number") {
+      return sortDirection === "asc" ? valA - valB : valB - valA;
+    }
+
+    return 0;
   });
 
   // Unique values for dropdown filters
@@ -627,10 +692,28 @@ export function AcertoMotoristasTab() {
                   <Th className="relative">
                     <div className="flex items-center gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "motorista" ? null : "motorista")}>
                       <span>Motorista</span>
-                      <Search size={10} className={filterMotorista ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "motorista" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterMotorista ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "motorista" && (
                       <div className="absolute left-0 mt-1.5 w-60 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("motorista"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "motorista" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("motorista"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "motorista" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <input
                           type="text"
                           placeholder="Buscar motorista..."
@@ -641,8 +724,8 @@ export function AcertoMotoristasTab() {
                         />
                         <div className="max-h-40 overflow-y-auto space-y-1">
                           {uniqueMotoristas
-                            .filter(m => m.toLowerCase().includes(filterMotorista.toLowerCase()))
-                            .map(moto => (
+                             .filter(m => m.toLowerCase().includes(filterMotorista.toLowerCase()))
+                             .map(moto => (
                               <button
                                 key={moto}
                                 onClick={() => { setFilterMotorista(moto); setOpenDropdown(null); }}
@@ -653,12 +736,12 @@ export function AcertoMotoristasTab() {
                               </button>
                             ))}
                         </div>
-                        {filterMotorista && (
+                        {(filterMotorista || sortColumn === "motorista") && (
                           <button
-                            onClick={() => { setFilterMotorista(""); setOpenDropdown(null); }}
+                            onClick={() => { setFilterMotorista(""); if (sortColumn === "motorista") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -667,10 +750,28 @@ export function AcertoMotoristasTab() {
                   <Th className="relative">
                     <div className="flex items-center gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "dataFrete" ? null : "dataFrete")}>
                       <span>Data Frete</span>
-                      <Search size={10} className={filterDataFrete ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "dataFrete" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterDataFrete ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "dataFrete" && (
                       <div className="absolute left-0 mt-1.5 w-52 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("dataFrete"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataFrete" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("dataFrete"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataFrete" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <input
                           type="date"
                           value={filterDataFrete}
@@ -690,12 +791,12 @@ export function AcertoMotoristasTab() {
                             </button>
                           ))}
                         </div>
-                        {filterDataFrete && (
+                        {(filterDataFrete || sortColumn === "dataFrete") && (
                           <button
-                            onClick={() => { setFilterDataFrete(""); setOpenDropdown(null); }}
+                            onClick={() => { setFilterDataFrete(""); if (sortColumn === "dataFrete") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -705,10 +806,28 @@ export function AcertoMotoristasTab() {
                   <Th className="text-right relative">
                     <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "freteCombinado" ? null : "freteCombinado")}>
                       <span>Frete Combinado</span>
-                      <Search size={10} className={filterFreteCombinado !== null ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "freteCombinado" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterFreteCombinado !== null ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "freteCombinado" && (
                       <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("freteCombinado"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "freteCombinado" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("freteCombinado"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "freteCombinado" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <div className="max-h-40 overflow-y-auto space-y-1">
                           {uniqueFreteCombinado.map(v => (
                             <button
@@ -721,12 +840,12 @@ export function AcertoMotoristasTab() {
                             </button>
                           ))}
                         </div>
-                        {filterFreteCombinado !== null && (
+                        {(filterFreteCombinado !== null || sortColumn === "freteCombinado") && (
                           <button
-                            onClick={() => { setFilterFreteCombinado(null); setOpenDropdown(null); }}
+                            onClick={() => { setFilterFreteCombinado(null); if (sortColumn === "freteCombinado") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -735,10 +854,28 @@ export function AcertoMotoristasTab() {
                   <Th className="text-right relative">
                     <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "valesSaida" ? null : "valesSaida")}>
                       <span>Vales / Saída</span>
-                      <Search size={10} className={filterValesSaida !== null ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "valesSaida" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterValesSaida !== null ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "valesSaida" && (
                       <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("valesSaida"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "valesSaida" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("valesSaida"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "valesSaida" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <div className="max-h-40 overflow-y-auto space-y-1">
                           {uniqueValesSaida.map(v => (
                             <button
@@ -751,12 +888,12 @@ export function AcertoMotoristasTab() {
                             </button>
                           ))}
                         </div>
-                        {filterValesSaida !== null && (
+                        {(filterValesSaida !== null || sortColumn === "valesSaida") && (
                           <button
-                            onClick={() => { setFilterValesSaida(null); setOpenDropdown(null); }}
+                            onClick={() => { setFilterValesSaida(null); if (sortColumn === "valesSaida") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -765,10 +902,28 @@ export function AcertoMotoristasTab() {
                   <Th className="text-right relative">
                     <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "descarga" ? null : "descarga")}>
                       <span>Descarga</span>
-                      <Search size={10} className={filterDescarga !== null ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "descarga" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterDescarga !== null ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "descarga" && (
                       <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("descarga"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "descarga" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("descarga"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "descarga" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <div className="max-h-40 overflow-y-auto space-y-1">
                           {uniqueDescarga.map(v => (
                             <button
@@ -781,12 +936,12 @@ export function AcertoMotoristasTab() {
                             </button>
                           ))}
                         </div>
-                        {filterDescarga !== null && (
+                        {(filterDescarga !== null || sortColumn === "descarga") && (
                           <button
-                            onClick={() => { setFilterDescarga(null); setOpenDropdown(null); }}
+                            onClick={() => { setFilterDescarga(null); if (sortColumn === "descarga") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -795,10 +950,28 @@ export function AcertoMotoristasTab() {
                   <Th className="text-right relative">
                     <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "adiantamento" ? null : "adiantamento")}>
                       <span>Adiantamento</span>
-                      <Search size={10} className={filterAdiantamento !== null ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "adiantamento" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterAdiantamento !== null ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "adiantamento" && (
                       <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("adiantamento"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "adiantamento" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("adiantamento"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "adiantamento" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <div className="max-h-40 overflow-y-auto space-y-1">
                           {uniqueAdiantamento.map(v => (
                             <button
@@ -811,12 +984,12 @@ export function AcertoMotoristasTab() {
                             </button>
                           ))}
                         </div>
-                        {filterAdiantamento !== null && (
+                        {(filterAdiantamento !== null || sortColumn === "adiantamento") && (
                           <button
-                            onClick={() => { setFilterAdiantamento(null); setOpenDropdown(null); }}
+                            onClick={() => { setFilterAdiantamento(null); if (sortColumn === "adiantamento") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -825,10 +998,28 @@ export function AcertoMotoristasTab() {
                   <Th className="text-right relative">
                     <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "desconto" ? null : "desconto")}>
                       <span>Desconto</span>
-                      <Search size={10} className={filterDesconto !== null ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "desconto" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterDesconto !== null ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "desconto" && (
                       <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("desconto"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "desconto" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("desconto"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "desconto" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <div className="max-h-40 overflow-y-auto space-y-1">
                           {uniqueDesconto.map(v => (
                             <button
@@ -841,12 +1032,12 @@ export function AcertoMotoristasTab() {
                             </button>
                           ))}
                         </div>
-                        {filterDesconto !== null && (
+                        {(filterDesconto !== null || sortColumn === "desconto") && (
                           <button
-                            onClick={() => { setFilterDesconto(null); setOpenDropdown(null); }}
+                            onClick={() => { setFilterDesconto(null); if (sortColumn === "desconto") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -855,10 +1046,28 @@ export function AcertoMotoristasTab() {
                   <Th className="text-right bg-rose-50 text-rose-700 relative">
                     <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "saldo" ? null : "saldo")}>
                       <span>Saldo a Pagar</span>
-                      <Search size={10} className={filterSaldo !== null ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "saldo" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterSaldo !== null ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "saldo" && (
                       <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("saldo"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "saldo" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("saldo"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "saldo" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <div className="max-h-40 overflow-y-auto space-y-1">
                           {uniqueSaldo.map(v => (
                             <button
@@ -871,12 +1080,12 @@ export function AcertoMotoristasTab() {
                             </button>
                           ))}
                         </div>
-                        {filterSaldo !== null && (
+                        {(filterSaldo !== null || sortColumn === "saldo") && (
                           <button
-                            onClick={() => { setFilterSaldo(null); setOpenDropdown(null); }}
+                            onClick={() => { setFilterSaldo(null); if (sortColumn === "saldo") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -885,10 +1094,28 @@ export function AcertoMotoristasTab() {
                   <Th className="relative">
                     <div className="flex items-center gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "dataPgto" ? null : "dataPgto")}>
                       <span>Data Pgto</span>
-                      <Search size={10} className={filterDataPgto ? "text-rose-500" : "text-gray-400"} />
+                      {sortColumn === "dataPgto" ? (
+                        sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
+                      ) : (
+                        <Search size={10} className={filterDataPgto ? "text-rose-500" : "text-gray-400"} />
+                      )}
                     </div>
                     {openDropdown === "dataPgto" && (
                       <div className="absolute right-0 mt-1.5 w-52 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
+                          <button
+                            onClick={() => { setSortColumn("dataPgto"); setSortDirection("asc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataPgto" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowUp size={10} /> Crescente
+                          </button>
+                          <button
+                            onClick={() => { setSortColumn("dataPgto"); setSortDirection("desc"); setOpenDropdown(null); }}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataPgto" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                          >
+                            <ArrowDown size={10} /> Decrescente
+                          </button>
+                        </div>
                         <input
                           type="date"
                           value={filterDataPgto}
@@ -908,12 +1135,12 @@ export function AcertoMotoristasTab() {
                             </button>
                           ))}
                         </div>
-                        {filterDataPgto && (
+                        {(filterDataPgto || sortColumn === "dataPgto") && (
                           <button
-                            onClick={() => { setFilterDataPgto(""); setOpenDropdown(null); }}
+                            onClick={() => { setFilterDataPgto(""); if (sortColumn === "dataPgto") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
                             className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
-                            Limpar Filtro
+                            Limpar Filtros / Ordenação
                           </button>
                         )}
                       </div>
@@ -923,7 +1150,7 @@ export function AcertoMotoristasTab() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEntregas.map((e) => {
+                {sortedEntregas.map((e) => {
                   const isSelected = selectedIds.some(s => s.id === e.id);
                   return (
                   <Tr key={e.id} className={`hover:bg-slate-50 transition-colors ${e.isDiariaExtra ? "opacity-50" : ""} ${isSelected ? "bg-rose-50/40" : ""}`}>

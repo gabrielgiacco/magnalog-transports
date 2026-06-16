@@ -8,7 +8,7 @@ import {
   Table, Th, Td, Tr,
 } from "@/components/ui";
 import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/utils";
-import { Calendar, Search, Eye, RefreshCw, ChevronLeft, ChevronRight, Clock, List, LayoutGrid } from "lucide-react";
+import { Calendar, Search, Eye, RefreshCw, ChevronLeft, ChevronRight, Clock, List, LayoutGrid, CalendarDays } from "lucide-react";
 
 type FiltroData = "TODAS" | "HOJE" | "AMANHA" | "SEMANA" | "MES";
 type ViewMode = "lista" | "calendario";
@@ -34,6 +34,14 @@ export default function AgendamentosPage() {
 
   // Day detail modal
   const [selectedDay, setSelectedDay] = useState<{ day: number; entregas: any[] } | null>(null);
+
+  // Bulk scheduling states
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkItems, setBulkItems] = useState<any[]>([]); // parsed and validated items
+  const [validatingBulk, setValidatingBulk] = useState(false);
+  const [savingBulk, setSavingBulk] = useState(false);
+  const [hasProcessed, setHasProcessed] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -119,6 +127,127 @@ export default function AgendamentosPage() {
   useEffect(() => { if (viewMode === "lista") fetchEntregas(); }, [fetchEntregas, viewMode]);
   useEffect(() => { if (viewMode === "calendario") fetchCalendar(); }, [fetchCalendar, viewMode]);
 
+  const handleProcessBulkText = async () => {
+    if (!bulkText.trim()) {
+      toast.error("Cole o conteúdo da planilha primeiro");
+      return;
+    }
+
+    setValidatingBulk(true);
+    setHasProcessed(false);
+    try {
+      const lines = bulkText.split(/\r?\n/);
+      const parsedItems: { notaFiscal: string; dataAgendada: string }[] = [];
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+
+        // Separar por Tab ou ponto e vírgula ou vírgula
+        const cols = line.split(/\t|;|\|/);
+        if (cols.length < 2) continue;
+
+        const nfRaw = cols[0].trim();
+        const dataRaw = cols[1].trim();
+
+        // Ignorar linhas de cabeçalho
+        if (
+          nfRaw.toLowerCase().includes("nota") || 
+          nfRaw.toLowerCase().includes("nf") ||
+          dataRaw.toLowerCase().includes("agenda") ||
+          dataRaw.toLowerCase().includes("data")
+        ) {
+          continue;
+        }
+
+        // Tentar formatar a data de DD/MM/YYYY para YYYY-MM-DD
+        let formattedDate = "";
+        const dateParts = dataRaw.split("/");
+        if (dateParts.length === 3) {
+          const day = dateParts[0].trim().padStart(2, "0");
+          const month = dateParts[1].trim().padStart(2, "0");
+          const year = dateParts[2].trim();
+          formattedDate = `${year}-${month}-${day}`;
+        } else {
+          // Tentar ler como YYYY-MM-DD
+          const parsed = new Date(dataRaw);
+          if (!isNaN(parsed.getTime())) {
+            formattedDate = parsed.toISOString().split("T")[0];
+          }
+        }
+
+        if (nfRaw && formattedDate) {
+          parsedItems.push({
+            notaFiscal: nfRaw,
+            dataAgendada: formattedDate,
+          });
+        }
+      }
+
+      if (parsedItems.length === 0) {
+        toast.error("Nenhum registro válido encontrado. Verifique se copiou a coluna de Nota Fiscal e a coluna de Data.");
+        setValidatingBulk(false);
+        return;
+      }
+
+      // Enviar para validação no backend
+      const res = await fetch("/api/entregas/agendar-lote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "validate",
+          items: parsedItems,
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+      setBulkItems(data.items || []);
+      setHasProcessed(true);
+    } catch (err) {
+      toast.error("Erro ao validar dados do agendamento");
+    } finally {
+      setValidatingBulk(false);
+    }
+  };
+
+  const handleSaveBulk = async () => {
+    const validItems = bulkItems.filter(item => item.status === "valido");
+    if (validItems.length === 0) {
+      toast.error("Nenhum agendamento válido para salvar");
+      return;
+    }
+
+    setSavingBulk(true);
+    try {
+      const res = await fetch("/api/entregas/agendar-lote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "confirm",
+          items: validItems.map(item => ({
+            notaFiscal: item.notaFiscal,
+            dataAgendada: item.dataAgendada,
+          })),
+        }),
+      });
+
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+      toast.success(`${data.updatedCount || validItems.length} entrega(s) agendada(s) com sucesso!`);
+      setShowBulkModal(false);
+      setBulkText("");
+      setBulkItems([]);
+      setHasProcessed(false);
+      fetchEntregas();
+    } catch {
+      toast.error("Erro ao confirmar agendamento em lote");
+    } finally {
+      setSavingBulk(false);
+    }
+  };
+
   // Contagem de atrasadas
   const hojeStr = new Date().toISOString().split("T")[0];
   const atrasadas = entregas.filter((e) => {
@@ -163,9 +292,14 @@ export default function AgendamentosPage() {
         title="Agendamentos"
         subtitle={`${total} entrega(s) com data marcada`}
         actions={
-          <Button onClick={() => router.push("/entregas")}>
-            Ir para Entregas gerais
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowBulkModal(true)} className="bg-orange-500 hover:bg-orange-600 text-white">
+              <CalendarDays size={14} className="mr-1.5" /> Agendar em Lote (Excel)
+            </Button>
+            <Button onClick={() => router.push("/entregas")} variant="ghost">
+              Ir para Entregas gerais
+            </Button>
+          </div>
         }
       />
 
@@ -458,6 +592,93 @@ export default function AgendamentosPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal de Agendamento em Lote */}
+      <Modal open={showBulkModal} onClose={() => { setShowBulkModal(false); setBulkText(""); setBulkItems([]); setHasProcessed(false); }} title="Agendar Entregas em Lote (Excel)" size="lg">
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500">
+            Copie as colunas <strong>Nota Fiscal</strong> e <strong>Data do Agendamento</strong> da sua planilha do Excel e cole na caixa abaixo.
+          </p>
+
+          {!hasProcessed ? (
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Dados da Planilha (Nota Fiscal [Tab] Data)</label>
+              <textarea
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                placeholder="Exemplo:&#10;104452&#9;16/06/2026&#10;105843&#9;17/06/2026"
+                className="w-full h-64 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-sm font-mono outline-none focus:border-orange-500/50"
+              />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold text-gray-600">Pré-visualização dos Registros</span>
+                <button onClick={() => setHasProcessed(false)} className="text-orange-500 hover:underline">Voltar a colar texto</button>
+              </div>
+
+              <div className="max-h-80 overflow-y-auto border border-[var(--border)] rounded-xl">
+                <Table>
+                  <thead className="sticky top-0 bg-gray-50 z-10">
+                    <tr>
+                      <Th>Nota Fiscal</Th>
+                      <Th>Data Agendamento</Th>
+                      <Th>Cliente</Th>
+                      <Th>Cidade</Th>
+                      <Th>Status no Sistema</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bulkItems.map((item, idx) => (
+                      <Tr key={idx} className={item.status === "valido" ? "hover:bg-slate-50" : "bg-red-50/20"}>
+                        <Td className="font-mono font-bold text-xs">{item.notaFiscal}</Td>
+                        <Td className="font-mono text-xs">{formatDate(item.dataAgendada)}</Td>
+                        <Td className="text-xs max-w-[150px] truncate">{item.razaoSocial || "—"}</Td>
+                        <Td className="text-xs">{item.cidade || "—"}</Td>
+                        <Td>
+                          {item.status === "valido" ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                              ✓ Pronto
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700" title={item.motivo}>
+                              ✗ {item.motivo}
+                            </span>
+                          )}
+                        </Td>
+                      </Tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+
+              <div className="flex justify-between items-center p-3 rounded-xl bg-orange-500/5 text-sm font-semibold border border-orange-500/10">
+                <span className="text-gray-600">
+                  Total processado: {bulkItems.length} registro(s)
+                </span>
+                <span className="text-emerald-600">
+                  Prontos para agendar: {bulkItems.filter(i => i.status === "valido").length}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+            <Button variant="ghost" onClick={() => { setShowBulkModal(false); setBulkText(""); setBulkItems([]); setHasProcessed(false); }}>
+              Cancelar
+            </Button>
+            {!hasProcessed ? (
+              <Button onClick={handleProcessBulkText} disabled={validatingBulk || !bulkText.trim()} className="bg-orange-500 hover:bg-orange-600 text-white border-none">
+                {validatingBulk ? "Processando..." : "Processar Dados"}
+              </Button>
+            ) : (
+              <Button onClick={handleSaveBulk} disabled={savingBulk || bulkItems.filter(i => i.status === "valido").length === 0} className="bg-orange-500 hover:bg-orange-600 text-white border-none">
+                {savingBulk ? "Agendando..." : "Confirmar Agendamento"}
+              </Button>
+            )}
+          </div>
+        </div>
       </Modal>
     </>
   );
