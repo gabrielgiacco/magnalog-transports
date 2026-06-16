@@ -190,8 +190,8 @@ export async function GET(req: NextRequest) {
       createdAt: r.createdAt,
     }))
   ].sort((a, b) => {
-    const dateA = new Date(a.dataEntrega || a.createdAt).getTime();
-    const dateB = new Date(b.dataEntrega || b.createdAt).getTime();
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
     return dateB - dateA;
   });
 
