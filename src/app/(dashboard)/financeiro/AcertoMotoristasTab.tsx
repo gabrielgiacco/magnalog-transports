@@ -62,6 +62,18 @@ export function AcertoMotoristasTab() {
   const [showBulkPredict, setShowBulkPredict] = useState(false);
   const [bulkDate, setBulkDate] = useState("");
 
+  // Column Filters
+  const [filterMotorista, setFilterMotorista] = useState("");
+  const [filterDataFrete, setFilterDataFrete] = useState("");
+  const [filterFreteCombinado, setFilterFreteCombinado] = useState<number | null>(null);
+  const [filterValesSaida, setFilterValesSaida] = useState<number | null>(null);
+  const [filterDescarga, setFilterDescarga] = useState<number | null>(null);
+  const [filterAdiantamento, setFilterAdiantamento] = useState<number | null>(null);
+  const [filterDesconto, setFilterDesconto] = useState<number | null>(null);
+  const [filterSaldo, setFilterSaldo] = useState<number | null>(null);
+  const [filterDataPgto, setFilterDataPgto] = useState("");
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "50" });
@@ -81,6 +93,86 @@ export function AcertoMotoristasTab() {
   }, [page, search, pendente, dataInicio, dataFim, abaAtiva]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Click outside header dropdowns to close them
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (openDropdown && !(e.target as HTMLElement).closest("th")) {
+        setOpenDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openDropdown]);
+
+  // Filtered deliveries locally on frontend (for responsive filtering)
+  const filteredEntregas = entregas.filter(e => {
+    if (filterMotorista) {
+      const nomeMoto = e.motorista?.nome || "";
+      if (!nomeMoto.toLowerCase().includes(filterMotorista.toLowerCase())) return false;
+    }
+    if (filterDataFrete) {
+      const dateStr = e.dataEntrega || e.dataAgendada || "";
+      if (!dateStr) return false;
+      const formatted = new Date(dateStr).toISOString().slice(0, 10);
+      if (formatted !== filterDataFrete) return false;
+    }
+    if (filterFreteCombinado !== null) {
+      if (e.valorMotorista !== filterFreteCombinado) return false;
+    }
+    if (filterValesSaida !== null) {
+      if (e.valorSaida !== filterValesSaida) return false;
+    }
+    if (filterDescarga !== null) {
+      if (e.valorDescarga !== filterDescarga) return false;
+    }
+    if (filterAdiantamento !== null) {
+      if (e.adiantamentoMotorista !== filterAdiantamento) return false;
+    }
+    if (filterDesconto !== null) {
+      if (e.descontosMotorista !== filterDesconto) return false;
+    }
+    if (filterSaldo !== null) {
+      if (e.saldoMotorista !== filterSaldo) return false;
+    }
+    if (filterDataPgto) {
+      const dateStr = e.dataPagamentoSaldo || "";
+      if (!dateStr) return false;
+      const formatted = new Date(dateStr).toISOString().slice(0, 10);
+      if (formatted !== filterDataPgto) return false;
+    }
+    return true;
+  });
+
+  // Unique values for dropdown filters
+  const uniqueMotoristas = Array.from(new Set(entregas.map(e => e.motorista?.nome).filter(Boolean))).sort() as string[];
+  const uniqueDatesFrete = Array.from(new Set(entregas.map(e => {
+    const d = e.dataEntrega || e.dataAgendada || "";
+    return d ? new Date(d).toISOString().slice(0, 10) : "";
+  }).filter(Boolean))).sort() as string[];
+  const uniqueFreteCombinado = Array.from(new Set(entregas.map(e => e.valorMotorista).filter(v => v !== undefined && v !== null))).sort((a,b)=>a-b) as number[];
+  const uniqueValesSaida = Array.from(new Set(entregas.map(e => e.valorSaida).filter(v => v !== undefined && v !== null))).sort((a,b)=>a-b) as number[];
+  const uniqueDescarga = Array.from(new Set(entregas.map(e => e.valorDescarga).filter(v => v !== undefined && v !== null))).sort((a,b)=>a-b) as number[];
+  const uniqueAdiantamento = Array.from(new Set(entregas.map(e => e.adiantamentoMotorista).filter(v => v !== undefined && v !== null))).sort((a,b)=>a-b) as number[];
+  const uniqueDesconto = Array.from(new Set(entregas.map(e => e.descontosMotorista).filter(v => v !== undefined && v !== null))).sort((a,b)=>a-b) as number[];
+  const uniqueSaldo = Array.from(new Set(entregas.map(e => e.saldoMotorista).filter(v => v !== undefined && v !== null))).sort((a,b)=>a-b) as number[];
+  const uniqueDatesPgto = Array.from(new Set(entregas.map(e => {
+    const d = e.dataPagamentoSaldo || "";
+    return d ? new Date(d).toISOString().slice(0, 10) : "";
+  }).filter(Boolean))).sort() as string[];
+
+  // Recalculate totals dynamically
+  const filteredTotais = filteredEntregas.reduce((acc: any, v: any) => {
+    const saldoPendenteViagem = v.dataPagamentoSaldo ? 0 : v.saldoMotorista;
+    return {
+      valorMotorista: (acc.valorMotorista || 0) + v.valorMotorista,
+      adiantamentoMotorista: (acc.adiantamentoMotorista || 0) + (v.adiantamentoMotorista || 0),
+      saldoMotorista: (acc.saldoMotorista || 0) + saldoPendenteViagem,
+      valorSaida: (acc.valorSaida || 0) + (v.valorSaida || 0),
+      valorDescarga: (acc.valorDescarga || 0) + (v.valorDescarga || 0),
+      descontosMotorista: (acc.descontosMotorista || 0) + (v.descontosMotorista || 0),
+    };
+  }, { valorMotorista: 0, adiantamentoMotorista: 0, saldoMotorista: 0, valorSaida: 0, valorDescarga: 0, descontosMotorista: 0 });
 
   function handlePresetChange(preset: PeriodoPreset) {
     setPeriodoAtivo(preset);
@@ -223,7 +315,7 @@ export function AcertoMotoristasTab() {
 
   return (
     <>
-      <Topbar title="Acerto de Motoristas" subtitle={`${total} viagens · Controle de Pagamentos de Terceiros`}
+      <Topbar title="Acerto de Motoristas" subtitle={`${filteredEntregas.length} de ${total} viagens · Controle de Pagamentos de Terceiros`}
         actions={
           <Button variant="ghost" size="sm" onClick={() => window.open("/api/export?tipo=financeiro-motoristas", "_blank")}>
             <Download size={14} /> Exportar CSV
@@ -257,7 +349,7 @@ export function AcertoMotoristasTab() {
             </div>
             <div className="min-w-0">
               <div className="text-[9px] sm:text-[10px] font-mono uppercase truncate" style={{ color: "var(--text3)" }}>Combinado</div>
-              <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#f97316" }}>{formatCurrency(totais.valorMotorista ?? 0)}</div>
+              <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#f97316" }}>{formatCurrency(filteredTotais.valorMotorista ?? 0)}</div>
             </div>
           </Card>
           <Card className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4">
@@ -267,7 +359,7 @@ export function AcertoMotoristasTab() {
             </div>
             <div className="min-w-0">
               <div className="text-[9px] sm:text-[10px] font-mono uppercase truncate" style={{ color: "var(--text3)" }}>Adiantado</div>
-              <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#3b82f6" }}>{formatCurrency(totais.adiantamentoMotorista ?? 0)}</div>
+              <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#3b82f6" }}>{formatCurrency(filteredTotais.adiantamentoMotorista ?? 0)}</div>
             </div>
           </Card>
           <Card className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4">
@@ -277,7 +369,7 @@ export function AcertoMotoristasTab() {
             </div>
             <div className="min-w-0">
               <div className="text-[9px] sm:text-[10px] font-mono uppercase truncate" style={{ color: "var(--text3)" }}>Vales</div>
-              <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#10b981" }}>{formatCurrency(totais.valorSaida ?? 0)}</div>
+              <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#10b981" }}>{formatCurrency(filteredTotais.valorSaida ?? 0)}</div>
             </div>
           </Card>
           <Card className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4">
@@ -287,7 +379,7 @@ export function AcertoMotoristasTab() {
             </div>
             <div className="min-w-0">
               <div className="text-[9px] sm:text-[10px] font-mono uppercase truncate" style={{ color: "var(--text3)" }}>Descontos</div>
-              <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#ef4444" }}>{formatCurrency(totais.descontosMotorista ?? 0)}</div>
+              <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#ef4444" }}>{formatCurrency(filteredTotais.descontosMotorista ?? 0)}</div>
             </div>
           </Card>
           <Card className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border border-rose-200 col-span-2 sm:col-span-1">
@@ -297,7 +389,7 @@ export function AcertoMotoristasTab() {
             </div>
             <div className="min-w-0">
               <div className="text-[9px] sm:text-[10px] font-mono uppercase font-bold text-rose-500">Saldo Pendente</div>
-              <div className="font-head text-sm sm:text-lg font-black text-rose-600">{formatCurrency(totais.saldoMotorista ?? 0)}</div>
+              <div className="font-head text-sm sm:text-lg font-black text-rose-600">{formatCurrency(filteredTotais.saldoMotorista ?? 0)}</div>
             </div>
           </Card>
         </div>
@@ -378,25 +470,102 @@ export function AcertoMotoristasTab() {
           </div>
         </Card>
 
+        {/* Active Column Filters Badges */}
+        {(filterMotorista || filterDataFrete || filterFreteCombinado !== null || filterValesSaida !== null || filterDescarga !== null || filterAdiantamento !== null || filterDesconto !== null || filterSaldo !== null || filterDataPgto) && (
+          <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-[var(--surface2)] border border-[var(--border)] items-center">
+            <span className="text-xs font-mono uppercase text-rose-500 font-bold ml-1">Filtros:</span>
+            {filterMotorista && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Motorista: {filterMotorista}
+                <button onClick={() => setFilterMotorista("")} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            {filterDataFrete && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Data: {formatDate(filterDataFrete)}
+                <button onClick={() => setFilterDataFrete("")} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            {filterFreteCombinado !== null && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Combinado: {formatCurrency(filterFreteCombinado)}
+                <button onClick={() => setFilterFreteCombinado(null)} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            {filterValesSaida !== null && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Vales: {formatCurrency(filterValesSaida)}
+                <button onClick={() => setFilterValesSaida(null)} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            {filterDescarga !== null && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Descarga: {formatCurrency(filterDescarga)}
+                <button onClick={() => setFilterDescarga(null)} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            {filterAdiantamento !== null && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Adiantamento: {formatCurrency(filterAdiantamento)}
+                <button onClick={() => setFilterAdiantamento(null)} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            {filterDesconto !== null && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Desconto: {formatCurrency(filterDesconto)}
+                <button onClick={() => setFilterDesconto(null)} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            {filterSaldo !== null && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Saldo: {formatCurrency(filterSaldo)}
+                <button onClick={() => setFilterSaldo(null)} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            {filterDataPgto && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 border border-rose-500/20 flex items-center gap-1.5">
+                Pgto: {formatDate(filterDataPgto)}
+                <button onClick={() => setFilterDataPgto("")} className="hover:opacity-75 font-bold">×</button>
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setFilterMotorista("");
+                setFilterDataFrete("");
+                setFilterFreteCombinado(null);
+                setFilterValesSaida(null);
+                setFilterDescarga(null);
+                setFilterAdiantamento(null);
+                setFilterDesconto(null);
+                setFilterSaldo(null);
+                setFilterDataPgto("");
+              }}
+              className="text-xs font-bold text-rose-500 hover:text-rose-600 px-2 py-1 rounded hover:bg-rose-50 transition-colors ml-auto"
+            >
+              Limpar Todos
+            </button>
+          </div>
+        )}
+
         {/* Table */}
         <Card className="p-0 overflow-hidden shadow">
-          {loading ? <Loading /> : entregas.length === 0 ? <Empty icon="" text="Nenhum acerto de viagem pendente." /> : (
+          {loading ? <Loading /> : filteredEntregas.length === 0 ? <Empty icon="" text="Nenhum acerto de viagem pendente." /> : (
             <>
             <div className="block lg:hidden divide-y" style={{ borderColor: "var(--border)" }}>
-              {entregas.map((e) => {
+              {filteredEntregas.map((e) => {
                 const isSelected = selectedIds.some(s => s.id === e.id);
                 return (
                 <div key={e.id} className={`p-3 transition-colors active:bg-slate-50 ${e.isDiariaExtra ? "opacity-60" : ""} ${isSelected ? "bg-rose-50/40" : ""}`}>
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                      <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer flex-shrink-0"
+                      <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer"
                         checked={isSelected}
                         onChange={(ev) => {
                           if (ev.target.checked) setSelectedIds(prev => [...prev, { id: e.id, isRota: e.isRota }]);
                           else setSelectedIds(prev => prev.filter(s => s.id !== e.id));
                         }}
                       />
-                      <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase flex-shrink-0 ${e.isRota ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-blue-100 text-blue-700 border border-blue-200"}`}>
+                      <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase ${e.isRota ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-blue-100 text-blue-700 border border-blue-200"}`}>
                         {e.isRota ? "Rota" : "Direta"}
                       </span>
                       <span className="font-mono text-xs font-bold text-gray-700 truncate">{getIdentificador(e)}</span>
@@ -406,25 +575,28 @@ export function AcertoMotoristasTab() {
                         </span>
                       )}
                       {e.isDiariaExtra && (
-                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-bold bg-gray-100 text-gray-500 border border-gray-200">
+                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-bold bg-gray-100 text-gray-400 border border-gray-200">
                           Incluso na diaria
                         </span>
                       )}
                     </div>
                     <StatusBadge status={e.statusCanhoto || "PENDENTE"} />
                   </div>
-                  <div className="font-bold text-sm text-gray-800 uppercase truncate">{e.motorista?.nome || "Motorista nao vinculado"}</div>
-                  <div className="text-[10px] text-gray-400 font-mono truncate">Para: {e.cidade} - {formatDate(e.dataEntrega || e.dataAgendada) || "-"}</div>
+                  <div onClick={() => setFilterMotorista(e.motorista?.nome || "")} className="font-bold text-sm text-gray-800 uppercase truncate cursor-pointer hover:underline">{e.motorista?.nome || "Motorista nao vinculado"}</div>
+                  <div onClick={() => {
+                    const d = e.dataEntrega || e.dataAgendada || "";
+                    if (d) setFilterDataFrete(new Date(d).toISOString().slice(0, 10));
+                  }} className="text-[10px] text-gray-400 font-mono truncate cursor-pointer hover:underline">Para: {e.cidade} - {formatDate(e.dataEntrega || e.dataAgendada) || "-"}</div>
                   <div className="grid grid-cols-2 gap-1.5 mt-2 text-[11px]">
-                    <div><span className="text-gray-400">Combinado: </span><span className="font-mono font-bold text-orange-500">{formatCurrency(e.valorMotorista)}</span></div>
-                    <div><span className="text-gray-400">Vales: </span><span className="font-mono text-gray-600">{formatCurrency(e.valorSaida)}</span></div>
-                    <div><span className="text-gray-400">Adiant.: </span><span className="font-mono text-blue-500 font-bold">{formatCurrency(e.adiantamentoMotorista)}</span></div>
-                    <div><span className="text-gray-400">Desc.: </span><span className="font-mono text-red-500 font-bold">{formatCurrency(e.descontosMotorista)}</span></div>
+                    <div onClick={() => setFilterFreteCombinado(e.valorMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400">Combinado: </span><span className="font-mono font-bold text-orange-500">{formatCurrency(e.valorMotorista)}</span></div>
+                    <div onClick={() => setFilterValesSaida(e.valorSaida)} className="cursor-pointer hover:underline"><span className="text-gray-400">Vales: </span><span className="font-mono text-gray-600">{formatCurrency(e.valorSaida)}</span></div>
+                    <div onClick={() => setFilterAdiantamento(e.adiantamentoMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400">Adiant.: </span><span className="font-mono text-blue-500 font-bold">{formatCurrency(e.adiantamentoMotorista)}</span></div>
+                    <div onClick={() => setFilterDesconto(e.descontosMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400">Desc.: </span><span className="font-mono text-red-500 font-bold">{formatCurrency(e.descontosMotorista)}</span></div>
                   </div>
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
                     <div>
                       <div className="text-[9px] uppercase font-bold text-rose-500">Saldo</div>
-                      <div className={`font-mono text-sm font-black ${e.saldoMotorista > 0 ? "text-rose-600" : "text-emerald-500"}`}>
+                      <div onClick={() => setFilterSaldo(e.saldoMotorista)} className={`font-mono text-sm font-black cursor-pointer hover:underline ${e.saldoMotorista > 0 ? "text-rose-600" : "text-emerald-500"}`}>
                         {formatCurrency(e.saldoMotorista)}
                       </div>
                     </div>
@@ -444,27 +616,314 @@ export function AcertoMotoristasTab() {
                 <tr>
                   <Th className="w-10 text-center">
                     <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer"
-                      checked={entregas.length > 0 && selectedIds.length === entregas.length}
+                      checked={filteredEntregas.length > 0 && selectedIds.length === filteredEntregas.length}
                       onChange={(e) => {
-                        if (e.target.checked) setSelectedIds(entregas.map(ent => ({ id: ent.id, isRota: ent.isRota })));
+                        if (e.target.checked) setSelectedIds(filteredEntregas.map(ent => ({ id: ent.id, isRota: ent.isRota })));
                         else setSelectedIds([]);
                       }}
                     />
                   </Th>
-                  <Th>NF / Rota</Th><Th>Motorista</Th>
-                  <Th>Data Frete</Th>
+                  <Th>NF / Rota</Th>
+                  <Th className="relative">
+                    <div className="flex items-center gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "motorista" ? null : "motorista")}>
+                      <span>Motorista</span>
+                      <Search size={10} className={filterMotorista ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "motorista" && (
+                      <div className="absolute left-0 mt-1.5 w-60 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <input
+                          type="text"
+                          placeholder="Buscar motorista..."
+                          value={filterMotorista}
+                          onChange={e => setFilterMotorista(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded-lg text-xs outline-none mb-2 font-normal"
+                          style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                        />
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueMotoristas
+                            .filter(m => m.toLowerCase().includes(filterMotorista.toLowerCase()))
+                            .map(moto => (
+                              <button
+                                key={moto}
+                                onClick={() => { setFilterMotorista(moto); setOpenDropdown(null); }}
+                                className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] truncate font-medium block"
+                                style={{ color: "var(--text2)" }}
+                              >
+                                {moto}
+                              </button>
+                            ))}
+                        </div>
+                        {filterMotorista && (
+                          <button
+                            onClick={() => { setFilterMotorista(""); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
+                  <Th className="relative">
+                    <div className="flex items-center gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "dataFrete" ? null : "dataFrete")}>
+                      <span>Data Frete</span>
+                      <Search size={10} className={filterDataFrete ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "dataFrete" && (
+                      <div className="absolute left-0 mt-1.5 w-52 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <input
+                          type="date"
+                          value={filterDataFrete}
+                          onChange={e => { setFilterDataFrete(e.target.value); setOpenDropdown(null); }}
+                          className="w-full px-2 py-1.5 rounded-lg text-xs outline-none mb-2 font-normal"
+                          style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                        />
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueDatesFrete.map(dt => (
+                            <button
+                              key={dt}
+                              onClick={() => { setFilterDataFrete(dt); setOpenDropdown(null); }}
+                              className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] font-mono block"
+                              style={{ color: "var(--text2)" }}
+                            >
+                              {formatDate(dt)}
+                            </button>
+                          ))}
+                        </div>
+                        {filterDataFrete && (
+                          <button
+                            onClick={() => { setFilterDataFrete(""); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
                   <Th>Canhoto</Th>
-                  <Th className="text-right">Frete Combinado</Th>
-                  <Th className="text-right">Vales / Saída</Th>
-                  <Th className="text-right">Descarga</Th>
-                  <Th className="text-right">Adiantamento</Th>
-                  <Th className="text-right">Desconto</Th>
-                  <Th className="text-right bg-rose-50 text-rose-700">Saldo a Pagar</Th>
-                  <Th>Data Pgto</Th><Th></Th>
+                  <Th className="text-right relative">
+                    <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "freteCombinado" ? null : "freteCombinado")}>
+                      <span>Frete Combinado</span>
+                      <Search size={10} className={filterFreteCombinado !== null ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "freteCombinado" && (
+                      <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueFreteCombinado.map(v => (
+                            <button
+                              key={v}
+                              onClick={() => { setFilterFreteCombinado(v); setOpenDropdown(null); }}
+                              className="w-full text-right px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] font-mono font-medium block"
+                              style={{ color: "var(--text2)" }}
+                            >
+                              {formatCurrency(v)}
+                            </button>
+                          ))}
+                        </div>
+                        {filterFreteCombinado !== null && (
+                          <button
+                            onClick={() => { setFilterFreteCombinado(null); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
+                  <Th className="text-right relative">
+                    <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "valesSaida" ? null : "valesSaida")}>
+                      <span>Vales / Saída</span>
+                      <Search size={10} className={filterValesSaida !== null ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "valesSaida" && (
+                      <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueValesSaida.map(v => (
+                            <button
+                              key={v}
+                              onClick={() => { setFilterValesSaida(v); setOpenDropdown(null); }}
+                              className="w-full text-right px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] font-mono font-medium block"
+                              style={{ color: "var(--text2)" }}
+                            >
+                              {formatCurrency(v)}
+                            </button>
+                          ))}
+                        </div>
+                        {filterValesSaida !== null && (
+                          <button
+                            onClick={() => { setFilterValesSaida(null); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
+                  <Th className="text-right relative">
+                    <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "descarga" ? null : "descarga")}>
+                      <span>Descarga</span>
+                      <Search size={10} className={filterDescarga !== null ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "descarga" && (
+                      <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueDescarga.map(v => (
+                            <button
+                              key={v}
+                              onClick={() => { setFilterDescarga(v); setOpenDropdown(null); }}
+                              className="w-full text-right px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] font-mono font-medium block"
+                              style={{ color: "var(--text2)" }}
+                            >
+                              {formatCurrency(v)}
+                            </button>
+                          ))}
+                        </div>
+                        {filterDescarga !== null && (
+                          <button
+                            onClick={() => { setFilterDescarga(null); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
+                  <Th className="text-right relative">
+                    <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "adiantamento" ? null : "adiantamento")}>
+                      <span>Adiantamento</span>
+                      <Search size={10} className={filterAdiantamento !== null ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "adiantamento" && (
+                      <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueAdiantamento.map(v => (
+                            <button
+                              key={v}
+                              onClick={() => { setFilterAdiantamento(v); setOpenDropdown(null); }}
+                              className="w-full text-right px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] font-mono font-medium block"
+                              style={{ color: "var(--text2)" }}
+                            >
+                              {formatCurrency(v)}
+                            </button>
+                          ))}
+                        </div>
+                        {filterAdiantamento !== null && (
+                          <button
+                            onClick={() => { setFilterAdiantamento(null); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
+                  <Th className="text-right relative">
+                    <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "desconto" ? null : "desconto")}>
+                      <span>Desconto</span>
+                      <Search size={10} className={filterDesconto !== null ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "desconto" && (
+                      <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueDesconto.map(v => (
+                            <button
+                              key={v}
+                              onClick={() => { setFilterDesconto(v); setOpenDropdown(null); }}
+                              className="w-full text-right px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] font-mono font-medium block"
+                              style={{ color: "var(--text2)" }}
+                            >
+                              {formatCurrency(v)}
+                            </button>
+                          ))}
+                        </div>
+                        {filterDesconto !== null && (
+                          <button
+                            onClick={() => { setFilterDesconto(null); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
+                  <Th className="text-right bg-rose-50 text-rose-700 relative">
+                    <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "saldo" ? null : "saldo")}>
+                      <span>Saldo a Pagar</span>
+                      <Search size={10} className={filterSaldo !== null ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "saldo" && (
+                      <div className="absolute right-0 mt-1.5 w-48 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueSaldo.map(v => (
+                            <button
+                              key={v}
+                              onClick={() => { setFilterSaldo(v); setOpenDropdown(null); }}
+                              className="w-full text-right px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] font-mono font-medium block"
+                              style={{ color: "var(--text2)" }}
+                            >
+                              {formatCurrency(v)}
+                            </button>
+                          ))}
+                        </div>
+                        {filterSaldo !== null && (
+                          <button
+                            onClick={() => { setFilterSaldo(null); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
+                  <Th className="relative">
+                    <div className="flex items-center gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "dataPgto" ? null : "dataPgto")}>
+                      <span>Data Pgto</span>
+                      <Search size={10} className={filterDataPgto ? "text-rose-500" : "text-gray-400"} />
+                    </div>
+                    {openDropdown === "dataPgto" && (
+                      <div className="absolute right-0 mt-1.5 w-52 rounded-xl shadow-2xl p-2.5 z-50 text-left font-normal" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <input
+                          type="date"
+                          value={filterDataPgto}
+                          onChange={e => { setFilterDataPgto(e.target.value); setOpenDropdown(null); }}
+                          className="w-full px-2 py-1.5 rounded-lg text-xs outline-none mb-2 font-normal"
+                          style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                        />
+                        <div className="max-h-40 overflow-y-auto space-y-1">
+                          {uniqueDatesPgto.map(dt => (
+                            <button
+                              key={dt}
+                              onClick={() => { setFilterDataPgto(dt); setOpenDropdown(null); }}
+                              className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-[var(--surface2)] font-mono block"
+                              style={{ color: "var(--text2)" }}
+                            >
+                              {formatDate(dt)}
+                            </button>
+                          ))}
+                        </div>
+                        {filterDataPgto && (
+                          <button
+                            onClick={() => { setFilterDataPgto(""); setOpenDropdown(null); }}
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                          >
+                            Limpar Filtro
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Th>
+                  <Th></Th>
                 </tr>
               </thead>
               <tbody>
-                {entregas.map((e) => {
+                {filteredEntregas.map((e) => {
                   const isSelected = selectedIds.some(s => s.id === e.id);
                   return (
                   <Tr key={e.id} className={`hover:bg-slate-50 transition-colors ${e.isDiariaExtra ? "opacity-50" : ""} ${isSelected ? "bg-rose-50/40" : ""}`}>
@@ -492,8 +951,8 @@ export function AcertoMotoristasTab() {
                         )}
                       </div>
                     </Td>
-                    <Td>
-                      <div className="font-bold text-sm text-gray-800 uppercase">{e.motorista?.nome || "Motorista não vinculado"}</div>
+                    <Td onClick={() => setFilterMotorista(e.motorista?.nome || "")} className="cursor-pointer hover:bg-rose-50/50 transition-colors">
+                      <div className="font-bold text-sm text-gray-800 uppercase hover:underline">{e.motorista?.nome || "Motorista não vinculado"}</div>
                       <div className="text-[10px] text-gray-400 font-mono">
                         {e.isDiariaPrincipal && e.diariaQtdViagens > 1
                           ? <span className="text-emerald-600 font-bold">Diaria — {e.diariaQtdSaidas} {e.diariaQtdSaidas === 1 ? "saida" : "saidas"} no dia{e.diariaQtdDiretas > 0 && e.diariaQtdRotas > 0 ? ` + ${e.diariaQtdDiretas} direta(s)` : ""}</span>
@@ -501,9 +960,12 @@ export function AcertoMotoristasTab() {
                         }
                       </div>
                     </Td>
-                    <Td>
+                    <Td onClick={() => {
+                      const d = e.dataEntrega || e.dataAgendada || "";
+                      if (d) setFilterDataFrete(new Date(d).toISOString().slice(0, 10));
+                    }} className="cursor-pointer hover:bg-rose-50/50 transition-colors">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[11px] font-semibold" style={{ color: "var(--text2)" }}>
+                        <span className="font-mono text-[11px] font-semibold hover:underline" style={{ color: "var(--text2)" }}>
                           {formatDate(e.dataEntrega || e.dataAgendada) || "-"}
                         </span>
                         <button
@@ -518,22 +980,33 @@ export function AcertoMotoristasTab() {
                     <Td>
                       <StatusBadge status={e.statusCanhoto || "PENDENTE"} />
                     </Td>
-                    <Td className="text-right">
-                      <span className={`font-mono text-sm font-bold ${e.isDiariaExtra ? "text-gray-300" : "text-orange-500"}`}>{formatCurrency(e.valorMotorista)}</span>
+                    <Td onClick={() => setFilterFreteCombinado(e.valorMotorista)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right">
+                      <span className={`font-mono text-sm font-bold hover:underline ${e.isDiariaExtra ? "text-gray-300" : "text-orange-500"}`}>{formatCurrency(e.valorMotorista)}</span>
                     </Td>
-                    <Td className="text-right"><span className="font-mono text-xs text-gray-500">{formatCurrency(e.valorSaida)}</span></Td>
-                    <Td className="text-right"><span className="font-mono text-xs text-gray-500">{formatCurrency(e.valorDescarga)}</span></Td>
-                    <Td className="text-right text-gray-500">
-                        <div className="font-mono text-xs text-blue-500 font-bold">{formatCurrency(e.adiantamentoMotorista)}</div>
+                    <Td onClick={() => setFilterValesSaida(e.valorSaida)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right">
+                      <span className="font-mono text-xs text-gray-500 hover:underline">{formatCurrency(e.valorSaida)}</span>
+                    </Td>
+                    <Td onClick={() => setFilterDescarga(e.valorDescarga)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right">
+                      <span className="font-mono text-xs text-gray-500 hover:underline">{formatCurrency(e.valorDescarga)}</span>
+                    </Td>
+                    <Td onClick={() => setFilterAdiantamento(e.adiantamentoMotorista)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right text-gray-500">
+                        <div className="font-mono text-xs text-blue-500 font-bold hover:underline">{formatCurrency(e.adiantamentoMotorista)}</div>
                         <div className="text-[9px] font-mono">{formatDate(e.dataAdiantamento)}</div>
                     </Td>
-                    <Td className="text-right"><span className="font-mono text-xs text-red-500 font-bold">{formatCurrency(e.descontosMotorista)}</span></Td>
-                    <Td className="text-right bg-rose-50/30">
-                      <span className={`font-mono text-sm font-black ${e.saldoMotorista > 0 ? "text-rose-600" : "text-emerald-500"}`}>
+                    <Td onClick={() => setFilterDesconto(e.descontosMotorista)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right">
+                      <span className="font-mono text-xs text-red-500 font-bold hover:underline">{formatCurrency(e.descontosMotorista)}</span>
+                    </Td>
+                    <Td onClick={() => setFilterSaldo(e.saldoMotorista)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right bg-rose-50/30">
+                      <span className={`font-mono text-sm font-black hover:underline ${e.saldoMotorista > 0 ? "text-rose-600" : "text-emerald-500"}`}>
                         {formatCurrency(e.saldoMotorista)}
                       </span>
                     </Td>
-                    <Td><span className="font-mono text-[10px] font-bold" style={{ color: "var(--text3)" }}>{formatDate(e.dataPagamentoSaldo) || "-"}</span></Td>
+                    <Td onClick={() => {
+                      const d = e.dataPagamentoSaldo || "";
+                      if (d) setFilterDataPgto(new Date(d).toISOString().slice(0, 10));
+                    }} className="cursor-pointer hover:bg-rose-50/50 transition-colors">
+                      <span className="font-mono text-[10px] font-bold hover:underline" style={{ color: "var(--text3)" }}>{formatDate(e.dataPagamentoSaldo) || "-"}</span>
+                    </Td>
                     <Td>
                       <button onClick={() => openEdit(e)}
                         className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-gray-800 text-white hover:bg-gray-700">
