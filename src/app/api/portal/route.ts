@@ -30,6 +30,12 @@ export async function GET(req: NextRequest) {
   const emitente = searchParams.get("emitente");
   const cidade = searchParams.get("cidade");
   const dataEmissao = searchParams.get("dataEmissao");
+  const destinatario = searchParams.get("destinatario");
+  const volumes = searchParams.get("volumes");
+  const peso = searchParams.get("peso");
+  const dataChegada = searchParams.get("dataChegada");
+  const dataEntrega = searchParams.get("dataEntrega");
+
 
   const where: any = {
     emitenteCnpj: { in: cnpjs },
@@ -43,6 +49,24 @@ export async function GET(req: NextRequest) {
     where.cidade = { contains: cidade, mode: "insensitive" };
   }
 
+  if (destinatario) {
+    where.destinatarioRazao = { contains: destinatario, mode: "insensitive" };
+  }
+
+  if (volumes) {
+    const vVal = parseInt(volumes);
+    if (!isNaN(vVal)) {
+      where.volumes = vVal;
+    }
+  }
+
+  if (peso) {
+    const pVal = parseFloat(peso);
+    if (!isNaN(pVal)) {
+      where.pesoBruto = pVal;
+    }
+  }
+
   if (dataEmissao) {
     const start = new Date(dataEmissao);
     start.setUTCHours(0, 0, 0, 0);
@@ -50,6 +74,7 @@ export async function GET(req: NextRequest) {
     end.setUTCHours(23, 59, 59, 999);
     where.dataEmissao = { gte: start, lte: end };
   }
+
 
   if (busca) {
     const orConditions: any[] = [
@@ -69,13 +94,35 @@ export async function GET(req: NextRequest) {
     where.OR = orConditions;
   }
 
+  const entregaFilters: any = {};
   if (status) {
     if (status === "FINALIZADAS") {
-      where.entrega = { status: { in: ["ENTREGUE", "FINALIZADO"] } };
+      entregaFilters.status = { in: ["ENTREGUE", "FINALIZADO"] };
     } else {
-      where.entrega = { status };
+      entregaFilters.status = status;
     }
   }
+
+  if (dataChegada) {
+    const start = new Date(dataChegada);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(dataChegada);
+    end.setUTCHours(23, 59, 59, 999);
+    entregaFilters.dataChegada = { gte: start, lte: end };
+  }
+
+  if (dataEntrega) {
+    const start = new Date(dataEntrega);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(dataEntrega);
+    end.setUTCHours(23, 59, 59, 999);
+    entregaFilters.dataEntrega = { gte: start, lte: end };
+  }
+
+  if (Object.keys(entregaFilters).length > 0) {
+    where.entrega = entregaFilters;
+  }
+
 
   const [notas, total] = await Promise.all([
     prisma.notaFiscal.findMany({
