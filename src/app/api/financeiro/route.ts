@@ -33,13 +33,29 @@ export async function GET(req: NextRequest) {
   }
   
   if (dataInicio || dataFim) {
-    whereEntrega.createdAt = {};
-    if (dataInicio) whereEntrega.createdAt.gte = new Date(dataInicio);
+    const conditions: any[] = [];
+    if (dataInicio) {
+      const inicio = new Date(dataInicio);
+      conditions.push({
+        OR: [
+          { dataAgendada: { gte: inicio } },
+          { AND: [{ dataAgendada: null }, { dataEntrega: { gte: inicio } }] },
+          { AND: [{ dataAgendada: null }, { dataEntrega: null }, { createdAt: { gte: inicio } }] }
+        ]
+      });
+    }
     if (dataFim) {
       const fim = new Date(dataFim);
       fim.setHours(23, 59, 59, 999);
-      whereEntrega.createdAt.lte = fim;
+      conditions.push({
+        OR: [
+          { dataAgendada: { lte: fim } },
+          { AND: [{ dataAgendada: null }, { dataEntrega: { lte: fim } }] },
+          { AND: [{ dataAgendada: null }, { dataEntrega: null }, { createdAt: { lte: fim } }] }
+        ]
+      });
     }
+    whereEntrega.AND = conditions;
   }
   if (search) {
     whereEntrega.OR = [
@@ -61,13 +77,27 @@ export async function GET(req: NextRequest) {
   }
 
   if (dataInicio || dataFim) {
-    whereRota.createdAt = {};
-    if (dataInicio) whereRota.createdAt.gte = new Date(dataInicio);
+    const conditions: any[] = [];
+    if (dataInicio) {
+      const inicio = new Date(dataInicio);
+      conditions.push({
+        OR: [
+          { data: { gte: inicio } },
+          { AND: [{ data: null }, { createdAt: { gte: inicio } }] }
+        ]
+      });
+    }
     if (dataFim) {
       const fim = new Date(dataFim);
       fim.setHours(23, 59, 59, 999);
-      whereRota.createdAt.lte = fim;
+      conditions.push({
+        OR: [
+          { data: { lte: fim } },
+          { AND: [{ data: null }, { createdAt: { lte: fim } }] }
+        ]
+      });
     }
+    whereRota.AND = conditions;
   }
   if (search) {
     whereRota.OR = [
