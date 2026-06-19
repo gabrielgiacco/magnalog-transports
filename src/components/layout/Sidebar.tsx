@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, Calendar, Users, FileText,
   DollarSign, Settings, BarChart2, Wallet, FileUp,
   Truck, Globe, Columns, Route, ShieldCheck, AlertTriangle, Map,
-  Layers, X, ChevronLeft, ChevronRight as ChevronRightIcon,
+  Layers, X, ChevronLeft, ChevronRight as ChevronRightIcon, Warehouse,
 } from "lucide-react";
 
 const navItems = [
@@ -24,6 +24,7 @@ const navItems = [
   { href: "/relatorios", label: "Relatórios", icon: BarChart2, roles: ["ADMIN","FINANCEIRO"] },
   { href: "/avarias", label: "Avarias e Ocorrências", icon: AlertTriangle, roles: ["ADMIN","OPERACIONAL","CONFERENTE"] },
   { href: "/paletes", label: "Paletes", icon: Layers, roles: ["ADMIN","OPERACIONAL","FINANCEIRO"] },
+  { href: "/configuracoes/normas", label: "Normas Paletização", icon: Warehouse, roles: ["ADMIN","OPERACIONAL","FINANCEIRO"] },
   { href: "/qualidade", label: "Qualidade", icon: ShieldCheck, roles: ["ADMIN"] },
   { href: "/portal", label: "Portal Cliente", icon: Globe, roles: ["ADMIN","CLIENTE"] },
   { href: "/usuarios", label: "Usuários", icon: Users, roles: ["ADMIN"] },

@@ -721,3 +721,21 @@ model LancamentoFinanceiro {
   @@index([entregaId])
   @@index([faturaId])
 }
+
+model NormaPaletizacao {
+  id                     String   @id @default(cuid())
+  clienteCnpj            String   // CNPJ do Cliente (Destinatário que recebe a mercadoria)
+  fornecedorCnpj         String   // CNPJ do Fornecedor (Emitente da NF)
+  codigoProduto          String   // Código do produto (CODPROD) do XML da NF
+  descricao              String?  // Descrição do produto para conferência
+  embalagem              String?  // Ex: "8X1"
+  lastro                 Int      // Quantidade de caixas na camada (lastro)
+  altura                 Int      // Quantidade de camadas de altura
+  quantidadeCaixasPalete Int      // Quantidade de caixas total por palete (lastro * altura)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([clienteCnpj, fornecedorCnpj, codigoProduto])
+  @@index([clienteCnpj])
+  @@index([fornecedorCnpj])
+}

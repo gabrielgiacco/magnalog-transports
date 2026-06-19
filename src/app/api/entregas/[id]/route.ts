@@ -83,11 +83,53 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   if (!entrega) return NextResponse.json({ error: "Não encontrada" }, { status: 404 });
 
-  // Parse XML of each NF to include products and additional data
-  const notasComProdutos = entrega.notas.map((nf) => {
+  // Fetch palletizing rules for this client & the emitters of the NFs
+  const emitentesCnpjs = Array.from(new Set(entrega.notas.map((n: any) => n.emitenteCnpj).filter(Boolean))) as string[];
+  const cleanClienteCnpj = String(entrega.cnpj).replace(/\D/g, "");
+  const cleanEmitentesCnpjs = emitentesCnpjs.map((c: string) => String(c).replace(/\D/g, ""));
+
+  const normas = await prisma.normaPaletizacao.findMany({
+    where: {
+      clienteCnpj: cleanClienteCnpj,
+      fornecedorCnpj: { in: cleanEmitentesCnpjs }
+    }
+  });
+
+  const normasMap = new Map<string, any>();
+  for (const n of normas) {
+    normasMap.set(`${n.fornecedorCnpj}_${n.codigoProduto}`, n);
+  }
+
+  let totalPaletesEstimadosEntrega = 0;
+
+  // Parse XML of each NF to include products, additional data and palletizing rules
+  const notasComProdutos = entrega.notas.map((nf: any) => {
     const { produtos, infAdicionais, infFisco, emitente } = parseNFProducts(nf.xmlOriginal);
+    const cleanFornecedorCnpj = String(nf.emitenteCnpj).replace(/\D/g, "");
+
+    const produtosComNormas = produtos.map((p: any) => {
+      const key = `${cleanFornecedorCnpj}_${p.codigo}`;
+      const norma = normasMap.get(key);
+
+      if (norma) {
+        const paletesEstimados = p.quantidade / (norma.quantidadeCaixasPalete || 1);
+        totalPaletesEstimadosEntrega += paletesEstimados;
+        return {
+          ...p,
+          norma: {
+            lastro: norma.lastro,
+            altura: norma.altura,
+            quantidadeCaixasPalete: norma.quantidadeCaixasPalete,
+            embalagem: norma.embalagem,
+          },
+          paletesEstimados,
+        };
+      }
+      return { ...p, norma: null, paletesEstimados: 0 };
+    });
+
     const { xmlOriginal, ...nfSemXml } = nf;
-    return { ...nfSemXml, produtos, infAdicionais, infFisco, emitente };
+    return { ...nfSemXml, produtos: produtosComNormas, infAdicionais, infFisco, emitente };
   });
 
   // Compute armazenagem automatically from TabelaArmazenagem per fornecedor/emitente das NFs
@@ -129,7 +171,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  return NextResponse.json({ ...entrega, notas: notasComProdutos, armazenagemCalc });
+  return NextResponse.json({ ...entrega, notas: notasComProdutos, armazenagemCalc, totalPaletesEstimados: totalPaletesEstimadosEntrega });
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {

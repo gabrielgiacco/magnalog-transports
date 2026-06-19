@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
-import { Button, Card, Loading, StatusBadge, Modal, Input, Select, Textarea, ComboboxMotorista } from "@/components/ui";
+import { Button, Card, Loading, StatusBadge, Modal, Input, Select, Textarea, ComboboxMotorista, Table, Th, Td, Tr } from "@/components/ui";
 import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/utils";
 import { Copy, FileText, History, Package, MapPin, Truck, ChevronLeft, Calendar, User, Clock, CheckCircle2, AlertCircle, Trash2, ShieldCheck, DollarSign, Scissors, ChevronDown, ChevronUp, Box, Info, Weight, Layers, AlertTriangle, Printer, Maximize2, Minimize2, Plus, Search, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
@@ -472,6 +472,7 @@ export default function EntregaDetailPage() {
           <TabButton active={tab === "info"} onClick={() => setTab("info")} icon={FileText}>Informações</TabButton>
           <TabButton active={tab === "historico"} onClick={() => setTab("historico")} icon={History}>Histórico</TabButton>
           <TabButton active={tab === "avarias"} onClick={() => setTab("avarias")} icon={AlertTriangle}>Avarias</TabButton>
+          <TabButton active={tab === "paletes"} onClick={() => setTab("paletes")} icon={Layers}>Paletização</TabButton>
           {isAdmin && (
             <TabButton active={tab === "qualidade"} onClick={() => setTab("qualidade")} icon={ShieldCheck}>Qualidade Operacional</TabButton>
           )}
@@ -705,6 +706,10 @@ export default function EntregaDetailPage() {
             </div>
             <QualityScoring entregaId={id} />
           </Card>
+        )}
+
+        {tab === "paletes" && (
+          <PaletizacaoTab entrega={entrega} />
         )}
       </div>
 
@@ -1369,3 +1374,338 @@ function AvariasTab({ entregaId, entrega }: { entregaId: string; entrega: any })
     </div>
   );
 }
+
+function PaletizacaoTab({ entrega }: { entrega: any }) {
+  const router = useRouter();
+  
+  // Extrair todos os produtos de todas as notas fiscais
+  const todosProdutos: any[] = [];
+  let totalCaixas = 0;
+  let totalComNorma = 0;
+
+  entrega.notas?.forEach((nf: any) => {
+    nf.produtos?.forEach((p: any) => {
+      totalCaixas += p.quantidade || 0;
+      const temNorma = !!p.norma;
+      if (temNorma) totalComNorma++;
+      
+      todosProdutos.push({
+        nfNumero: nf.numero,
+        fornecedorCnpj: nf.emitenteCnpj,
+        fornecedorRazao: nf.emitenteRazao,
+        ...p
+      });
+    });
+  });
+
+  const totalProdutos = todosProdutos.length;
+  const pctNormas = totalProdutos > 0 ? Math.round((totalComNorma / totalProdutos) * 100) : 0;
+
+  const handlePrint = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    const dataEntregaFormatada = entrega.dataAgendada ? formatDate(entrega.dataAgendada) : "Não agendada";
+
+    const rowsHtml = todosProdutos.map((p) => {
+      const normaText = p.norma 
+        ? `${p.norma.lastro} x ${p.norma.altura} = ${p.norma.quantidadeCaixasPalete}` 
+        : "SEM NORMA";
+      
+      let paletesText = "—";
+      if (p.norma) {
+        const totalPalete = p.norma.quantidadeCaixasPalete || 1;
+        const inteiros = Math.floor(p.quantidade / totalPalete);
+        const sobras = p.quantidade % totalPalete;
+        if (inteiros > 0 && sobras > 0) {
+          paletesText = `${inteiros} int. + ${sobras} cx`;
+        } else if (inteiros > 0) {
+          paletesText = `${inteiros} int.`;
+        } else {
+          paletesText = `${sobras} cx`;
+        }
+      }
+
+      return `
+        <tr>
+          <td class="font-mono text-center">${p.nfNumero}</td>
+          <td class="font-mono text-center">${p.codigo}</td>
+          <td>${p.descricao || "—"}</td>
+          <td class="text-center font-mono">${p.quantidade}</td>
+          <td class="text-center font-mono">${normaText}</td>
+          <td class="text-center font-mono font-bold">${paletesText}</td>
+          <td style="width: 120px;"></td> <!-- Campo para conferência manual -->
+          <td style="width: 120px;"></td> <!-- Campo para observação -->
+        </tr>
+      `;
+    }).join("");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Ficha de Conferência de Paletização - Carga ${entrega.codigo}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+            body { font-family: 'Inter', sans-serif; color: #1e293b; padding: 20px; line-height: 1.4; }
+            .header-container { display: flex; justify-content: space-between; align-items: start; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
+            .title-area h1 { font-size: 18px; margin: 0 0 5px 0; text-transform: uppercase; font-weight: 700; color: #0f172a; }
+            .title-area p { font-size: 11px; color: #64748b; margin: 0; }
+            .meta-carga { text-align: right; }
+            .meta-carga h2 { font-size: 20px; margin: 0; font-weight: 700; color: #f97316; font-family: monospace; }
+            .meta-carga p { font-size: 10px; color: #64748b; margin: 2px 0 0 0; text-transform: uppercase; }
+            
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; }
+            .info-col { display: flex; flex-direction: column; gap: 6px; }
+            .info-item { font-size: 11px; }
+            .info-label { font-weight: bold; color: #475569; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+            
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 30px; }
+            th { background: #f1f5f9; font-size: 9px; text-transform: uppercase; font-weight: 700; color: #475569; padding: 8px 10px; border: 1px solid #cbd5e1; }
+            td { font-size: 11px; padding: 8px 10px; border: 1px solid #cbd5e1; color: #334155; }
+            .font-mono { font-family: monospace; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            
+            .kpis-print { display: flex; gap: 20px; margin-bottom: 20px; }
+            .kpi-print-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; text-align: center; background: #fff; }
+            .kpi-print-val { font-size: 18px; font-weight: bold; color: #0f172a; }
+            .kpi-print-lbl { font-size: 9px; text-transform: uppercase; color: #64748b; margin-top: 2px; }
+
+            .signature-area { display: flex; justify-content: space-between; margin-top: 50px; page-break-inside: avoid; }
+            .signature-line { width: 45%; border-top: 1px solid #64748b; text-align: center; padding-top: 6px; font-size: 10px; font-weight: bold; color: #475569; }
+            
+            @media print {
+              body { padding: 10px; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header-container">
+            <div class="title-area">
+              <h1>Ficha de Conferência & Paletização</h1>
+              <p>Instruções físicas de empilhamento de produtos por norma do cliente</p>
+            </div>
+            <div class="meta-carga">
+              <h2>${entrega.codigo}</h2>
+              <p>Código da Carga</p>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-col">
+              <div class="info-item"><span class="info-label">Destinatário (Cliente):</span> ${entrega.razaoSocial} (${formatCNPJ(entrega.cnpj)})</div>
+              <div class="info-item"><span class="info-label">Endereço de Entrega:</span> ${entrega.endereco || "—"}, ${entrega.cidade || "—"}/${entrega.uf || "—"}</div>
+              <div class="info-item"><span class="info-label">Data Agendada:</span> ${dataEntregaFormatada}</div>
+            </div>
+            <div class="info-col">
+              <div class="info-item"><span class="info-label">Motorista:</span> ${entrega.motorista?.nome || "Não escalado"}</div>
+              <div class="info-item"><span class="info-label">Veículo / Placa:</span> ${entrega.veiculo?.placa || "Não escalado"} (${entrega.veiculo?.tipo || ""})</div>
+              <div class="info-item"><span class="info-label">Notas Fiscais:</span> ${entrega.notas?.map((n: any) => n.numero).join(", ") || "—"}</div>
+            </div>
+          </div>
+
+          <div class="kpis-print">
+            <div class="kpi-print-box">
+              <div class="kpi-print-val">${entrega.totalPaletesEstimados?.toFixed(2) || "0.00"}</div>
+              <div class="kpi-print-lbl">Paletes Estimados Totais</div>
+            </div>
+            <div class="kpi-print-box">
+              <div class="kpi-print-val">${totalCaixas}</div>
+              <div class="kpi-print-lbl">Total Caixas (NF)</div>
+            </div>
+            <div class="kpi-print-box">
+              <div class="kpi-print-val">${totalComNorma} de ${totalProdutos}</div>
+              <div class="kpi-print-lbl">Itens com Normas</div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60px;">NF</th>
+                <th style="width: 80px;">Cód Produto</th>
+                <th>Descrição do Produto</th>
+                <th style="width: 60px; text-align: center;">Qtd Caixas</th>
+                <th style="width: 120px; text-align: center;">Norma (L x A)</th>
+                <th style="width: 110px; text-align: center;">Paletes Estimados</th>
+                <th>Conf. Paletes (Assinalar)</th>
+                <th>Observações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div class="signature-area">
+            <div class="signature-line">Assinatura do Conferente (Pátio)</div>
+            <div class="signature-line">Assinatura do Motorista</div>
+          </div>
+
+          <div class="no-print" style="margin-top: 30px; text-align: right;">
+            <button onclick="window.print()" style="background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Imprimir Ficha</button>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Cards de Resumo de Paletização */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="flex items-center justify-between p-5 relative overflow-hidden">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 mb-1">Paletes Estimados</div>
+            <div className="font-head text-3xl font-black text-orange-400">
+              {entrega.totalPaletesEstimados?.toFixed(2) || "0.00"}
+            </div>
+            <div className="text-xs text-slate-400 mt-1">Cálculo de volume ocupado</div>
+          </div>
+          <div className="text-4xl opacity-10">
+            <Layers size={40} className="text-slate-400" />
+          </div>
+        </Card>
+
+        <Card className="flex items-center justify-between p-5 relative overflow-hidden">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 mb-1">Total de Caixas</div>
+            <div className="font-head text-3xl font-black text-emerald-400">
+              {totalCaixas}
+            </div>
+            <div className="text-xs text-slate-400 mt-1">Soma de volumes das NFs</div>
+          </div>
+          <div className="text-4xl opacity-10">
+            <Box size={40} className="text-slate-400" />
+          </div>
+        </Card>
+
+        <Card className="flex items-center justify-between p-5 relative overflow-hidden">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 mb-1">Itens com Normas</div>
+            <div className="font-head text-3xl font-black text-blue-400">
+              {totalComNorma} <span className="text-sm font-normal text-slate-500">de {totalProdutos} ({pctNormas}%)</span>
+            </div>
+            <div className="text-xs text-slate-400 mt-1">Cobertura das regras físicas</div>
+          </div>
+          <div className="text-4xl opacity-10">
+            <ShieldCheck size={40} className="text-slate-400" />
+          </div>
+        </Card>
+      </div>
+
+      {/* Ações da Aba */}
+      <div className="flex justify-between items-center p-3 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+        <div className="text-xs text-slate-400 flex items-center gap-2">
+          <Info size={14} className="text-[var(--accent)]" />
+          <span>Forneça esta ficha aos conferentes para guiar a montagem física no pátio.</span>
+        </div>
+        <Button size="sm" onClick={handlePrint}>
+          <Printer size={13} /> Imprimir Ficha de Conferência
+        </Button>
+      </div>
+
+      {/* Tabela de Produtos e Normas */}
+      <Card className="p-0 overflow-hidden">
+        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)", background: "var(--surface2)" }}>
+          <span className="text-xs font-mono uppercase tracking-widest text-slate-400 font-bold">Listagem de Itens e Normas de Paletização</span>
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <thead>
+              <tr>
+                <Th>NF</Th>
+                <Th>Cód Produto</Th>
+                <Th>Descrição</Th>
+                <Th className="text-center">Quantidade Caixas</Th>
+                <Th className="text-center">Lastro x Altura</Th>
+                <Th className="text-center">Qtd / Palete</Th>
+                <Th className="text-center">Paletes Estimados</Th>
+                <Th className="text-right">Ação</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {todosProdutos.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-10 text-xs text-slate-500">
+                    Nenhum produto extraído do XML desta entrega.
+                  </td>
+                </tr>
+              ) : (
+                todosProdutos.map((p, idx) => {
+                  const hasNorma = !!p.norma;
+                  
+                  let paletesText = "—";
+                  if (hasNorma) {
+                    const totalPalete = p.norma.quantidadeCaixasPalete || 1;
+                    const inteiros = Math.floor(p.quantidade / totalPalete);
+                    const sobras = p.quantidade % totalPalete;
+                    if (inteiros > 0 && sobras > 0) {
+                      paletesText = `${inteiros} int. + ${sobras} cx`;
+                    } else if (inteiros > 0) {
+                      paletesText = `${inteiros} int.`;
+                    } else {
+                      paletesText = `${sobras} cx`;
+                    }
+                  }
+
+                  return (
+                    <Tr key={idx}>
+                      <Td className="font-mono text-xs font-semibold">NF {p.nfNumero}</Td>
+                      <Td className="font-mono text-xs font-semibold text-orange-400">{p.codigo}</Td>
+                      <Td className="max-w-xs truncate" title={p.descricao || ""}>
+                        <div className="font-medium text-slate-200">{p.descricao || "—"}</div>
+                        <div className="text-[9px] text-slate-500">Fornecedor: {p.fornecedorRazao}</div>
+                      </Td>
+                      <Td className="text-center font-mono font-semibold">{p.quantidade}</Td>
+                      <Td className="text-center font-mono text-emerald-400 font-semibold">
+                        {hasNorma ? `${p.norma.lastro} x ${p.norma.altura}` : "—"}
+                      </Td>
+                      <Td className="text-center font-mono text-orange-400 font-bold">
+                        {hasNorma ? p.norma.quantidadeCaixasPalete : "—"}
+                      </Td>
+                      <Td className="text-center font-mono font-bold text-orange-400">
+                        {hasNorma ? (
+                          <div className="flex flex-col items-center">
+                            <span>{p.paletesEstimados.toFixed(2)} paletes</span>
+                            <span className="text-[10px] text-slate-400 font-normal">{paletesText}</span>
+                          </div>
+                        ) : (
+                          <span className="text-red-400 font-normal italic text-xs">Sem norma</span>
+                        )}
+                      </Td>
+                      <Td className="text-right">
+                        {hasNorma ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="px-2.5 py-1 text-xs"
+                            onClick={() => router.push(`/configuracoes/normas?q=${p.codigo}`)}
+                          >
+                            Ver Norma
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            className="px-2.5 py-1 text-xs bg-orange-600 border-orange-600 hover:bg-orange-700"
+                            onClick={() => router.push(`/configuracoes/normas?addManual=true&clienteCnpj=${entrega.cnpj}&fornecedorCnpj=${p.fornecedorCnpj}&codigoProduto=${p.codigo}&descricao=${encodeURIComponent(p.descricao || "")}`)}
+                          >
+                            Cadastrar Norma
+                          </Button>
+                        )}
+                      </Td>
+                    </Tr>
+                  );
+                })
+              )}
+            </tbody>
+          </Table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
