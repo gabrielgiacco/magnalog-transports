@@ -5,7 +5,143 @@ import { useSearchParams } from "next/navigation";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Button, Input, Select, Modal, Table, Th, Td, Tr, Empty, Loading, Textarea } from "@/components/ui";
 import toast from "react-hot-toast";
-import { Search, Plus, Trash2, Edit2, FileSpreadsheet, Save, X, RefreshCw, Info } from "lucide-react";
+import { Search, Plus, Trash2, Edit2, FileSpreadsheet, Save, X, RefreshCw, Info, ChevronDown } from "lucide-react";
+
+interface ComboboxOption {
+  value: string;
+  label: string;
+  sublabel?: string;
+}
+
+function ComboboxPesquisa({
+  label,
+  options,
+  value,
+  onChange,
+  onManual,
+  placeholder = "Selecionar...",
+  searchPlaceholder = "Buscar...",
+  manualLabel = "+ Digitar Manualmente..."
+}: {
+  label: string;
+  options: ComboboxOption[];
+  value: string;
+  onChange: (val: string) => void;
+  onManual?: () => void;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  manualLabel?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selected = options.find((o) => o.value === value);
+  const filtered = options.filter(
+    (o) => 
+      o.label.toLowerCase().includes(search.toLowerCase()) || 
+      (o.sublabel && o.sublabel.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setSearch("");
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5 w-full relative">
+      <label className="text-[10px] uppercase tracking-widest font-mono" style={{ color: "var(--text3)" }}>{label}</label>
+      <div 
+        className="w-full px-3 py-2 rounded-lg text-sm border cursor-text transition-all flex items-center justify-between gap-1"
+        style={{ 
+          background: "var(--surface2)", 
+          borderColor: open ? "var(--accent)" : "var(--border)", 
+          color: "var(--text)", 
+          fontFamily: "'Inter', sans-serif",
+          minHeight: "38px"
+        }}
+        onClick={() => setOpen(true)}
+      >
+        {open ? (
+          <input
+            autoFocus
+            className="bg-transparent outline-none w-full"
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)}
+            onBlur={() => setTimeout(() => setOpen(false), 200)}
+            placeholder={searchPlaceholder}
+          />
+        ) : (
+          <span className={selected ? "text-slate-200 font-semibold truncate" : "opacity-50 truncate"}>
+            {selected ? `${selected.label} ${selected.sublabel ? `(${selected.sublabel})` : ""}` : placeholder}
+          </span>
+        )}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {selected && !open && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-0.5 rounded hover:bg-slate-700/30 transition-colors"
+              title="Limpar"
+            >
+              <X size={14} className="text-red-400" />
+            </button>
+          )}
+          <ChevronDown size={14} style={{ color: "var(--text3)" }} />
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute top-[100%] left-0 right-0 mt-1 rounded-lg shadow-lg border z-50 overflow-hidden max-h-48 overflow-y-auto"
+          style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          
+          {onManual && (
+            <div
+              className="flex items-center gap-2 p-3 text-xs hover:bg-slate-800/50 cursor-pointer transition-colors text-[var(--accent)] font-bold uppercase tracking-wider"
+              style={{ borderBottom: "1px solid var(--border)" }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onManual();
+                setOpen(false);
+                setSearch("");
+              }}
+            >
+              <span>{manualLabel}</span>
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <div className="p-3 text-xs text-center opacity-50">Nenhum resultado encontrado</div>
+          ) : (
+            filtered.map((o) => (
+              <div key={o.value}
+                className="flex flex-col p-3 text-xs hover:bg-slate-800/50 cursor-pointer transition-colors"
+                style={{ borderBottom: "1px solid var(--border)" }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange(o.value);
+                  setOpen(false);
+                  setSearch("");
+                }}
+              >
+                <span className="font-semibold text-slate-200 truncate">{o.label}</span>
+                {o.sublabel && (
+                  <span className="text-[10px] font-mono text-slate-400 mt-0.5 truncate">{o.sublabel}</span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatCnpj(v: string) {
+  const clean = v.replace(/\D/g, "");
+  if (clean.length <= 11) return clean;
+  return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+}
 
 interface Norma {
   id: string;
@@ -36,6 +172,18 @@ export default function NormasPaletizacaoPage() {
     clientes: [],
     fornecedores: [],
   });
+
+  const clientOptions = options.clientes.map((c) => ({
+    value: c.cnpj,
+    label: c.razaoSocial,
+    sublabel: formatCnpj(c.cnpj),
+  }));
+
+  const supplierOptions = options.fornecedores.map((f) => ({
+    value: f.cnpj,
+    label: f.razaoSocial,
+    sublabel: formatCnpj(f.cnpj),
+  }));
 
   // Modais
   const [modalIndividualOpen, setModalIndividualOpen] = useState(false);
@@ -413,12 +561,6 @@ export default function NormasPaletizacaoPage() {
     return forn ? forn.razaoSocial : cnpj;
   };
 
-  const formatCnpj = (v: string) => {
-    const clean = v.replace(/\D/g, "");
-    if (clean.length <= 11) return clean; // CPF ou incompleto
-    return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-  };
-
   return (
     <>
       <Topbar title="Normas de Paletização" subtitle="Configure o lastro e altura para conferência física dos produtos" />
@@ -547,25 +689,19 @@ export default function NormasPaletizacaoPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Seletor Cliente */}
             {!isClienteManual ? (
-              <Select
+              <ComboboxPesquisa
                 label="Cliente (Destinatário)"
+                options={clientOptions}
                 value={clienteCnpjSel}
-                onChange={(e) => {
-                  if (e.target.value === "MANUAL") {
-                    setIsClienteManual(true);
-                  } else {
-                    setClienteCnpjSel(e.target.value);
-                  }
+                onChange={(val) => setClienteCnpjSel(val)}
+                onManual={() => {
+                  setIsClienteManual(true);
+                  setClienteCnpjSel("MANUAL");
                 }}
-              >
-                <option value="">Selecione...</option>
-                {options.clientes.map((c) => (
-                  <option key={c.cnpj} value={c.cnpj}>
-                    {c.razaoSocial} ({formatCnpj(c.cnpj)})
-                  </option>
-                ))}
-                <option value="MANUAL">+ Digitar Manualmente...</option>
-              </Select>
+                placeholder="Selecionar Cliente..."
+                searchPlaceholder="Buscar cliente por nome ou CNPJ..."
+                manualLabel="+ Digitar CNPJ Manualmente..."
+              />
             ) : (
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center">
@@ -592,25 +728,19 @@ export default function NormasPaletizacaoPage() {
 
             {/* Seletor Fornecedor */}
             {!isFornecedorManual ? (
-              <Select
+              <ComboboxPesquisa
                 label="Fornecedor (Emitente)"
+                options={supplierOptions}
                 value={fornecedorCnpjSel}
-                onChange={(e) => {
-                  if (e.target.value === "MANUAL") {
-                    setIsFornecedorManual(true);
-                  } else {
-                    setFornecedorCnpjSel(e.target.value);
-                  }
+                onChange={(val) => setFornecedorCnpjSel(val)}
+                onManual={() => {
+                  setIsFornecedorManual(true);
+                  setFornecedorCnpjSel("MANUAL");
                 }}
-              >
-                <option value="">Selecione...</option>
-                {options.fornecedores.map((f) => (
-                  <option key={f.cnpj} value={f.cnpj}>
-                    {f.razaoSocial} ({formatCnpj(f.cnpj)})
-                  </option>
-                ))}
-                <option value="MANUAL">+ Digitar Manualmente...</option>
-              </Select>
+                placeholder="Selecionar Fornecedor..."
+                searchPlaceholder="Buscar fornecedor por nome ou CNPJ..."
+                manualLabel="+ Digitar CNPJ Manualmente..."
+              />
             ) : (
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center">
@@ -714,25 +844,19 @@ export default function NormasPaletizacaoPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Seletor Cliente Importação */}
             {!isImportClienteManual ? (
-              <Select
+              <ComboboxPesquisa
                 label="Cliente (Destinatário da Entrega)"
+                options={clientOptions}
                 value={importClienteCnpjSel}
-                onChange={(e) => {
-                  if (e.target.value === "MANUAL") {
-                    setIsImportClienteManual(true);
-                  } else {
-                    setImportClienteCnpjSel(e.target.value);
-                  }
+                onChange={(val) => setImportClienteCnpjSel(val)}
+                onManual={() => {
+                  setIsImportClienteManual(true);
+                  setImportClienteCnpjSel("MANUAL");
                 }}
-              >
-                <option value="">Selecione...</option>
-                {options.clientes.map((c) => (
-                  <option key={c.cnpj} value={c.cnpj}>
-                    {c.razaoSocial} ({formatCnpj(c.cnpj)})
-                  </option>
-                ))}
-                <option value="MANUAL">+ Digitar Manualmente...</option>
-              </Select>
+                placeholder="Selecionar Cliente..."
+                searchPlaceholder="Buscar cliente por nome ou CNPJ..."
+                manualLabel="+ Digitar CNPJ Manualmente..."
+              />
             ) : (
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center">
@@ -759,25 +883,19 @@ export default function NormasPaletizacaoPage() {
 
             {/* Seletor Fornecedor Importação */}
             {!isImportFornecedorManual ? (
-              <Select
+              <ComboboxPesquisa
                 label="Fornecedor (Emitente das NFs)"
+                options={supplierOptions}
                 value={importFornecedorCnpjSel}
-                onChange={(e) => {
-                  if (e.target.value === "MANUAL") {
-                    setIsImportFornecedorManual(true);
-                  } else {
-                    setImportFornecedorCnpjSel(e.target.value);
-                  }
+                onChange={(val) => setImportFornecedorCnpjSel(val)}
+                onManual={() => {
+                  setIsImportFornecedorManual(true);
+                  setImportFornecedorCnpjSel("MANUAL");
                 }}
-              >
-                <option value="">Selecione...</option>
-                {options.fornecedores.map((f) => (
-                  <option key={f.cnpj} value={f.cnpj}>
-                    {f.razaoSocial} ({formatCnpj(f.cnpj)})
-                  </option>
-                ))}
-                <option value="MANUAL">+ Digitar Manualmente...</option>
-              </Select>
+                placeholder="Selecionar Fornecedor..."
+                searchPlaceholder="Buscar fornecedor por nome ou CNPJ..."
+                manualLabel="+ Digitar CNPJ Manualmente..."
+              />
             ) : (
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center">
