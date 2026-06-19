@@ -149,7 +149,7 @@ export async function PATCH(req: NextRequest) {
     if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
     const body = await req.json();
-    const { id, lastro, altura, quantidadeCaixasPalete, descricao, embalagem } = body;
+    const { id, clienteCnpj, fornecedorCnpj, codigoProduto, lastro, altura, quantidadeCaixasPalete, descricao, embalagem } = body;
 
     if (!id) {
       return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
@@ -159,11 +159,34 @@ export async function PATCH(req: NextRequest) {
     const a = parseInt(String(altura)) || 0;
     const total = parseInt(String(quantidadeCaixasPalete)) || (l * a);
 
+    // Validação de duplicidade se CNPJs e Código forem alterados
+    if (clienteCnpj && fornecedorCnpj && codigoProduto) {
+      const cleanClienteCnpj = String(clienteCnpj).replace(/\D/g, "");
+      const cleanFornecedorCnpj = String(fornecedorCnpj).replace(/\D/g, "");
+      const cleanCodigo = String(codigoProduto).trim();
+
+      const existing = await prisma.normaPaletizacao.findFirst({
+        where: {
+          clienteCnpj: cleanClienteCnpj,
+          fornecedorCnpj: cleanFornecedorCnpj,
+          codigoProduto: cleanCodigo,
+          NOT: { id }
+        }
+      });
+
+      if (existing) {
+        return NextResponse.json({ error: "Já existe uma norma cadastrada para este Cliente, Fornecedor e Produto" }, { status: 400 });
+      }
+    }
+
     const norma = await prisma.normaPaletizacao.update({
       where: { id },
       data: {
-        descricao: descricao || undefined,
-        embalagem: embalagem || undefined,
+        clienteCnpj: clienteCnpj ? String(clienteCnpj).replace(/\D/g, "") : undefined,
+        fornecedorCnpj: fornecedorCnpj ? String(fornecedorCnpj).replace(/\D/g, "") : undefined,
+        codigoProduto: codigoProduto ? String(codigoProduto).trim() : undefined,
+        descricao: descricao !== undefined ? (descricao || null) : undefined,
+        embalagem: embalagem !== undefined ? (embalagem || null) : undefined,
         lastro: l,
         altura: a,
         quantidadeCaixasPalete: total
@@ -171,9 +194,9 @@ export async function PATCH(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, norma });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao atualizar norma:", error);
-    return NextResponse.json({ error: "Erro interno no servidor" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Erro interno no servidor" }, { status: 500 });
   }
 }
 
