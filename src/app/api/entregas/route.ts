@@ -81,6 +81,7 @@ export async function GET(req: NextRequest) {
         { notas: { some: { numero: { contains: cliente } } } },
         { notas: { some: { emitenteRazao: { contains: cliente, mode: "insensitive" } } } },
         { notas: { some: { chaveAcesso: { contains: cliente } } } },
+        { notas: { some: { xmlOriginal: { contains: cliente, mode: "insensitive" } } } },
         { motorista: { nome: { contains: cliente, mode: "insensitive" } } },
         { rota: { codigo: { contains: cliente, mode: "insensitive" } } },
       ];

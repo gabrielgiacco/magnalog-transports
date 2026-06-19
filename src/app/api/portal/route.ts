@@ -87,6 +87,7 @@ export async function GET(req: NextRequest) {
       { bairro: { contains: busca, mode: "insensitive" } },
       { cep: { contains: busca, mode: "insensitive" } },
       { chaveAcesso: { contains: busca } },
+      { xmlOriginal: { contains: busca, mode: "insensitive" } },
     ];
     const digits = busca.replace(/\D/g, "");
     if (digits.length > 0) {
