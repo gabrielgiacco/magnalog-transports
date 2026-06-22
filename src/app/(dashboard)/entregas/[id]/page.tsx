@@ -529,6 +529,9 @@ export default function EntregaDetailPage() {
                   <Field label="Data Chegada" value={formatDate(entrega.dataChegada)} mono />
                   <Field label="Data Agendada" value={formatDate(entrega.dataAgendada)} mono />
                   <Field label="Data Entrega" value={formatDate(entrega.dataEntrega)} mono />
+                  <div className="pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                    <Field label="Observações da Carga" value={entrega.observacoes || "—"} />
+                  </div>
                 </div>
               </Card>
 
@@ -1378,28 +1381,56 @@ function AvariasTab({ entregaId, entrega }: { entregaId: string; entrega: any })
 function PaletizacaoTab({ entrega }: { entrega: any }) {
   const router = useRouter();
   
-  // Extrair todos os produtos de todas as notas fiscais
-  const todosProdutos: any[] = [];
+  // Extrair e agrupar todos os produtos de todas as notas fiscais pelo código do produto e CNPJ do fornecedor
+  const produtosMap = new Map<string, any>();
   let totalCaixas = 0;
-  let totalComNorma = 0;
 
   entrega.notas?.forEach((nf: any) => {
     nf.produtos?.forEach((p: any) => {
       totalCaixas += p.quantidade || 0;
-      const temNorma = !!p.norma;
-      if (temNorma) totalComNorma++;
-      
-      todosProdutos.push({
-        nfNumero: nf.numero,
-        fornecedorCnpj: nf.emitenteCnpj,
-        fornecedorRazao: nf.emitenteRazao,
-        ...p
-      });
+      const cleanFornecedorCnpj = String(nf.emitenteCnpj || "").replace(/\D/g, "");
+      const key = `${cleanFornecedorCnpj}_${p.codigo}`;
+
+      if (produtosMap.has(key)) {
+        const existente = produtosMap.get(key);
+        existente.quantidade += p.quantidade || 0;
+        if (!existente.nfNumeros.includes(nf.numero)) {
+          existente.nfNumeros.push(nf.numero);
+        }
+      } else {
+        produtosMap.set(key, {
+          codigo: p.codigo,
+          descricao: p.descricao,
+          fornecedorCnpj: nf.emitenteCnpj,
+          fornecedorRazao: nf.emitenteRazao,
+          quantidade: p.quantidade || 0,
+          norma: p.norma,
+          nfNumeros: [nf.numero]
+        });
+      }
     });
+  });
+
+  let totalComNorma = 0;
+  const todosProdutos = Array.from(produtosMap.values()).map((p) => {
+    const temNorma = !!p.norma;
+    if (temNorma) totalComNorma++;
+
+    let paletesEstimados = 0;
+    if (temNorma) {
+      paletesEstimados = p.quantidade / (p.norma.quantidadeCaixasPalete || 1);
+    }
+
+    return {
+      ...p,
+      paletesEstimados,
+      nfNumero: p.nfNumeros.join(", ")
+    };
   });
 
   const totalProdutos = todosProdutos.length;
   const pctNormas = totalProdutos > 0 ? Math.round((totalComNorma / totalProdutos) * 100) : 0;
+  const totalPaletesEstimadosCarga = todosProdutos.reduce((acc, p) => acc + (p.paletesEstimados || 0), 0);
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
@@ -1507,7 +1538,7 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
 
           <div class="kpis-print">
             <div class="kpi-print-box">
-              <div class="kpi-print-val">${entrega.totalPaletesEstimados?.toFixed(2) || "0.00"}</div>
+              <div class="kpi-print-val">${totalPaletesEstimadosCarga.toFixed(2)}</div>
               <div class="kpi-print-lbl">Paletes Estimados Totais</div>
             </div>
             <div class="kpi-print-box">
@@ -1560,7 +1591,7 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
           <div>
             <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 mb-1">Paletes Estimados</div>
             <div className="font-head text-3xl font-black text-orange-400">
-              {entrega.totalPaletesEstimados?.toFixed(2) || "0.00"}
+              {totalPaletesEstimadosCarga.toFixed(2)}
             </div>
             <div className="text-xs text-slate-400 mt-1">Cálculo de volume ocupado</div>
           </div>
