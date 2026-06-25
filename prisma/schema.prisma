@@ -21,6 +21,7 @@ model Account {
   id_token          String? @db.Text
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
 }
 
@@ -36,6 +37,7 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
+
   @@unique([identifier, token])
 }
 
@@ -48,23 +50,23 @@ enum UserRole {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          UserRole  @default(OPERACIONAL)
-  ativo         Boolean   @default(true)
-  aprovado      Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-  sessions      Session[]
+  id                      String                 @id @default(cuid())
+  name                    String?
+  email                   String?                @unique
+  emailVerified           DateTime?
+  image                   String?
+  password                String?
+  role                    UserRole               @default(OPERACIONAL)
+  ativo                   Boolean                @default(true)
+  aprovado                Boolean                @default(false)
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  accounts                Account[]
+  sessions                Session[]
   fornecedoresAutorizados FornecedorAutorizado[]
-  qualidadeRegistrada QualidadeOperacional[] @relation("AdminQualidade")
-  avariasRegistradas  Avaria[] @relation("AvariaRegistrada")
-  avariasResolvidas   Avaria[] @relation("AvariaResolvida")
+  qualidadeRegistrada     QualidadeOperacional[] @relation("AdminQualidade")
+  avariasRegistradas      Avaria[]               @relation("AvariaRegistrada")
+  avariasResolvidas       Avaria[]               @relation("AvariaResolvida")
 }
 
 model FornecedorAutorizado {
@@ -72,6 +74,7 @@ model FornecedorAutorizado {
   userId       String
   cnpjEmitente String
   user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, cnpjEmitente])
 }
 
@@ -92,39 +95,39 @@ enum TipoVeiculo {
 }
 
 model Veiculo {
-  id           String      @id @default(cuid())
-  placa        String      @unique
-  tipo         TipoVeiculo
-  modelo       String?
-  ano          Int?
-  capacidadeKg Float?
-  ativo        Boolean     @default(true)
-  motoristaId  String?     // Vinculo de motorista padrão
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  motorista    Motorista?  @relation(fields: [motoristaId], references: [id])
-  entregas     Entrega[]   @relation("VeiculoPrincipal")
-  entregasCompl Entrega[]  @relation("VeiculoComplementar")
-  rotas        Rota[]
+  id            String      @id @default(cuid())
+  placa         String      @unique
+  tipo          TipoVeiculo
+  modelo        String?
+  ano           Int?
+  capacidadeKg  Float?
+  ativo         Boolean     @default(true)
+  motoristaId   String? // Vinculo de motorista padrão
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  motorista     Motorista?  @relation(fields: [motoristaId], references: [id])
+  entregas      Entrega[]   @relation("VeiculoPrincipal")
+  entregasCompl Entrega[]   @relation("VeiculoComplementar")
+  rotas         Rota[]
 }
 
 model Motorista {
-  id           String    @id @default(cuid())
-  nome         String
-  cpf          String?   @unique
-  cnh          String?
-  categoriaCnh String?
-  telefone     String?
-  ativo        Boolean   @default(true)
-  tipo         TipoMotorista @default(TERCEIRO)
-  valorDiaria  Float?    // Usado se tipo == DIARIA
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  veiculos     Veiculo[]
-  entregas     Entrega[] @relation("MotoristaPrincipal")
-  entregasCompl Entrega[] @relation("MotoristaComplementar")
-  rotas        Rota[]
-  avarias      Avaria[]
+  id            String        @id @default(cuid())
+  nome          String
+  cpf           String?       @unique
+  cnh           String?
+  categoriaCnh  String?
+  telefone      String?
+  ativo         Boolean       @default(true)
+  tipo          TipoMotorista @default(TERCEIRO)
+  valorDiaria   Float? // Usado se tipo == DIARIA
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  veiculos      Veiculo[]
+  entregas      Entrega[]     @relation("MotoristaPrincipal")
+  entregasCompl Entrega[]     @relation("MotoristaComplementar")
+  rotas         Rota[]
+  avarias       Avaria[]
 }
 
 model Cliente {
@@ -147,33 +150,33 @@ enum StatusRota {
 }
 
 model Rota {
-  id          String     @id @default(cuid())
-  codigo      String     @unique
-  data        DateTime
-  motoristaId String?
-  veiculoId   String?
-  pesoTotal   Float      @default(0)
-  volumeTotal Int        @default(0)
-  valorMotorista Float   @default(0)
-  valorSaida     Float   @default(0)
-  valorDescarga  Float   @default(0)
-  adiantamentoMotorista Float @default(0)
-  dataAdiantamento DateTime?
-  descontosMotorista Float @default(0)
-  saldoMotorista Float   @default(0)
-  dataPagamentoSaldo DateTime?
-  statusCanhoto  String  @default("PENDENTE")
-  status      StatusRota @default(PLANEJADA)
-  observacoes String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  motorista   Motorista? @relation(fields: [motoristaId], references: [id])
-  veiculo     Veiculo?   @relation(fields: [veiculoId], references: [id])
-  entregas    Entrega[]
-  contasPagar ContaPagar[]
-  qualidade   QualidadeOperacional?
-  avarias     Avaria[]
-  lancamentos LancamentoFinanceiro[]
+  id                    String                 @id @default(cuid())
+  codigo                String                 @unique
+  data                  DateTime
+  motoristaId           String?
+  veiculoId             String?
+  pesoTotal             Float                  @default(0)
+  volumeTotal           Int                    @default(0)
+  valorMotorista        Float                  @default(0)
+  valorSaida            Float                  @default(0)
+  valorDescarga         Float                  @default(0)
+  adiantamentoMotorista Float                  @default(0)
+  dataAdiantamento      DateTime?
+  descontosMotorista    Float                  @default(0)
+  saldoMotorista        Float                  @default(0)
+  dataPagamentoSaldo    DateTime?
+  statusCanhoto         String                 @default("PENDENTE")
+  status                StatusRota             @default(PLANEJADA)
+  observacoes           String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  motorista             Motorista?             @relation(fields: [motoristaId], references: [id])
+  veiculo               Veiculo?               @relation(fields: [veiculoId], references: [id])
+  entregas              Entrega[]
+  contasPagar           ContaPagar[]
+  qualidade             QualidadeOperacional?
+  avarias               Avaria[]
+  lancamentos           LancamentoFinanceiro[]
 }
 
 enum StatusEntrega {
@@ -187,46 +190,46 @@ enum StatusEntrega {
 }
 
 model Entrega {
-  id               String        @id @default(cuid())
-  codigo           String
-  clienteId        String?
-  cnpj             String
-  razaoSocial      String
-  cidade           String
-  uf               String?
-  endereco         String?
-  bairro           String?
-  cep              String?
-  latitude         Float?
-  longitude        Float?
-  dataChegada      DateTime?
-  dataAgendada     DateTime?
-  dataEntrega      DateTime?
-  motoristaId      String?
-  veiculoId        String?
-  motoristaComplId String?
-  veiculoComplId   String?
-  rotaId           String?
-  chaveAcesso      String?       @db.Text
-  pesoTotal        Float         @default(0)
-  volumeTotal      Int           @default(0)
-  status           StatusEntrega @default(PROGRAMADO)
-  observacoes      String?
+  id                String        @id @default(cuid())
+  codigo            String
+  clienteId         String?
+  cnpj              String
+  razaoSocial       String
+  cidade            String
+  uf                String?
+  endereco          String?
+  bairro            String?
+  cep               String?
+  latitude          Float?
+  longitude         Float?
+  dataChegada       DateTime?
+  dataAgendada      DateTime?
+  dataEntrega       DateTime?
+  motoristaId       String?
+  veiculoId         String?
+  motoristaComplId  String?
+  veiculoComplId    String?
+  rotaId            String?
+  chaveAcesso       String?       @db.Text
+  pesoTotal         Float         @default(0)
+  volumeTotal       Int           @default(0)
+  status            StatusEntrega @default(PROGRAMADO)
+  observacoes       String?
   // Receitas (Faturamento)
-  valorFrete       Float     @default(0)
-  valorDescarga    Float     @default(0)
-  valorArmazenagem Float     @default(0)
-  diasArmazenagem  Int       @default(0)
-  quantidadePaletes Int      @default(0)
-  
+  valorFrete        Float         @default(0)
+  valorDescarga     Float         @default(0)
+  valorArmazenagem  Float         @default(0)
+  diasArmazenagem   Int           @default(0)
+  quantidadePaletes Int           @default(0)
+
   // Custos e Acerto do Motorista Terceiro (Novo Controle Financeiro)
   valorMotorista        Float     @default(0) // Valor combinado para a viagem
   valorSaida            Float     @default(0) // Pedágios, Vales de Saída
   adiantamentoMotorista Float     @default(0) // $ Adiantado
-  dataAdiantamento      DateTime?             // Data do adiantamento
+  dataAdiantamento      DateTime? // Data do adiantamento
   descontosMotorista    Float     @default(0) // Avarias, faltas, etc.
   saldoMotorista        Float     @default(0) // (Combinado - Saida - Adiantamento - Descontos)
-  dataPagamentoSaldo    DateTime?             // Quitação do Terceiro
+  dataPagamentoSaldo    DateTime? // Quitação do Terceiro
   statusCanhoto         String    @default("PENDENTE") // PENDENTE ou RECEBIDO
 
   // Custo e Acerto do Motorista Complementar
@@ -240,25 +243,25 @@ model Entrega {
   statusCanhotoCompl         String    @default("PENDENTE")
 
   // Legado (se ainda em uso)
-  adiantamento     Float     @default(0)
-  dataPagamento    DateTime?
-  saldoPendente    Float         @default(0)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  cliente          Cliente?      @relation(fields: [clienteId], references: [id])
-  motorista        Motorista?    @relation("MotoristaPrincipal", fields: [motoristaId], references: [id])
-  veiculo          Veiculo?      @relation("VeiculoPrincipal", fields: [veiculoId], references: [id])
-  motoristaCompl   Motorista?    @relation("MotoristaComplementar", fields: [motoristaComplId], references: [id])
-  veiculoCompl     Veiculo?      @relation("VeiculoComplementar", fields: [veiculoComplId], references: [id])
-  rota             Rota?         @relation(fields: [rotaId], references: [id])
-  faturaId         String?
-  fatura           Fatura?       @relation(fields: [faturaId], references: [id])
-  notas            NotaFiscal[]
-  ocorrencias      Ocorrencia[]
-  contasPagar      ContaPagar[]
-  qualidade        QualidadeOperacional?
-  avarias          Avaria[]
-  lancamentos      LancamentoFinanceiro[]
+  adiantamento   Float                  @default(0)
+  dataPagamento  DateTime?
+  saldoPendente  Float                  @default(0)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  cliente        Cliente?               @relation(fields: [clienteId], references: [id])
+  motorista      Motorista?             @relation("MotoristaPrincipal", fields: [motoristaId], references: [id])
+  veiculo        Veiculo?               @relation("VeiculoPrincipal", fields: [veiculoId], references: [id])
+  motoristaCompl Motorista?             @relation("MotoristaComplementar", fields: [motoristaComplId], references: [id])
+  veiculoCompl   Veiculo?               @relation("VeiculoComplementar", fields: [veiculoComplId], references: [id])
+  rota           Rota?                  @relation(fields: [rotaId], references: [id])
+  faturaId       String?
+  fatura         Fatura?                @relation(fields: [faturaId], references: [id])
+  notas          NotaFiscal[]
+  ocorrencias    Ocorrencia[]
+  contasPagar    ContaPagar[]
+  qualidade      QualidadeOperacional?
+  avarias        Avaria[]
+  lancamentos    LancamentoFinanceiro[]
 
   @@index([cnpj])
   @@index([status])
@@ -303,35 +306,35 @@ model NotaFiscal {
 }
 
 model Ocorrencia {
-  id          String   @id @default(cuid())
-  entregaId   String
-  tipo        String
-  descricao   String
-  resolucao   String?
-  resolvida   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  entrega     Entrega  @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  entregaId String
+  tipo      String
+  descricao String
+  resolucao String?
+  resolvida Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  entrega   Entrega  @relation(fields: [entregaId], references: [id], onDelete: Cascade)
 }
 
 model CTe {
-  id               String       @id @default(cuid())
-  chaveAcesso      String       @unique
-  numero           String
-  serie            String?
-  dataEmissao      DateTime?
-  valorReceber     Float        @default(0)
-  valorPedagio     Float        @default(0)
-  valorImpostos    Float        @default(0)
-  emitenteCnpj     String
-  emitenteNome     String?
-  tomadorCnpj      String
-  tomadorNome      String?
-  notas            NotaFiscal[]
-  faturaId         String?
-  fatura           Fatura?      @relation(fields: [faturaId], references: [id])
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  id            String       @id @default(cuid())
+  chaveAcesso   String       @unique
+  numero        String
+  serie         String?
+  dataEmissao   DateTime?
+  valorReceber  Float        @default(0)
+  valorPedagio  Float        @default(0)
+  valorImpostos Float        @default(0)
+  emitenteCnpj  String
+  emitenteNome  String?
+  tomadorCnpj   String
+  tomadorNome   String?
+  notas         NotaFiscal[]
+  faturaId      String?
+  fatura        Fatura?      @relation(fields: [faturaId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([tomadorCnpj])
   @@index([faturaId])
@@ -344,22 +347,22 @@ enum StatusFatura {
 }
 
 model Fatura {
-  id               String       @id @default(cuid())
-  numero           String       @unique
-  clienteCnpj      String
-  clienteNome      String
-  valorFretes      Float        @default(0)
-  valorReembolsos  Float        @default(0)
-  valorTotal       Float        @default(0)
-  dataEmissao      DateTime     @default(now())
-  dataVencimento   DateTime
-  status           StatusFatura @default(ABERTA)
-  observacoes      String?      @db.Text
-  ctes             CTe[]
-  entregas         Entrega[]
-  lancamentos      LancamentoFinanceiro[]
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  id              String                 @id @default(cuid())
+  numero          String                 @unique
+  clienteCnpj     String
+  clienteNome     String
+  valorFretes     Float                  @default(0)
+  valorReembolsos Float                  @default(0)
+  valorTotal      Float                  @default(0)
+  dataEmissao     DateTime               @default(now())
+  dataVencimento  DateTime
+  status          StatusFatura           @default(ABERTA)
+  observacoes     String?                @db.Text
+  ctes            CTe[]
+  entregas        Entrega[]
+  lancamentos     LancamentoFinanceiro[]
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   @@index([clienteCnpj])
 }
@@ -379,72 +382,78 @@ enum StatusContaPagar {
 }
 
 model ContaPagar {
-  id               String           @id @default(cuid())
-  tipo             TipoContaPagar
-  descricao        String
-  valor            Float
-  dataVencimento   DateTime
-  dataPagamento    DateTime?
-  status           StatusContaPagar @default(PENDENTE)
-  favorecido       String?          // Quem vai receber (Motorista, Chapa de Descarga)
-  rotaId           String?
-  entregaId        String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  tipo           TipoContaPagar
+  descricao      String
+  valor          Float
+  dataVencimento DateTime
+  dataPagamento  DateTime?
+  status         StatusContaPagar @default(PENDENTE)
+  favorecido     String? // Quem vai receber (Motorista, Chapa de Descarga)
+  formaPagamento FormaPagamento?
+  observacoes    String?          @db.Text
+  rotaId         String?
+  entregaId      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
-  rota             Rota?            @relation(fields: [rotaId], references: [id], onDelete: Cascade)
-  entrega          Entrega?         @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+  rota        Rota?                  @relation(fields: [rotaId], references: [id], onDelete: Cascade)
+  entrega     Entrega?               @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+  lancamentos LancamentoFinanceiro[]
 
   @@index([rotaId])
   @@index([entregaId])
+  @@index([status])
+  @@index([dataVencimento])
 }
 
 model TabelaArmazenagem {
-  id              String   @id @default(cuid())
-  cnpjCliente     String   @unique
-  nomeCliente     String
-  diasFree        Int      @default(0)
-  valorPaleteDia  Float    @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  cnpjCliente    String   @unique
+  nomeCliente    String
+  diasFree       Int      @default(0)
+  valorPaleteDia Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model FaturaArmazenagem {
-  id               String                    @id @default(cuid())
-  numero           String                    @unique
-  fornecedorCnpj   String
-  fornecedorNome   String
-  valorTotal       Float                     @default(0)
-  dataEmissao      DateTime                  @default(now())
-  dataVencimento   DateTime
-  status           StatusFatura              @default(ABERTA)
-  observacoes      String?                   @db.Text
-  items            ItemFaturaArmazenagem[]
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
+  id             String                  @id @default(cuid())
+  numero         String                  @unique
+  fornecedorCnpj String
+  fornecedorNome String
+  valorTotal     Float                   @default(0)
+  dataEmissao    DateTime                @default(now())
+  dataVencimento DateTime
+  status         StatusFatura            @default(ABERTA)
+  observacoes    String?                 @db.Text
+  items          ItemFaturaArmazenagem[]
+  lancamentos    LancamentoFinanceiro[]
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
 
   @@index([fornecedorCnpj])
 }
 
 model ItemFaturaArmazenagem {
-  id                 String            @id @default(cuid())
-  faturaId           String
-  fatura             FaturaArmazenagem @relation(fields: [faturaId], references: [id], onDelete: Cascade)
-  entregaId          String
-  fornecedorCnpj     String
-  codigoEntrega      String
-  destinatarioRazao  String?
-  cidade             String?
-  nfs                String?
-  paletes            Int               @default(0)
-  diasDecorridos     Int               @default(0)
-  diasCobraveis      Int               @default(0)
-  diasFree           Int               @default(0)
-  valorPaleteDia     Float             @default(0)
-  valorCalculado     Float             @default(0)
-  dataEntrada        DateTime?
-  dataSaida          DateTime?
-  createdAt          DateTime          @default(now())
+  id                String            @id @default(cuid())
+  faturaId          String
+  fatura            FaturaArmazenagem @relation(fields: [faturaId], references: [id], onDelete: Cascade)
+  entregaId         String
+  fornecedorCnpj    String
+  codigoEntrega     String
+  destinatarioRazao String?
+  cidade            String?
+  nfs               String?
+  paletes           Int               @default(0)
+  diasDecorridos    Int               @default(0)
+  diasCobraveis     Int               @default(0)
+  diasFree          Int               @default(0)
+  valorPaleteDia    Float             @default(0)
+  valorCalculado    Float             @default(0)
+  dataEntrada       DateTime?
+  dataSaida         DateTime?
+  createdAt         DateTime          @default(now())
 
   @@unique([entregaId, fornecedorCnpj])
   @@index([faturaId])
@@ -452,22 +461,22 @@ model ItemFaturaArmazenagem {
 }
 
 model QualidadeOperacional {
-  id                   String   @id @default(cuid())
+  id                  String   @id @default(cuid())
   entregaId           String?  @unique
   rotaId              String?  @unique
-  conferenciaCorreta   Boolean  @default(true)
-  carregamentoCorreto  Boolean  @default(true)
+  conferenciaCorreta  Boolean  @default(true)
+  carregamentoCorreto Boolean  @default(true)
   houveAvaria         Boolean  @default(false)
-  organizacaoGeral     Boolean  @default(true)
-  observacoes          String?  @db.Text
-  pontuacao            Int      @default(40)
-  adminId              String
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  organizacaoGeral    Boolean  @default(true)
+  observacoes         String?  @db.Text
+  pontuacao           Int      @default(40)
+  adminId             String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  entrega              Entrega? @relation(fields: [entregaId], references: [id], onDelete: Cascade)
-  rota                 Rota?    @relation(fields: [rotaId], references: [id], onDelete: Cascade)
-  admin                User     @relation("AdminQualidade", fields: [adminId], references: [id])
+  entrega Entrega? @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+  rota    Rota?    @relation(fields: [rotaId], references: [id], onDelete: Cascade)
+  admin   User     @relation("AdminQualidade", fields: [adminId], references: [id])
 
   @@index([entregaId])
   @@index([rotaId])
@@ -508,46 +517,46 @@ enum StatusDevolucao {
 }
 
 model Avaria {
-  id              String         @id @default(cuid())
-  codigo          String         @unique
-  tipo            TipoAvaria
-  fase            FaseAvaria
-  status          StatusAvaria   @default(PENDENTE)
+  id     String       @id @default(cuid())
+  codigo String       @unique
+  tipo   TipoAvaria
+  fase   FaseAvaria
+  status StatusAvaria @default(PENDENTE)
 
-  entregaId       String?
-  notaFiscalId    String?
-  motoristaId     String?
-  rotaId          String?
+  entregaId    String?
+  notaFiscalId String?
+  motoristaId  String?
+  rotaId       String?
 
-  descricao       String         @db.Text
-  observacoes     String?        @db.Text
-  valorPrejuizo   Float          @default(0)
+  descricao     String  @db.Text
+  observacoes   String? @db.Text
+  valorPrejuizo Float   @default(0)
 
   registradoPorId String
   dataOcorrencia  DateTime
   localOcorrencia String?
 
-  dataChegada            DateTime?
-  transportadoraChegada  String?
-  motoristaChegada       String?
-  placaChegada           String?
+  dataChegada           DateTime?
+  transportadoraChegada String?
+  motoristaChegada      String?
+  placaChegada          String?
 
-  resolucao       String?        @db.Text
-  resolvidoPorId  String?
-  dataResolucao   DateTime?
+  resolucao      String?   @db.Text
+  resolvidoPorId String?
+  dataResolucao  DateTime?
 
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  entrega         Entrega?       @relation(fields: [entregaId], references: [id])
-  notaFiscal      NotaFiscal?    @relation(fields: [notaFiscalId], references: [id])
-  motorista       Motorista?     @relation(fields: [motoristaId], references: [id])
-  rota            Rota?          @relation(fields: [rotaId], references: [id])
-  registradoPor   User           @relation("AvariaRegistrada", fields: [registradoPorId], references: [id])
-  resolvidoPor    User?          @relation("AvariaResolvida", fields: [resolvidoPorId], references: [id])
+  entrega       Entrega?    @relation(fields: [entregaId], references: [id])
+  notaFiscal    NotaFiscal? @relation(fields: [notaFiscalId], references: [id])
+  motorista     Motorista?  @relation(fields: [motoristaId], references: [id])
+  rota          Rota?       @relation(fields: [rotaId], references: [id])
+  registradoPor User        @relation("AvariaRegistrada", fields: [registradoPorId], references: [id])
+  resolvidoPor  User?       @relation("AvariaResolvida", fields: [resolvidoPorId], references: [id])
 
-  produtos        AvariaProduto[]
-  devolucoes      NotaDevolucao[]
+  produtos   AvariaProduto[]
+  devolucoes NotaDevolucao[]
 
   @@index([entregaId])
   @@index([notaFiscalId])
@@ -571,7 +580,7 @@ model AvariaProduto {
   observacoes      String?  @db.Text
   createdAt        DateTime @default(now())
 
-  avaria           Avaria   @relation(fields: [avariaId], references: [id], onDelete: Cascade)
+  avaria Avaria @relation(fields: [avariaId], references: [id], onDelete: Cascade)
 
   @@index([avariaId])
 }
@@ -591,30 +600,30 @@ enum StatusPalete {
 }
 
 model PaleteConfig {
-  id          String   @id @default("default")
-  cnpjPool    String   @default("")
-  razaoPool   String   @default("")
-  glnPool     String   @default("")
-  tipoPallet  String   @default("CHEP")
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default("default")
+  cnpjPool   String   @default("")
+  razaoPool  String   @default("")
+  glnPool    String   @default("")
+  tipoPallet String   @default("CHEP")
+  updatedAt  DateTime @updatedAt
 }
 
 model PaleteMovimento {
-  id              String               @id @default(cuid())
-  nf              String
-  tipoPallet      String               @default("CHEP")
-  dataEmissao     DateTime
-  quantidade      Int
-  cnpjCliente     String
-  razaoCliente    String
-  glnCliente      String?
-  tipoMovimento   TipoMovimentoPalete
-  status          StatusPalete         @default(PENDENTE)
-  observacoes     String?
-  ticketBaixa     String?
-  chaveAcessoNFe  String?              @unique
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  id             String              @id @default(cuid())
+  nf             String
+  tipoPallet     String              @default("CHEP")
+  dataEmissao    DateTime
+  quantidade     Int
+  cnpjCliente    String
+  razaoCliente   String
+  glnCliente     String?
+  tipoMovimento  TipoMovimentoPalete
+  status         StatusPalete        @default(PENDENTE)
+  observacoes    String?
+  ticketBaixa    String?
+  chaveAcessoNFe String?             @unique
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([dataEmissao])
   @@index([status])
@@ -623,9 +632,9 @@ model PaleteMovimento {
 }
 
 model NotaDevolucao {
-  id                String          @id @default(cuid())
+  id                String    @id @default(cuid())
   avariaId          String
-  chaveAcesso       String          @unique
+  chaveAcesso       String    @unique
   numero            String
   serie             String?
   emitenteCnpj      String
@@ -633,20 +642,20 @@ model NotaDevolucao {
   destinatarioCnpj  String
   destinatarioRazao String
   dataEmissao       DateTime?
-  valorNota         Float           @default(0)
-  xmlOriginal       String?         @db.Text
+  valorNota         Float     @default(0)
+  xmlOriginal       String?   @db.Text
 
-  status            StatusDevolucao @default(PENDENTE)
-  dataRetorno       DateTime?
-  dataRetirada      DateTime?
-  dataDescarte      DateTime?
-  responsavel       String?
-  observacoes       String?         @db.Text
+  status       StatusDevolucao @default(PENDENTE)
+  dataRetorno  DateTime?
+  dataRetirada DateTime?
+  dataDescarte DateTime?
+  responsavel  String?
+  observacoes  String?         @db.Text
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  avaria            Avaria          @relation(fields: [avariaId], references: [id], onDelete: Cascade)
+  avaria Avaria @relation(fields: [avariaId], references: [id], onDelete: Cascade)
 
   @@index([avariaId])
   @@index([status])
@@ -665,73 +674,113 @@ enum StatusLancamento {
   CANCELADO
 }
 
+enum FormaPagamento {
+  DINHEIRO
+  PIX
+  TRANSFERENCIA
+  BOLETO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  CHEQUE
+  OUTRO
+}
+
+enum OrigemLancamento {
+  MANUAL
+  FATURA
+  FATURA_ARMAZENAGEM
+  ACERTO_MOTORISTA
+  CONTA_PAGAR
+}
+
 model CategoriaFinanceira {
-  id            String   @id @default(cuid())
+  id            String                   @id @default(cuid())
   nome          String
   tipo          TipoLancamento
+  ativo         Boolean                  @default(true)
+  ordem         Int                      @default(0)
+  sistema       Boolean                  @default(false) // categoria padrão (não pode apagar, só desativar)
   subcategorias SubcategoriaFinanceira[]
   lancamentos   LancamentoFinanceiro[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@unique([nome, tipo])
+  @@index([tipo, ativo])
 }
 
 model SubcategoriaFinanceira {
-  id            String   @id @default(cuid())
-  nome          String
-  categoriaId   String
-  categoria     CategoriaFinanceira @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
-  lancamentos   LancamentoFinanceiro[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  id          String                 @id @default(cuid())
+  nome        String
+  ativo       Boolean                @default(true)
+  categoriaId String
+  categoria   CategoriaFinanceira    @relation(fields: [categoriaId], references: [id], onDelete: Cascade)
+  lancamentos LancamentoFinanceiro[]
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@unique([categoriaId, nome])
   @@index([categoriaId])
 }
 
 model LancamentoFinanceiro {
-  id               String   @id @default(cuid())
-  descricao        String
-  tipo             TipoLancamento
-  valor            Float
-  dataVencimento   DateTime
-  dataPagamento    DateTime?
-  status           StatusLancamento @default(PENDENTE)
-  
-  categoriaId      String?
-  subcategoriaId   String?
-  categoria        CategoriaFinanceira? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
-  subcategoria     SubcategoriaFinanceira? @relation(fields: [subcategoriaId], references: [id], onDelete: SetNull)
-  
-  favorecido       String? 
-  anexoUrl         String?
-  
-  rotaId           String?
-  entregaId        String?
-  faturaId         String?
-  
-  rota             Rota?    @relation(fields: [rotaId], references: [id], onDelete: SetNull)
-  entrega          Entrega? @relation(fields: [entregaId], references: [id], onDelete: SetNull)
-  fatura           Fatura?  @relation(fields: [faturaId], references: [id], onDelete: SetNull)
+  id             String           @id @default(cuid())
+  descricao      String
+  tipo           TipoLancamento
+  valor          Float
+  dataVencimento DateTime
+  dataPagamento  DateTime?
+  status         StatusLancamento @default(PENDENTE)
+  origem         OrigemLancamento @default(MANUAL)
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  formaPagamento FormaPagamento?
+  contaBancaria  String?
+
+  categoriaId    String?
+  subcategoriaId String?
+  categoria      CategoriaFinanceira?    @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  subcategoria   SubcategoriaFinanceira? @relation(fields: [subcategoriaId], references: [id], onDelete: SetNull)
+
+  favorecido  String?
+  anexoUrl    String?
+  observacoes String? @db.Text
+
+  rotaId              String?
+  entregaId           String?
+  faturaId            String?
+  faturaArmazenagemId String?
+  contaPagarId        String?
+
+  rota              Rota?              @relation(fields: [rotaId], references: [id], onDelete: SetNull)
+  entrega           Entrega?           @relation(fields: [entregaId], references: [id], onDelete: SetNull)
+  fatura            Fatura?            @relation(fields: [faturaId], references: [id], onDelete: SetNull)
+  faturaArmazenagem FaturaArmazenagem? @relation(fields: [faturaArmazenagemId], references: [id], onDelete: SetNull)
+  contaPagar        ContaPagar?        @relation(fields: [contaPagarId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([categoriaId])
   @@index([subcategoriaId])
   @@index([rotaId])
   @@index([entregaId])
   @@index([faturaId])
+  @@index([faturaArmazenagemId])
+  @@index([contaPagarId])
+  @@index([status, dataPagamento])
+  @@index([tipo, dataPagamento])
 }
 
 model NormaPaletizacao {
   id                     String   @id @default(cuid())
-  clienteCnpj            String   // CNPJ do Cliente (Destinatário que recebe a mercadoria)
-  fornecedorCnpj         String   // CNPJ do Fornecedor (Emitente da NF)
-  codigoProduto          String   // Código do produto (CODPROD) do XML da NF
-  descricao              String?  // Descrição do produto para conferência
-  embalagem              String?  // Ex: "8X1"
-  lastro                 Int      // Quantidade de caixas na camada (lastro)
-  altura                 Int      // Quantidade de camadas de altura
-  quantidadeCaixasPalete Int      // Quantidade de caixas total por palete (lastro * altura)
+  clienteCnpj            String // CNPJ do Cliente (Destinatário que recebe a mercadoria)
+  fornecedorCnpj         String // CNPJ do Fornecedor (Emitente da NF)
+  codigoProduto          String // Código do produto (CODPROD) do XML da NF
+  descricao              String? // Descrição do produto para conferência
+  embalagem              String? // Ex: "8X1"
+  lastro                 Int // Quantidade de caixas na camada (lastro)
+  altura                 Int // Quantidade de camadas de altura
+  quantidadeCaixasPalete Int // Quantidade de caixas total por palete (lastro * altura)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

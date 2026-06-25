@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { upsertLancamentoAutomatico, removeLancamentoAutomatico } from "@/lib/financeiro";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,24 @@ export async function PATCH(req: NextRequest) {
       where: { id: body.id },
       data,
     });
+
+    // Sincroniza LancamentoFinanceiro
+    if (fatura.status === "PAGA") {
+      const dataPagamento = body.dataPagamento ? new Date(body.dataPagamento) : new Date();
+      await upsertLancamentoAutomatico({
+        origem: "FATURA_ARMAZENAGEM",
+        tipo: "RECEITA",
+        descricao: `Armazenagem ${fatura.numero} · ${fatura.fornecedorNome}`,
+        valor: fatura.valorTotal,
+        dataPagamento,
+        categoriaNome: "Armazenagem",
+        formaPagamento: body.formaPagamento || null,
+        favorecido: fatura.fornecedorNome,
+        faturaArmazenagemId: fatura.id,
+      });
+    } else {
+      await removeLancamentoAutomatico("FATURA_ARMAZENAGEM", { faturaArmazenagemId: fatura.id });
+    }
 
     return NextResponse.json(fatura);
   } catch (error: any) {

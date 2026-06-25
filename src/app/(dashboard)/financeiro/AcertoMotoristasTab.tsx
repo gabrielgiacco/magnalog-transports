@@ -36,7 +36,7 @@ function getPresetDates(preset: PeriodoPreset): { inicio: string; fim: string } 
   return { inicio, fim };
 }
 
-export function AcertoMotoristasTab() {
+export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean } = {}) {
   const [entregas, setEntregas] = useState<any[]>([]);
   const [totais, setTotais] = useState<any>({});
   const [loading, setLoading] = useState(true);
@@ -380,15 +380,25 @@ export function AcertoMotoristasTab() {
 
   return (
     <>
-      <Topbar title="Acerto de Motoristas" subtitle={`${filteredEntregas.length} de ${total} viagens · Controle de Pagamentos de Terceiros`}
-        actions={
-          <Button variant="ghost" size="sm" onClick={() => window.open("/api/export?tipo=financeiro-motoristas", "_blank")}>
-            <Download size={14} /> Exportar CSV
-          </Button>
-        }
-      />
+      {!embedded && (
+        <Topbar title="Acerto de Motoristas" subtitle={`${filteredEntregas.length} de ${total} viagens · Controle de Pagamentos de Terceiros`}
+          actions={
+            <Button variant="ghost" size="sm" onClick={() => window.open("/api/export?tipo=financeiro-motoristas", "_blank")}>
+              <Download size={14} /> Exportar CSV
+            </Button>
+          }
+        />
+      )}
 
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4 relative">
+      <div className={embedded ? "space-y-3 sm:space-y-4 relative" : "flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4 relative"}>
+        {embedded && (
+          <div className="flex justify-between items-center text-xs" style={{ color: "var(--text2)" }}>
+            <span>{filteredEntregas.length} de {total} viagens</span>
+            <Button variant="ghost" size="sm" onClick={() => window.open("/api/export?tipo=financeiro-motoristas", "_blank")}>
+              <Download size={14} /> Exportar CSV
+            </Button>
+          </div>
+        )}
         {/* Tabs */}
         <div className="flex items-center gap-6 border-b" style={{ borderColor: "var(--border)" }}>
           <button 

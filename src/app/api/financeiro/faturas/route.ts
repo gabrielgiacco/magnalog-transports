@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { upsertLancamentoAutomatico, removeLancamentoAutomatico } from "@/lib/financeiro";
 
 export const dynamic = "force-dynamic";
 
@@ -77,11 +78,30 @@ export async function PATCH(req: NextRequest) {
     if (body.status) data.status = body.status;
     if (body.dataVencimento) data.dataVencimento = new Date(body.dataVencimento);
     if (body.observacoes !== undefined) data.observacoes = body.observacoes;
+    if (body.dataPagamento !== undefined) data.observacoes = body.observacoes; // legado
 
     const fatura = await prisma.fatura.update({
       where: { id: body.id },
       data,
     });
+
+    // Sincronização com LancamentoFinanceiro
+    if (fatura.status === "PAGA") {
+      const dataPagamento = body.dataPagamento ? new Date(body.dataPagamento) : new Date();
+      await upsertLancamentoAutomatico({
+        origem: "FATURA",
+        tipo: "RECEITA",
+        descricao: `Fatura ${fatura.numero} · ${fatura.clienteNome}`,
+        valor: fatura.valorTotal,
+        dataPagamento,
+        categoriaNome: "Frete",
+        formaPagamento: body.formaPagamento || null,
+        favorecido: fatura.clienteNome,
+        faturaId: fatura.id,
+      });
+    } else if (fatura.status === "ABERTA" || fatura.status === "CANCELADA") {
+      await removeLancamentoAutomatico("FATURA", { faturaId: fatura.id });
+    }
 
     return NextResponse.json(fatura);
   } catch (error: any) {
