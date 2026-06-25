@@ -251,7 +251,7 @@ export default function AgendamentosPage() {
   // Contagem de atrasadas
   const hojeStr = new Date().toISOString().split("T")[0];
   const atrasadas = entregas.filter((e) => {
-    if (!e.dataAgendada || ["ENTREGUE", "FINALIZADO"].includes(e.status)) return false;
+    if (!e.dataAgendada || ["ENTREGUE", "FINALIZADO", "OCORRENCIA"].includes(e.status)) return false;
     return new Date(e.dataAgendada).toISOString().split("T")[0] < hojeStr;
   }).length;
 
@@ -386,7 +386,7 @@ export default function AgendamentosPage() {
                   <tbody>
                     {entregas.map((e) => {
                       const dataStr = e.dataAgendada ? new Date(e.dataAgendada).toISOString().split("T")[0] : null;
-                      const atrasada = dataStr && dataStr < hojeStr && !["ENTREGUE", "FINALIZADO"].includes(e.status);
+                      const atrasada = dataStr && dataStr < hojeStr && !["ENTREGUE", "FINALIZADO", "OCORRENCIA"].includes(e.status);
                       const fornecedor = e.notas && e.notas.length > 0 
                         ? Array.from(new Set(e.notas.filter((n: any) => n.emitenteRazao).map((n: any) => n.emitenteRazao))).join(", ") || "—"
                         : "—";
@@ -504,9 +504,9 @@ export default function AgendamentosPage() {
                                 onClick={(ev) => { ev.stopPropagation(); router.push(`/entregas/${e.id}`); }}
                                 className="px-1.5 py-1 rounded text-[10px] font-medium leading-tight truncate cursor-pointer hover:opacity-80 transition-opacity"
                                 style={{
-                                  background: ["ENTREGUE", "FINALIZADO"].includes(e.status) ? "rgba(16,185,129,.1)" : dateStr < hojeStr ? "rgba(239,68,68,.08)" : "rgba(59,130,246,.08)",
-                                  color: ["ENTREGUE", "FINALIZADO"].includes(e.status) ? "#10b981" : dateStr < hojeStr ? "#ef4444" : "#3b82f6",
-                                  border: `1px solid ${["ENTREGUE", "FINALIZADO"].includes(e.status) ? "rgba(16,185,129,.2)" : dateStr < hojeStr ? "rgba(239,68,68,.15)" : "rgba(59,130,246,.15)"}`,
+                                  background: ["ENTREGUE", "FINALIZADO"].includes(e.status) ? "rgba(16,185,129,.1)" : e.status === "OCORRENCIA" ? "rgba(245,158,11,.1)" : dateStr < hojeStr ? "rgba(239,68,68,.08)" : "rgba(59,130,246,.08)",
+                                  color: ["ENTREGUE", "FINALIZADO"].includes(e.status) ? "#10b981" : e.status === "OCORRENCIA" ? "#d97706" : dateStr < hojeStr ? "#ef4444" : "#3b82f6",
+                                  border: `1px solid ${["ENTREGUE", "FINALIZADO"].includes(e.status) ? "rgba(16,185,129,.2)" : e.status === "OCORRENCIA" ? "rgba(245,158,11,.2)" : dateStr < hojeStr ? "rgba(239,68,68,.15)" : "rgba(59,130,246,.15)"}`,
                                 }}
                                 title={titleStr}
                               >
