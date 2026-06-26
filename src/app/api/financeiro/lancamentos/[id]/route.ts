@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { logFromRequest } from "@/lib/audit";
 
 async function requireFinanceiro() {
   const session = await getServerSession(authOptions);
@@ -63,10 +64,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     where: { id: params.id },
     data,
   });
+
+  const user = auth.session!.user as any;
+  await logFromRequest(req, "LANCAMENTO_EDITADO", {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    recursoTipo: "lancamento",
+    recursoId: updated.id,
+    recursoDesc: `${updated.tipo} · ${updated.descricao}`,
+    detalhes: { camposAlterados: Object.keys(data), origem: updated.origem },
+  });
+
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireFinanceiro();
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
@@ -77,5 +88,15 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   }
 
   await prisma.lancamentoFinanceiro.delete({ where: { id: params.id } });
+
+  const user = auth.session!.user as any;
+  await logFromRequest(req, "LANCAMENTO_APAGADO", {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    recursoTipo: "lancamento",
+    recursoId: params.id,
+    recursoDesc: `${existente.tipo} · ${existente.descricao}`,
+    detalhes: { valor: existente.valor },
+  });
+
   return NextResponse.json({ ok: true });
 }

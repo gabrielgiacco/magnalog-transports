@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { XMLParser } from "fast-xml-parser";
+import { logFromRequest } from "@/lib/audit";
 
 function parseNFProducts(xmlContent: string | null) {
   if (!xmlContent) return { produtos: [], infAdicionais: "", infFisco: "", emitente: null };
@@ -399,6 +400,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }
     }
 
+    // Auditoria
+    const sessionUser = (session.user as any);
+    await logFromRequest(req, "ENTREGA_EDITADA", {
+      user: { id: sessionUser?.id, email: sessionUser?.email, name: sessionUser?.name, role: sessionUser?.role },
+      recursoTipo: "entrega",
+      recursoId: entrega.id,
+      recursoDesc: `${entrega.codigo} · ${entrega.razaoSocial}`,
+      detalhes: { camposAlterados: Object.keys(data) },
+    });
+
     return NextResponse.json({ ...entrega, notas: notasComProdutos, armazenagemCalc });
   } catch (error: any) {
     console.error("Erro no PUT /api/entregas/[id]:", error);
@@ -469,19 +480,42 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
   });
 
+  const sessionUser = (session.user as any);
+  await logFromRequest(req, "ENTREGA_CRIADA", {
+    user: { id: sessionUser?.id, email: sessionUser?.email, name: sessionUser?.name, role: sessionUser?.role },
+    recursoTipo: "entrega",
+    recursoId: novaEntrega.id,
+    recursoDesc: `${novaEntrega.codigo} · ${novaEntrega.razaoSocial}`,
+    detalhes: { acao: "separar", origemEntregaId: params.id, notasSeparadas: notasParaSeparar.length },
+  });
+
   return NextResponse.json({ novaEntregaId: novaEntrega.id, notasSeparadas: notasParaSeparar.length }, { status: 201 });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const user = (session.user as any);
   if (user.role !== "ADMIN") return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
+  const entregaInfo = await prisma.entrega.findUnique({
+    where: { id: params.id },
+    select: { codigo: true, razaoSocial: true, _count: { select: { notas: true } } },
+  });
+
   // Deletar registros relacionados antes de deletar a entrega
   await prisma.notaFiscal.deleteMany({ where: { entregaId: params.id } });
 
   await prisma.entrega.delete({ where: { id: params.id } });
+
+  await logFromRequest(req, "ENTREGA_APAGADA", {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    recursoTipo: "entrega",
+    recursoId: params.id,
+    recursoDesc: entregaInfo ? `${entregaInfo.codigo} · ${entregaInfo.razaoSocial}` : params.id,
+    detalhes: { notasApagadas: entregaInfo?._count.notas || 0 },
+  });
+
   return NextResponse.json({ ok: true });
 }

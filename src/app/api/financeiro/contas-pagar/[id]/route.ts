@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { upsertLancamentoAutomatico, removeLancamentoAutomatico, categoriaFromTipoConta } from "@/lib/financeiro";
+import { logFromRequest } from "@/lib/audit";
 
 async function requireFinanceiro() {
   const session = await getServerSession(authOptions);
@@ -40,6 +41,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const updated = await prisma.contaPagar.update({ where: { id: params.id }, data });
 
+  const user = auth.session!.user as any;
+  const wasNotPagoBefore = existente.status !== "PAGO";
+  await logFromRequest(req, wasNotPagoBefore && updated.status === "PAGO" ? "CONTA_PAGAR_PAGA" : "CONTA_PAGAR_CRIADA", {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    recursoTipo: "conta_pagar",
+    recursoId: updated.id,
+    recursoDesc: `${updated.tipo} · ${updated.descricao}`,
+    detalhes: { valor: updated.valor, status: updated.status, statusAnterior: existente.status },
+  });
+
   // sincroniza com LancamentoFinanceiro
   if (updated.status === "PAGO" && updated.dataPagamento) {
     await upsertLancamentoAutomatico({
@@ -60,11 +71,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireFinanceiro();
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
+  const existente = await prisma.contaPagar.findUnique({ where: { id: params.id } });
   await removeLancamentoAutomatico("CONTA_PAGAR", { contaPagarId: params.id });
   await prisma.contaPagar.delete({ where: { id: params.id } });
+
+  const user = auth.session!.user as any;
+  await logFromRequest(req, "CONTA_PAGAR_APAGADA", {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    recursoTipo: "conta_pagar",
+    recursoId: params.id,
+    recursoDesc: existente ? `${existente.tipo} · ${existente.descricao}` : params.id,
+    detalhes: { valor: existente?.valor },
+  });
+
   return NextResponse.json({ ok: true });
 }

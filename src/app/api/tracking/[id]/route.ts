@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logFromRequest } from "@/lib/audit";
 
 // Public endpoint — no auth required
 // Returns limited data for tracking page
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -51,11 +52,24 @@ export async function GET(
     });
 
     if (!entrega) {
+      await logFromRequest(req, "RASTREIO_PUBLICO", {
+        sucesso: false,
+        recursoTipo: "rastreio",
+        recursoDesc: params.id,
+        detalhes: { busca: params.id, resultado: "nao_encontrado" },
+      });
       return NextResponse.json(
         { error: "Entrega não encontrada. Verifique o código de rastreamento." },
         { status: 404 }
       );
     }
+
+    await logFromRequest(req, "RASTREIO_PUBLICO", {
+      recursoTipo: "entrega",
+      recursoId: entrega.id,
+      recursoDesc: `${entrega.codigo} · ${entrega.razaoSocial}`,
+      detalhes: { busca: params.id, status: entrega.status, cliente: entrega.razaoSocial },
+    });
 
     return NextResponse.json(entrega);
   } catch {

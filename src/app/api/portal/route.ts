@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { logFromRequest } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -171,9 +172,29 @@ export async function GET(req: NextRequest) {
     prisma.notaFiscal.count({ where: { ...chartWhere, entrega: { status: "EM_ROTA" } } }),
   ]);
 
-  return NextResponse.json({ 
-    notas, 
-    total, 
+  // Auditoria — registra acesso e/ou busca no portal
+  const filtrosAplicados: Record<string, any> = {};
+  if (busca) filtrosAplicados.busca = busca;
+  if (status) filtrosAplicados.status = status;
+  if (emitente) filtrosAplicados.emitente = emitente;
+  if (cidade) filtrosAplicados.cidade = cidade;
+  if (destinatario) filtrosAplicados.destinatario = destinatario;
+  if (dataEmissao) filtrosAplicados.dataEmissao = dataEmissao;
+  if (dataAgendada) filtrosAplicados.dataAgendada = dataAgendada;
+  if (dataChegada) filtrosAplicados.dataChegada = dataChegada;
+  if (dataEntrega) filtrosAplicados.dataEntrega = dataEntrega;
+  if (volumes) filtrosAplicados.volumes = volumes;
+  if (peso) filtrosAplicados.peso = peso;
+
+  const tipoEvento = Object.keys(filtrosAplicados).length > 0 ? "PORTAL_BUSCA" : "PORTAL_ACESSO";
+  await logFromRequest(req, tipoEvento, {
+    user: { id: sessionUser.id, email: sessionUser.email, name: sessionUser.name, role: sessionUser.role },
+    detalhes: { filtros: filtrosAplicados, total, page },
+  });
+
+  return NextResponse.json({
+    notas,
+    total,
     pages: Math.ceil(total / limit),
     stats: {
       EM_SEPARACAO: countEmSeparacao,

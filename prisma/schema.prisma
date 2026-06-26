@@ -67,6 +67,73 @@ model User {
   qualidadeRegistrada     QualidadeOperacional[] @relation("AdminQualidade")
   avariasRegistradas      Avaria[]               @relation("AvariaRegistrada")
   avariasResolvidas       Avaria[]               @relation("AvariaResolvida")
+  auditLogs               AuditLog[]
+}
+
+enum TipoEventoAuditoria {
+  LOGIN
+  LOGOUT
+  LOGIN_FAIL
+  PORTAL_ACESSO
+  PORTAL_BUSCA
+  PORTAL_VIEW_ENTREGA
+  RASTREIO_PUBLICO
+  ENTREGA_CRIADA
+  ENTREGA_EDITADA
+  ENTREGA_APAGADA
+  NF_IMPORTADA
+  NF_EDITADA
+  NF_APAGADA
+  FATURA_CRIADA
+  FATURA_EDITADA
+  FATURA_APAGADA
+  LANCAMENTO_CRIADO
+  LANCAMENTO_EDITADO
+  LANCAMENTO_APAGADO
+  CONTA_PAGAR_CRIADA
+  CONTA_PAGAR_PAGA
+  CONTA_PAGAR_APAGADA
+  OCORRENCIA_CRIADA
+  OCORRENCIA_RESOLVIDA
+  USUARIO_CRIADO
+  USUARIO_EDITADO
+  USUARIO_APAGADO
+  OUTRO
+}
+
+model AuditLog {
+  id          String              @id @default(cuid())
+  timestamp   DateTime            @default(now())
+  tipo        TipoEventoAuditoria
+  sucesso     Boolean             @default(true)
+
+  // Snapshot do usuário (mantém histórico mesmo se usuário for apagado)
+  userId      String?
+  userEmail   String?
+  userRole    String?
+  userName    String?
+
+  // Recurso afetado
+  recursoTipo String?  // 'entrega', 'nf', 'fatura', 'lancamento', etc.
+  recursoId   String?
+  recursoDesc String?  // descrição legível (ex: "ENT-00042", "Fatura FAT-00012")
+
+  // Metadados da requisição
+  ip          String?
+  userAgent   String?  @db.Text
+  metodo      String?  // GET, POST, PATCH, DELETE
+  rota        String?  // /api/entregas/123
+
+  // Dados livres
+  detalhes    String?  @db.Text  // JSON com info extra (termo pesquisado, antes/depois etc.)
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([timestamp(sort: Desc)])
+  @@index([userId])
+  @@index([tipo])
+  @@index([ip])
+  @@index([recursoTipo, recursoId])
 }
 
 model FornecedorAutorizado {

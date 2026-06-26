@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { upsertLancamentoAutomatico, removeLancamentoAutomatico } from "@/lib/financeiro";
+import { logFromRequest } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const user = session.user as any;
+    await logFromRequest(req, "FATURA_CRIADA", {
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      recursoTipo: "fatura",
+      recursoId: fatura.id,
+      recursoDesc: `${fatura.numero} · ${fatura.clienteNome}`,
+      detalhes: { valor: fatura.valorTotal, ctes: cteIds.length },
+    });
+
     return NextResponse.json(fatura, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -83,6 +93,15 @@ export async function PATCH(req: NextRequest) {
     const fatura = await prisma.fatura.update({
       where: { id: body.id },
       data,
+    });
+
+    const user = session.user as any;
+    await logFromRequest(req, "FATURA_EDITADA", {
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      recursoTipo: "fatura",
+      recursoId: fatura.id,
+      recursoDesc: `${fatura.numero} · ${fatura.clienteNome}`,
+      detalhes: { status: fatura.status, camposAlterados: Object.keys(data) },
     });
 
     // Sincronização com LancamentoFinanceiro

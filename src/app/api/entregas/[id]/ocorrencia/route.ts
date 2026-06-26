@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { logFromRequest } from "@/lib/audit";
 
 export async function POST(
   req: NextRequest,
@@ -25,6 +26,15 @@ export async function POST(
     },
   });
 
+  const user = session.user as any;
+  await logFromRequest(req, "OCORRENCIA_CRIADA", {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    recursoTipo: "ocorrencia",
+    recursoId: ocorrencia.id,
+    recursoDesc: `${ocorrencia.tipo} · entrega ${params.id}`,
+    detalhes: { entregaId: params.id, tipo: ocorrencia.tipo, descricao: ocorrencia.descricao },
+  });
+
   return NextResponse.json(ocorrencia, { status: 201 });
 }
 
@@ -43,6 +53,15 @@ export async function PUT(
       resolucao: body.resolucao,
       resolvida: true,
     },
+  });
+
+  const user = session.user as any;
+  await logFromRequest(req, "OCORRENCIA_RESOLVIDA", {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    recursoTipo: "ocorrencia",
+    recursoId: ocorrencia.id,
+    recursoDesc: `${ocorrencia.tipo} · entrega ${params.id}`,
+    detalhes: { entregaId: params.id, resolucao: body.resolucao },
   });
 
   return NextResponse.json(ocorrencia);

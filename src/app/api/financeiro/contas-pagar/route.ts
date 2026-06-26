@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { upsertLancamentoAutomatico, categoriaFromTipoConta } from "@/lib/financeiro";
+import { logFromRequest } from "@/lib/audit";
 
 async function requireFinanceiro() {
   const session = await getServerSession(authOptions);
@@ -81,6 +82,15 @@ export async function POST(req: NextRequest) {
       rotaId: body.rotaId || null,
       entregaId: body.entregaId || null,
     },
+  });
+
+  const user = auth.session!.user as any;
+  await logFromRequest(req, status === "PAGO" ? "CONTA_PAGAR_PAGA" : "CONTA_PAGAR_CRIADA", {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    recursoTipo: "conta_pagar",
+    recursoId: created.id,
+    recursoDesc: `${created.tipo} · ${created.descricao}`,
+    detalhes: { valor: created.valor, status: created.status, favorecido: created.favorecido },
   });
 
   // se já criou paga, dispara lançamento automático
