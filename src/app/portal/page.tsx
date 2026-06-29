@@ -259,7 +259,7 @@ export default function PortalPage() {
 
 
         {/* Notes table */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="rounded-2xl overflow-x-auto" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           {loading ? <Loading /> : notas.length === 0 ? (
             <div className="text-center py-16">
               <Package size={40} className="mx-auto mb-3 opacity-20" />
@@ -267,7 +267,6 @@ export default function PortalPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
                   <tr>
@@ -827,7 +826,6 @@ export default function PortalPage() {
                   ))}
                 </tbody>
               </table>
-              </div>
 
               {/* Pagination */}
               {pages > 1 && (
