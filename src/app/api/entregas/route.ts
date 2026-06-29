@@ -201,6 +201,7 @@ export async function GET(req: NextRequest) {
       motorista: { motorista: { nome: sortOrder } },
       dataChegada: { dataChegada: sortOrder },
       dataAgendada: { dataAgendada: sortOrder },
+      dataEntrega: { dataEntrega: sortOrder },
       status: { status: sortOrder },
       valorFrete: { valorFrete: sortOrder },
     };

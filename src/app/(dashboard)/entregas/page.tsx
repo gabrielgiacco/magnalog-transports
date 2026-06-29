@@ -588,6 +588,7 @@ export default function EntregasPage() {
                     <SortTh col="motorista" label="Motorista" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
                     <SortTh col="dataChegada" label="Chegada" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
                     <SortTh col="dataAgendada" label="Agendado" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
+                    <SortTh col="dataEntrega" label="Entregue" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
                     <SortTh col="status" label="Status" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
                     <SortTh col="valorFrete" label="Frete" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
                     <Th></Th>
@@ -603,56 +604,60 @@ export default function EntregasPage() {
                         style={atrasada ? { borderLeftColor: "#ef4444" } as any : {}}>
                         <Td>
                           {e.notas && e.notas.length > 0 ? (
-                            <div className="space-y-1.5 py-1">
+                            <div className="space-y-0.5 py-0.5">
                               {e.notas.map((n: any) => (
-                                <div key={n.id} className="group/nf">
-                                  <div className="font-mono text-[11px] font-bold leading-tight" style={{ color: "var(--accent)" }}>
-                                    NF {n.numero}
-                                  </div>
-                                  {n.chaveAcesso && (
-                                    <div className="text-[9px] font-mono mt-0.5 max-w-[150px] truncate opacity-50 group-hover/nf:opacity-100 transition-opacity" title={n.chaveAcesso}>
-                                      {n.chaveAcesso}
-                                    </div>
-                                  )}
+                                <div key={n.id} className="font-mono text-[11px] font-bold leading-tight" style={{ color: "var(--accent)" }}>
+                                  NF {n.numero}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <>
-                              <div className="font-mono text-sm leading-tight" style={{ color: "#3b82f6" }}>
-                                {e.codigo}
-                              </div>
-                              {e.chaveAcesso && (
-                                <div className="text-[10px] font-mono mt-0.5 max-w-[150px] truncate" title={e.chaveAcesso} style={{ color: "var(--text3)" }}>
-                                  {e.chaveAcesso}
-                                </div>
-                              )}
-                            </>
+                            <div className="font-mono text-sm leading-tight" style={{ color: "#3b82f6" }}>
+                              {e.codigo}
+                            </div>
                           )}
                         </Td>
                         <Td>
-                          <span className="text-xs" style={{ color: "var(--text2)" }}>
-                            {e.notas && e.notas.length > 0 
+                          {(() => {
+                            const fornecedor = e.notas && e.notas.length > 0
                               ? Array.from(new Set(e.notas.filter((n: any) => n.emitenteRazao).map((n: any) => n.emitenteRazao))).join(", ") || "—"
-                              : "—"}
+                              : "—";
+                            return (
+                              <span className="text-xs block max-w-[160px] truncate" title={fornecedor} style={{ color: "var(--text2)" }}>
+                                {fornecedor}
+                              </span>
+                            );
+                          })()}
+                        </Td>
+                        <Td>
+                          <div className="font-semibold text-sm leading-tight max-w-[200px] truncate" title={e.razaoSocial}>{e.razaoSocial}</div>
+                          <div className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text3)" }}>{formatCNPJ(e.cnpj)}</div>
+                        </Td>
+                        <Td>
+                          <span className="text-xs block max-w-[140px] truncate" title={`${e.cidade}${e.uf ? ` - ${e.uf}` : ""}`} style={{ color: "var(--text2)" }}>
+                            {e.cidade}{e.uf ? ` — ${e.uf}` : ""}
+                          </span>
+                        </Td>
+                        <Td><span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: "var(--surface2)", color: "var(--text2)" }}>{e.volumeTotal || 0}</span></Td>
+                        <Td><span className="text-xs font-mono whitespace-nowrap" style={{ color: "var(--text2)" }}>{formatWeight(e.pesoTotal)}</span></Td>
+                        <Td>
+                          <span className="text-xs block max-w-[140px] truncate" title={e.motorista?.nome || ""} style={{ color: "var(--text2)" }}>
+                            {e.motorista?.nome || <span style={{ color: "var(--text3)" }}>—</span>}
                           </span>
                         </Td>
                         <Td>
-                          <div className="font-semibold text-sm leading-tight">{e.razaoSocial}</div>
-                          <div className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text3)" }}>{formatCNPJ(e.cnpj)}</div>
-                        </Td>
-                        <Td><span className="text-xs" style={{ color: "var(--text2)" }}>{e.cidade}{e.uf ? ` — ${e.uf}` : ""}</span></Td>
-                        <Td><span className="font-mono text-xs px-2 py-0.5 rounded" style={{ background: "var(--surface2)", color: "var(--text2)" }}>{e.volumeTotal || 0}</span></Td>
-                        <Td><span className="text-xs font-mono" style={{ color: "var(--text2)" }}>{formatWeight(e.pesoTotal)}</span></Td>
-                        <Td><span className="text-xs" style={{ color: "var(--text2)" }}>{e.motorista?.nome || <span style={{ color: "var(--text3)" }}>—</span>}</span></Td>
-                        <Td>
-                          <span className="text-xs font-mono" style={{ color: "var(--text3)" }}>
+                          <span className="text-xs font-mono whitespace-nowrap" style={{ color: "var(--text3)" }}>
                             {formatDate(e.dataChegada)}
                           </span>
                         </Td>
                         <Td>
-                          <span className={`text-xs font-mono ${atrasada ? "text-red-400" : ""}`} style={!atrasada ? { color: "var(--text3)" } : {}}>
+                          <span className={`text-xs font-mono whitespace-nowrap ${atrasada ? "text-red-400" : ""}`} style={!atrasada ? { color: "var(--text3)" } : {}}>
                             {formatDate(e.dataAgendada)}{atrasada ? " ⚠" : ""}
+                          </span>
+                        </Td>
+                        <Td>
+                          <span className="text-xs font-mono whitespace-nowrap" style={{ color: e.dataEntrega ? "#059669" : "var(--text3)" }}>
+                            {e.dataEntrega ? formatDate(e.dataEntrega) : "—"}
                           </span>
                         </Td>
                         <Td>
