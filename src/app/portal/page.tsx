@@ -267,7 +267,8 @@ export default function PortalPage() {
             </div>
           ) : (
             <>
-              <table className="w-full border-collapse">
+              <div className="overflow-x-auto">
+              <table className="w-full border-collapse min-w-[1100px]">
                 <thead>
                   <tr>
                     <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
@@ -826,6 +827,7 @@ export default function PortalPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
 
               {/* Pagination */}
               {pages > 1 && (
