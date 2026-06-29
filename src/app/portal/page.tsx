@@ -4,7 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Loading, StatusBadge } from "@/components/ui";
 import { formatDate, formatWeight } from "@/lib/utils";
-import { Search, LogOut, FileText, ChevronLeft, ChevronRight, Package, AlertTriangle, Filter, X } from "lucide-react";
+import { Search, LogOut, FileText, ChevronLeft, ChevronRight, Package, AlertTriangle, Filter, X, Eye, Truck, MapPin, Calendar, User, Clock, Building2 } from "lucide-react";
 
 
 const STATUS_LABELS: Record<string, string> = {
@@ -34,6 +34,7 @@ export default function PortalPage() {
   const [filterDataEntrega, setFilterDataEntrega] = useState("");
   const [filterDataAgendada, setFilterDataAgendada] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [detalheNota, setDetalheNota] = useState<any | null>(null);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -701,6 +702,11 @@ export default function PortalPage() {
                         </div>
                       )}
                     </th>
+
+                    <th className="text-center px-2 py-3 text-[10px] uppercase tracking-widest font-normal font-mono w-12"
+                      style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
+                      Ver
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -711,18 +717,17 @@ export default function PortalPage() {
                         <div className="font-mono text-sm font-semibold group-hover:underline group-hover:text-blue-400 transition-colors" style={{ color: "var(--accent)" }}>NF {n.numero}</div>
                         {n.serie && <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>Série {n.serie}</div>}
                       </td>
-                      <td className="px-4 py-3 cursor-pointer group" onClick={() => { setFilterEmitente(n.emitenteRazao); setPage(1); }}>
-                        <div className="text-sm font-medium group-hover:underline group-hover:text-blue-400 transition-colors">{n.emitenteRazao}</div>
-                        <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>{n.emitenteCnpj}</div>
+                      <td className="px-4 py-3 cursor-pointer group max-w-[180px]" onClick={() => { setFilterEmitente(n.emitenteRazao); setPage(1); }}>
+                        <div className="text-sm font-medium group-hover:underline group-hover:text-blue-400 transition-colors truncate" title={n.emitenteRazao}>{n.emitenteRazao}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm cursor-pointer hover:underline hover:text-blue-400 transition-colors"
+                      <td className="px-4 py-3 text-sm cursor-pointer hover:underline hover:text-blue-400 transition-colors max-w-[180px]"
                         onClick={() => { setFilterDestinatario(n.destinatarioRazao); setPage(1); }}>
-                        {n.destinatarioRazao}
+                        <div className="truncate" title={n.destinatarioRazao}>{n.destinatarioRazao}</div>
                       </td>
-                      <td className="px-4 py-3 text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
+                      <td className="px-4 py-3 text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors max-w-[140px] whitespace-nowrap"
                         onClick={() => { setFilterCidade(n.cidade); setPage(1); }}
                         style={{ color: "var(--text2)" }}>
-                        {n.cidade}{n.uf ? ` — ${n.uf}` : ""}
+                        <div className="truncate" title={`${n.cidade}${n.uf ? ` - ${n.uf}` : ""}`}>{n.cidade}{n.uf ? ` — ${n.uf}` : ""}</div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
                         onClick={() => { setFilterVolumes(String(n.volumes)); setPage(1); }}>
@@ -807,6 +812,16 @@ export default function PortalPage() {
                           <span className="badge badge-PROGRAMADO">Programado</span>
                         )}
                       </td>
+                      <td className="px-2 py-3 text-center">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDetalheNota(n); }}
+                          className="p-2 rounded-lg hover:bg-blue-600 hover:text-white transition-all"
+                          style={{ background: "var(--surface2)", color: "var(--text2)" }}
+                          title="Ver detalhes completos"
+                        >
+                          <Eye size={14} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -834,6 +849,156 @@ export default function PortalPage() {
           )}
         </div>
       </main>
+
+      {detalheNota && <DetalheNotaModal nota={detalheNota} onClose={() => setDetalheNota(null)} />}
+    </div>
+  );
+}
+
+function DetalheNotaModal({ nota, onClose }: { nota: any; onClose: () => void }) {
+  const e = nota.entrega;
+  const ocorrenciaAberta = e?.ocorrencias?.find((o: any) => !o.resolvida);
+
+  function formatCnpjLocal(c: string) {
+    if (!c) return "—";
+    const d = c.replace(/\D/g, "");
+    if (d.length !== 14) return c;
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  }
+
+  function formatMoney(v?: number) {
+    if (v == null) return "—";
+    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,.6)" }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        onClick={(ev) => ev.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 px-6 py-4 flex items-center justify-between border-b" style={{ background: "var(--surface)", borderColor: "var(--border)", zIndex: 10 }}>
+          <div>
+            <div className="text-xs uppercase tracking-widest font-mono" style={{ color: "var(--text3)" }}>Detalhes da Nota Fiscal</div>
+            <div className="text-xl font-bold font-mono" style={{ color: "var(--accent)" }}>NF {nota.numero}{nota.serie ? ` · Série ${nota.serie}` : ""}</div>
+          </div>
+          <div className="flex items-center gap-3">
+            {e?.status && <StatusBadge status={e.status} />}
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Ocorrência destacada */}
+          {ocorrenciaAberta && (
+            <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.3)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={16} className="text-red-500" />
+                <span className="text-sm font-bold text-red-500">Ocorrência: {ocorrenciaAberta.tipo}</span>
+              </div>
+              <p className="text-sm" style={{ color: "var(--text2)" }}>{ocorrenciaAberta.descricao}</p>
+              {ocorrenciaAberta.createdAt && (
+                <p className="text-[11px] mt-2" style={{ color: "var(--text3)" }}>
+                  Registrada em {new Date(ocorrenciaAberta.createdAt).toLocaleString("pt-BR")}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Emitente */}
+          <Section icon={Building2} title="Emitente">
+            <div className="text-sm font-medium">{nota.emitenteRazao}</div>
+            <div className="text-xs font-mono mt-1" style={{ color: "var(--text3)" }}>CNPJ: {formatCnpjLocal(nota.emitenteCnpj)}</div>
+          </Section>
+
+          {/* Destinatário */}
+          <Section icon={MapPin} title="Destinatário">
+            <div className="text-sm font-medium">{nota.destinatarioRazao}</div>
+            <div className="text-xs font-mono mt-1" style={{ color: "var(--text3)" }}>CNPJ: {formatCnpjLocal(nota.destinatarioCnpj)}</div>
+            <div className="text-xs mt-2" style={{ color: "var(--text2)" }}>
+              {[nota.endereco, nota.bairro, nota.cidade, nota.uf, nota.cep].filter(Boolean).join(" · ")}
+            </div>
+          </Section>
+
+          {/* Dados da nota */}
+          <Section icon={FileText} title="Dados da Nota">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+              <Info label="Volumes" value={nota.volumes ?? "—"} />
+              <Info label="Peso Bruto" value={formatWeight(nota.pesoBruto)} />
+              <Info label="Valor da Nota" value={formatMoney(nota.valorNota)} />
+              <Info label="Emissão" value={formatDate(nota.dataEmissao)} />
+              {nota.chaveAcesso && (
+                <div className="col-span-2 sm:col-span-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text3)" }}>Chave de Acesso</div>
+                  <div className="text-[11px] font-mono break-all" style={{ color: "var(--text2)" }}>{nota.chaveAcesso}</div>
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* Entrega */}
+          {e ? (
+            <>
+              <Section icon={Truck} title="Entrega">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                  <Info label="Código" value={e.codigo} mono />
+                  <Info label="Motorista" value={e.motorista?.nome || "—"} />
+                  {e.notas && e.notas.length > 1 && (
+                    <Info label="NFs nesta carga" value={e.notas.map((nt: any) => nt.numero).join(", ")} mono />
+                  )}
+                </div>
+              </Section>
+
+              <Section icon={Calendar} title="Datas">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <Info label="Chegada no CD" value={e.dataChegada ? formatDate(e.dataChegada) : "—"} mono />
+                  <Info label="Agendamento" value={e.dataAgendada ? formatDate(e.dataAgendada) : "—"} mono />
+                  <Info label="Entrega" value={e.dataEntrega ? formatDate(e.dataEntrega) : "—"} mono color={e.dataEntrega ? "#059669" : undefined} />
+                </div>
+              </Section>
+            </>
+          ) : (
+            <Section icon={Clock} title="Entrega">
+              <div className="text-sm" style={{ color: "var(--text3)" }}>Aguardando vinculação à entrega.</div>
+            </Section>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 px-6 py-3 border-t flex justify-end" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text2)" }}>
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon size={14} style={{ color: "var(--accent)" }} />
+        <h3 className="text-xs uppercase tracking-widest font-bold font-mono" style={{ color: "var(--text2)" }}>{title}</h3>
+      </div>
+      <div className="pl-6">{children}</div>
+    </div>
+  );
+}
+
+function Info({ label, value, mono, color }: { label: string; value: any; mono?: boolean; color?: string }) {
+  return (
+    <div>
+      <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text3)" }}>{label}</div>
+      <div className={`text-sm ${mono ? "font-mono" : ""}`} style={{ color: color || "var(--text)" }}>{value}</div>
     </div>
   );
 }
