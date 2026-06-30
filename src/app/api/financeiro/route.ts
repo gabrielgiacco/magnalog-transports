@@ -60,6 +60,9 @@ export async function GET(req: NextRequest) {
   if (search) {
     whereEntrega.OR = [
       { motorista: { nome: { contains: search, mode: "insensitive" } } },
+      { motoristaCompl: { nome: { contains: search, mode: "insensitive" } } },
+      { veiculo: { dono: { nome: { contains: search, mode: "insensitive" } } } },
+      { veiculoCompl: { dono: { nome: { contains: search, mode: "insensitive" } } } },
       { notas: { some: { numero: { contains: search } } } }
     ];
   }
@@ -102,6 +105,7 @@ export async function GET(req: NextRequest) {
   if (search) {
     whereRota.OR = [
       { motorista: { nome: { contains: search, mode: "insensitive" } } },
+      { veiculo: { dono: { nome: { contains: search, mode: "insensitive" } } } },
       { entregas: { some: { notas: { some: { numero: { contains: search } } } } } }
     ];
   }
@@ -117,9 +121,12 @@ export async function GET(req: NextRequest) {
         descontosMotorista: true, saldoMotorista: true, dataPagamentoSaldo: true, statusCanhoto: true,
         dataEntrega: true, dataAgendada: true,
         motoristaId: true, motorista: { select: { nome: true, tipo: true, valorDiaria: true } },
+        veiculoId: true,
+        veiculo: { select: { id: true, placa: true, dono: { select: { id: true, nome: true, telefone: true } } } },
         motoristaComplId: true,
         motoristaCompl: { select: { nome: true, tipo: true, valorDiaria: true } },
         veiculoComplId: true,
+        veiculoCompl: { select: { id: true, placa: true, dono: { select: { id: true, nome: true, telefone: true } } } },
         valorMotoristaCompl: true,
         valorSaidaCompl: true,
         adiantamentoMotoristaCompl: true,
@@ -138,6 +145,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
       include: {
         motorista: { select: { nome: true, tipo: true, valorDiaria: true } },
+        veiculo: { select: { id: true, placa: true, dono: { select: { id: true, nome: true, telefone: true } } } },
         entregas: {
           select: { id: true, codigo: true, razaoSocial: true, cidade: true, notas: { select: { numero: true } } }
         },
@@ -150,15 +158,19 @@ export async function GET(req: NextRequest) {
   const viagensList: any[] = [];
   
   for (const e of entregasDiretas) {
+    const donoVeiculo = (e as any).veiculo?.dono || null;
     viagensList.push({
       ...e,
       isRota: false,
       motoristaTipo: e.motorista?.tipo || null,
       motoristaValorDiaria: e.motorista?.valorDiaria || 0,
+      donoVeiculo,
+      favorecido: donoVeiculo?.nome || e.motorista?.nome || null,
       dataRef: e.dataAgendada || e.dataEntrega || e.createdAt,
     });
 
     if (e.motoristaComplId && e.motoristaCompl) {
+      const donoVeiculoCompl = (e as any).veiculoCompl?.dono || null;
       viagensList.push({
         id: e.id,
         isComplementar: true,
@@ -180,6 +192,8 @@ export async function GET(req: NextRequest) {
         motorista: e.motoristaCompl,
         motoristaTipo: e.motoristaCompl?.tipo || null,
         motoristaValorDiaria: e.motoristaCompl?.valorDiaria || 0,
+        donoVeiculo: donoVeiculoCompl,
+        favorecido: donoVeiculoCompl?.nome || e.motoristaCompl?.nome || null,
         isRota: false,
         notas: e.notas,
         _count: e._count,
@@ -211,6 +225,8 @@ export async function GET(req: NextRequest) {
       motorista: r.motorista,
       motoristaTipo: r.motorista?.tipo || null,
       motoristaValorDiaria: r.motorista?.valorDiaria || 0,
+      donoVeiculo: r.veiculo?.dono || null,
+      favorecido: r.veiculo?.dono?.nome || r.motorista?.nome || null,
       isRota: true,
       rotaEntregas: r.entregas.map((e: any) => ({ codigo: e.codigo, razaoSocial: e.razaoSocial })),
       notas: r.entregas.flatMap((e: any) => e.notas),

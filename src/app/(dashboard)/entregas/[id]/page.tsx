@@ -518,10 +518,24 @@ export default function EntregaDetailPage() {
                 <div className="space-y-3">
                   <Field label={entrega.motoristaCompl ? "Motorista (Principal)" : "Motorista"} value={entrega.motorista?.nome} />
                   <Field label={entrega.motoristaCompl ? "Veículo (Principal)" : "Veículo"} value={entrega.veiculo ? `${entrega.veiculo.placa} — ${entrega.veiculo.tipo}` : "—"} />
+                  {entrega.veiculo?.dono && entrega.veiculo.dono.id !== entrega.motorista?.id && (
+                    <Field
+                      label="👑 Dono do Veículo"
+                      value={`${entrega.veiculo.dono.nome}${entrega.veiculo.dono.telefone ? ` · ${entrega.veiculo.dono.telefone}` : ""}`}
+                      color="#d97706"
+                    />
+                  )}
                   {entrega.motoristaCompl && (
                     <>
                       <Field label="Motorista Complementar" value={entrega.motoristaCompl.nome} color="#f97316" />
                       <Field label="Veículo Complementar" value={entrega.veiculoCompl ? `${entrega.veiculoCompl.placa} — ${entrega.veiculoCompl.tipo}` : "—"} color="#f97316" />
+                      {entrega.veiculoCompl?.dono && entrega.veiculoCompl.dono.id !== entrega.motoristaCompl?.id && (
+                        <Field
+                          label="👑 Dono do Veículo Complementar"
+                          value={`${entrega.veiculoCompl.dono.nome}${entrega.veiculoCompl.dono.telefone ? ` · ${entrega.veiculoCompl.dono.telefone}` : ""}`}
+                          color="#d97706"
+                        />
+                      )}
                     </>
                   )}
                   <Field label="Rota" value={entrega.rota?.codigo} mono />

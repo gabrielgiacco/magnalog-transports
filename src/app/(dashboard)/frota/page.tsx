@@ -6,7 +6,7 @@ import { Button, Card, Loading, Empty, Modal, Input, Select } from "@/components
 import { Plus, Edit2, Phone, FileText, User as UserIcon, Truck as TruckIcon } from "lucide-react";
 
 const B_MOT = { nome: "", cpf: "", cnh: "", categoriaCnh: "E", telefone: "", tipo: "TERCEIRO", valorDiaria: "" };
-const B_VEI = { placa: "", tipo: "TRUCK", modelo: "", ano: "", capacidadeKg: "", motoristaId: "" };
+const B_VEI = { placa: "", tipo: "TRUCK", modelo: "", ano: "", capacidadeKg: "", motoristaId: "", donoId: "" };
 
 const TIPOS: Record<string, { label: string; icon: string; color: string }> = {
   VUC:         { label: "VUC",          icon: "🚐", color: "#3b82f6" },
@@ -58,7 +58,7 @@ export default function FrotaPage() {
 
   function openEditVei(v: any) {
     setFormType("veiculo"); setEditing(v);
-    setFormVei({ placa: v.placa, tipo: v.tipo, modelo: v.modelo || "", ano: String(v.ano || ""), capacidadeKg: String(v.capacidadeKg || ""), motoristaId: v.motoristaId || "" });
+    setFormVei({ placa: v.placa, tipo: v.tipo, modelo: v.modelo || "", ano: String(v.ano || ""), capacidadeKg: String(v.capacidadeKg || ""), motoristaId: v.motoristaId || "", donoId: v.donoId || "" });
     setShowModal(true);
   }
 
@@ -161,7 +161,8 @@ export default function FrotaPage() {
                     </div>
                     <div className="font-head text-base sm:text-xl font-black tracking-widest mb-1 truncate" style={{ color: tipo.color }}>{v.placa}</div>
                     <div className="text-xs sm:text-sm font-semibold mb-1">{tipo.label}</div>
-                    {v.motorista && <div className="text-[10px] sm:text-[11px] mb-2 px-2 py-1 bg-blue-50 text-blue-700 rounded-md inline-flex items-center gap-1.5 max-w-full truncate"><UserIcon size={10}/> <span className="truncate">{v.motorista.nome}</span></div>}
+                    {v.motorista && <div className="text-[10px] sm:text-[11px] mb-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md inline-flex items-center gap-1.5 max-w-full truncate" title={`Motorista padrão: ${v.motorista.nome}`}><UserIcon size={10}/> <span className="truncate">{v.motorista.nome}</span></div>}
+                    {v.dono && v.dono.id !== v.motoristaId && <div className="text-[10px] sm:text-[11px] mb-2 px-2 py-1 bg-amber-50 text-amber-700 rounded-md inline-flex items-center gap-1.5 max-w-full truncate" title={`Dono do veículo${v.dono.telefone ? ` · ${v.dono.telefone}` : ""}`}><span className="font-bold">👑</span> <span className="truncate">{v.dono.nome}</span></div>}
                     <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
                       <span className="text-[9px] sm:text-[10px] font-mono ml-auto" style={{ color: "var(--text3)" }}>{v._count?.entregas ?? 0} fretes</span>
                     </div>
@@ -205,6 +206,11 @@ export default function FrotaPage() {
             
             <Select label="Motorista Padrão" value={formVei.motoristaId} onChange={(e) => setV("motoristaId", e.target.value)}>
               <option value="">Sem vínculo</option>
+              {motoristas.filter(m => m.ativo).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+            </Select>
+
+            <Select label="Dono do Veículo" value={formVei.donoId} onChange={(e) => setV("donoId", e.target.value)}>
+              <option value="">Sem dono cadastrado</option>
               {motoristas.filter(m => m.ativo).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
             </Select>
 

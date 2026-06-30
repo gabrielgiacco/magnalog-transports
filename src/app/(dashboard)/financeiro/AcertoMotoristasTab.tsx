@@ -112,8 +112,10 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
   // Filtered deliveries locally on frontend (for responsive filtering)
   const filteredEntregas = entregas.filter(e => {
     if (filterMotorista) {
-      const nomeMoto = e.motorista?.nome || "";
-      if (!nomeMoto.toLowerCase().includes(filterMotorista.toLowerCase())) return false;
+      const nomeMoto = (e.motorista?.nome || "").toLowerCase();
+      const nomeDono = (e.donoVeiculo?.nome || "").toLowerCase();
+      const filtro = filterMotorista.toLowerCase();
+      if (!nomeMoto.includes(filtro) && !nomeDono.includes(filtro)) return false;
     }
     if (filterDataFrete) {
       const dateStr = e.dataEntrega || e.dataAgendada || "";
@@ -210,7 +212,10 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
   });
 
   // Unique values for dropdown filters
-  const uniqueMotoristas = Array.from(new Set(entregas.map(e => e.motorista?.nome).filter(Boolean))).sort() as string[];
+  const uniqueMotoristas = Array.from(new Set([
+    ...entregas.map(e => e.motorista?.nome).filter(Boolean),
+    ...entregas.map(e => e.donoVeiculo?.nome).filter(Boolean),
+  ])).sort() as string[];
   const uniqueDatesFrete = Array.from(new Set(entregas.map(e => {
     const d = e.dataEntrega || e.dataAgendada || "";
     return d ? new Date(d).toISOString().slice(0, 10) : "";
@@ -657,7 +662,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                     </div>
                     <StatusBadge status={e.statusCanhoto || "PENDENTE"} />
                   </div>
-                  <div onClick={() => setFilterMotorista(e.motorista?.nome || "")} className="font-bold text-sm text-gray-800 uppercase truncate cursor-pointer hover:underline">{e.motorista?.nome || "Motorista nao vinculado"}</div>
+                  <div onClick={() => setFilterMotorista(e.donoVeiculo?.nome || e.motorista?.nome || "")} className="font-bold text-sm text-gray-800 uppercase truncate cursor-pointer hover:underline" title={e.donoVeiculo ? `Dono: ${e.donoVeiculo.nome}${e.donoVeiculo.telefone ? ` · ${e.donoVeiculo.telefone}` : ""}` : ""}>
+                    {e.donoVeiculo?.nome || e.motorista?.nome || "Motorista nao vinculado"}
+                    {e.donoVeiculo && <span className="ml-1 text-[9px] font-mono px-1.5 py-0.5 rounded align-middle" style={{ background: "rgba(245,158,11,.15)", color: "#d97706" }}>DONO</span>}
+                  </div>
+                  {e.donoVeiculo && e.motorista && e.donoVeiculo.nome !== e.motorista.nome && (
+                    <div className="text-[10px] text-gray-500 truncate -mt-0.5">🚛 Dirigiu: {e.motorista.nome}</div>
+                  )}
                   <div onClick={() => {
                     const d = e.dataEntrega || e.dataAgendada || "";
                     if (d) setFilterDataFrete(new Date(d).toISOString().slice(0, 10));
@@ -1188,8 +1199,14 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         )}
                       </div>
                     </Td>
-                    <Td onClick={() => setFilterMotorista(e.motorista?.nome || "")} className="cursor-pointer hover:bg-rose-50/50 transition-colors">
-                      <div className="font-bold text-sm text-gray-800 uppercase hover:underline">{e.motorista?.nome || "Motorista não vinculado"}</div>
+                    <Td onClick={() => setFilterMotorista(e.donoVeiculo?.nome || e.motorista?.nome || "")} className="cursor-pointer hover:bg-rose-50/50 transition-colors">
+                      <div className="font-bold text-sm text-gray-800 uppercase hover:underline" title={e.donoVeiculo ? `Dono: ${e.donoVeiculo.nome}${e.donoVeiculo.telefone ? ` · ${e.donoVeiculo.telefone}` : ""}` : ""}>
+                        {e.donoVeiculo?.nome || e.motorista?.nome || "Motorista não vinculado"}
+                        {e.donoVeiculo && <span className="ml-1 text-[9px] font-mono px-1.5 py-0.5 rounded align-middle" style={{ background: "rgba(245,158,11,.15)", color: "#d97706" }}>DONO</span>}
+                      </div>
+                      {e.donoVeiculo && e.motorista && e.donoVeiculo.nome !== e.motorista.nome && (
+                        <div className="text-[10px] text-gray-500">🚛 Dirigiu: {e.motorista.nome}</div>
+                      )}
                       <div className="text-[10px] text-gray-400 font-mono">
                         {e.isDiariaPrincipal && e.diariaQtdViagens > 1
                           ? <span className="text-emerald-600 font-bold">Diaria — {e.diariaQtdSaidas} {e.diariaQtdSaidas === 1 ? "saida" : "saidas"} no dia{e.diariaQtdDiretas > 0 && e.diariaQtdRotas > 0 ? ` + ${e.diariaQtdDiretas} direta(s)` : ""}</span>

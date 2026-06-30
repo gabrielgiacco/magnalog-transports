@@ -10,7 +10,11 @@ export async function GET(req: NextRequest) {
   const veiculos = await prisma.veiculo.findMany({
     where: { ativo: true },
     orderBy: { placa: "asc" },
-    include: { motorista: { select: { nome: true } }, _count: { select: { entregas: true } } },
+    include: {
+      motorista: { select: { id: true, nome: true } },
+      dono: { select: { id: true, nome: true, telefone: true } },
+      _count: { select: { entregas: true } },
+    },
   });
 
   return NextResponse.json(veiculos);
@@ -33,6 +37,7 @@ export async function POST(req: NextRequest) {
         ano: isNaN(ano as any) ? null : ano,
         capacidadeKg: isNaN(capacidadeKg as any) ? null : capacidadeKg,
         motoristaId: body.motoristaId || null,
+        donoId: body.donoId || null,
       },
     });
 

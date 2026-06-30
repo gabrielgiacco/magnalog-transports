@@ -71,9 +71,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     where: { id: params.id },
     include: {
       motorista: true,
-      veiculo: true,
+      veiculo: { include: { dono: { select: { id: true, nome: true, telefone: true } } } },
       motoristaCompl: true,
-      veiculoCompl: true,
+      veiculoCompl: { include: { dono: { select: { id: true, nome: true, telefone: true } } } },
       rota: true,
       notas: { orderBy: { createdAt: "asc" } },
       ocorrencias: { orderBy: { createdAt: "desc" } },

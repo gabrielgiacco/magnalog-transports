@@ -153,12 +153,20 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Motorista filter: multiple values → OR
+    // Motorista filter: busca em motorista da viagem OU dono do veículo
+    const motoristaOrDonoFilter = (nome: string) => ({
+      OR: [
+        { motorista: { nome: { contains: nome, mode: "insensitive" as const } } },
+        { veiculo: { dono: { nome: { contains: nome, mode: "insensitive" as const } } } },
+        { motoristaCompl: { nome: { contains: nome, mode: "insensitive" as const } } },
+        { veiculoCompl: { dono: { nome: { contains: nome, mode: "insensitive" as const } } } },
+      ],
+    });
     if (motoristas.length === 1) {
-      andConditions.push({ motorista: { nome: { contains: motoristas[0], mode: "insensitive" } } });
+      andConditions.push(motoristaOrDonoFilter(motoristas[0]));
     } else if (motoristas.length > 1) {
       andConditions.push({
-        OR: motoristas.map((m) => ({ motorista: { nome: { contains: m, mode: "insensitive" } } })),
+        OR: motoristas.map(motoristaOrDonoFilter),
       });
     }
 
@@ -215,7 +223,7 @@ export async function GET(req: NextRequest) {
         orderBy,
         include: {
           motorista: { select: { id: true, nome: true } },
-          veiculo: { select: { id: true, placa: true, tipo: true } },
+          veiculo: { select: { id: true, placa: true, tipo: true, dono: { select: { id: true, nome: true, telefone: true } } } },
           rota: { select: { id: true, codigo: true } },
           notas: { select: { id: true, numero: true, chaveAcesso: true, valorNota: true, volumes: true, pesoBruto: true, emitenteRazao: true } },
           _count: { select: { notas: true, ocorrencias: true } },
