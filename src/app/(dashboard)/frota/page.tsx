@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, Modal, Input, Select } from "@/components/ui";
-import { Plus, Edit2, Phone, FileText, User as UserIcon, Truck as TruckIcon } from "lucide-react";
+import { Plus, Edit2, Phone, FileText, User as UserIcon, Truck as TruckIcon, Search, X } from "lucide-react";
 
 const B_MOT = { nome: "", cpf: "", cnh: "", categoriaCnh: "E", telefone: "", tipo: "TERCEIRO", valorDiaria: "" };
 const B_VEI = { placa: "", tipo: "TRUCK", modelo: "", ano: "", capacidadeKg: "", motoristaId: "", donoId: "" };
@@ -24,6 +24,8 @@ export default function FrotaPage() {
   const [veiculos, setVeiculos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
+  const [searchMot, setSearchMot] = useState("");
+  const [searchVei, setSearchVei] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [formType, setFormType] = useState<"motorista" | "veiculo">("motorista");
@@ -98,6 +100,32 @@ export default function FrotaPage() {
 
   const getInitials = (name: string) => name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
 
+  const motoristasFiltrados = motoristas.filter((m) => {
+    if (!searchMot.trim()) return true;
+    const q = searchMot.toLowerCase();
+    return (
+      (m.nome || "").toLowerCase().includes(q) ||
+      (m.cpf || "").toLowerCase().includes(q) ||
+      (m.cnh || "").toLowerCase().includes(q) ||
+      (m.telefone || "").toLowerCase().includes(q) ||
+      (m.tipo || "").toLowerCase().includes(q)
+    );
+  });
+
+  const veiculosFiltrados = veiculos.filter((v) => {
+    if (!searchVei.trim()) return true;
+    const q = searchVei.toLowerCase();
+    return (
+      (v.placa || "").toLowerCase().includes(q) ||
+      (v.modelo || "").toLowerCase().includes(q) ||
+      (v.tipo || "").toLowerCase().includes(q) ||
+      (TIPOS[v.tipo]?.label || "").toLowerCase().includes(q) ||
+      String(v.ano || "").includes(q) ||
+      (v.motorista?.nome || "").toLowerCase().includes(q) ||
+      (v.dono?.nome || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <>
       <Topbar title="Frota" subtitle={`${motoristas.length} motoristas · ${veiculos.length} veículos`}
@@ -120,10 +148,39 @@ export default function FrotaPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+        {/* Barra de busca */}
+        <div className="mb-4 relative max-w-md">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text3)" }} />
+          {tab === "motoristas" ? (
+            <Input
+              placeholder="Buscar por nome, CPF, CNH, telefone..."
+              value={searchMot}
+              onChange={(e) => setSearchMot(e.target.value)}
+              className="pl-9 pr-9"
+            />
+          ) : (
+            <Input
+              placeholder="Buscar por placa, modelo, tipo, motorista, dono..."
+              value={searchVei}
+              onChange={(e) => setSearchVei(e.target.value)}
+              className="pl-9 pr-9"
+            />
+          )}
+          {((tab === "motoristas" && searchMot) || (tab === "veiculos" && searchVei)) && (
+            <button
+              onClick={() => tab === "motoristas" ? setSearchMot("") : setSearchVei("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70"
+              style={{ color: "var(--text3)" }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
         {loading ? <Loading /> : tab === "motoristas" ? (
-          motoristas.length === 0 ? <Empty icon="" text="Nenhum motorista" /> : (
+          motoristasFiltrados.length === 0 ? <Empty icon="" text={searchMot ? `Nenhum motorista encontrado para "${searchMot}"` : "Nenhum motorista"} /> : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {motoristas.map((m) => (
+              {motoristasFiltrados.map((m) => (
                 <Card key={m.id} className={`text-center transition-all p-3 sm:p-5 ${!m.ativo ? "opacity-50" : "hover:-translate-y-0.5"}`}>
                   <div className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-black text-white mx-auto mb-3"
                     style={{ background: "linear-gradient(135deg, var(--accent), #8b5cf6)" }}>
@@ -148,9 +205,9 @@ export default function FrotaPage() {
             </div>
           )
         ) : (
-          veiculos.length === 0 ? <Empty icon="🚛" text="Nenhum veículo" /> : (
+          veiculosFiltrados.length === 0 ? <Empty icon="🚛" text={searchVei ? `Nenhum veículo encontrado para "${searchVei}"` : "Nenhum veículo"} /> : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {veiculos.map((v) => {
+              {veiculosFiltrados.map((v) => {
                 const tipo = TIPOS[v.tipo] || { label: v.tipo, icon: "🚛", color: "#64748b" };
                 return (
                   <Card key={v.id} className={`transition-all p-3 sm:p-5 ${!v.ativo ? "opacity-50" : "hover:-translate-y-0.5"}`}>
