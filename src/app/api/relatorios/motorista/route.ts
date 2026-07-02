@@ -16,7 +16,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Parâmetros obrigatórios: motoristaId, inicio, fim" }, { status: 400 });
   }
 
-  const dateFilter = { gte: new Date(inicio), lte: new Date(fim) };
+  // Range UTC-normalizado — cobre todo o dia independente de timezone salvo
+  const parseDate = (s: string, isEnd = false) => {
+    const ymd = s.length === 10 ? s : s.slice(0, 10);
+    return new Date(ymd + (isEnd ? "T23:59:59.999Z" : "T00:00:00.000Z"));
+  };
+  const dateFilter = { gte: parseDate(inicio), lte: parseDate(fim, true) };
 
   // Entregas diretas (sem rota)
   const entregasDiretas = await prisma.entrega.findMany({

@@ -83,8 +83,9 @@ export default function RelatoriosPage() {
   async function handleMotoristaClick(motoristaId: string, nome: string) {
     setMotoristaDetail({ open: true, id: motoristaId, nome, entregas: [], loading: true });
     try {
-      const inicio = new Date(ano, mes - 1, 1).toISOString();
-      const fim = new Date(ano, mes, 0, 23, 59, 59).toISOString();
+      const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const inicio = ymd(new Date(ano, mes - 1, 1));
+      const fim = ymd(new Date(ano, mes, 0));
       const res = await fetch(`/api/relatorios/motorista?motoristaId=${motoristaId}&inicio=${inicio}&fim=${fim}`);
       const entregas = await res.json();
       setMotoristaDetail({ open: true, id: motoristaId, nome, entregas, loading: false });
@@ -99,6 +100,9 @@ export default function RelatoriosPage() {
       return;
     }
 
+    // Retorna YYYY-MM-DD do fuso local (independente de timezone)
+    const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
     let inicioStr = "";
     let fimStr = "";
 
@@ -108,43 +112,35 @@ export default function RelatoriosPage() {
       const d = hoje.getDay();
       const seg = new Date(hoje);
       seg.setDate(hoje.getDate() - (d === 0 ? 6 : d - 1));
-      seg.setHours(0,0,0,0);
       const dom = new Date(seg);
       dom.setDate(seg.getDate() + 6);
-      dom.setHours(23,59,59,999);
-      inicioStr = seg.toISOString();
-      fimStr = dom.toISOString();
+      inicioStr = ymd(seg);
+      fimStr = ymd(dom);
     } else if (selectedPeriodo === "semana_passada") {
       const d = hoje.getDay();
       const seg = new Date(hoje);
       seg.setDate(hoje.getDate() - (d === 0 ? 6 : d - 1) - 7);
-      seg.setHours(0,0,0,0);
       const dom = new Date(seg);
       dom.setDate(seg.getDate() + 6);
-      dom.setHours(23,59,59,999);
-      inicioStr = seg.toISOString();
-      fimStr = dom.toISOString();
+      inicioStr = ymd(seg);
+      fimStr = ymd(dom);
     } else if (selectedPeriodo === "mes") {
       const y = hoje.getFullYear();
       const m = hoje.getMonth();
-      const ini = new Date(y, m, 1, 0, 0, 0, 0);
-      const fim = new Date(y, m + 1, 0, 23, 59, 59, 999);
-      inicioStr = ini.toISOString();
-      fimStr = fim.toISOString();
+      inicioStr = ymd(new Date(y, m, 1));
+      fimStr = ymd(new Date(y, m + 1, 0));
     } else if (selectedPeriodo === "mes_passada") {
       const y = hoje.getFullYear();
       const m = hoje.getMonth();
-      const ini = new Date(y, m - 1, 1, 0, 0, 0, 0);
-      const fim = new Date(y, m, 0, 23, 59, 59, 999);
-      inicioStr = ini.toISOString();
-      fimStr = fim.toISOString();
+      inicioStr = ymd(new Date(y, m - 1, 1));
+      fimStr = ymd(new Date(y, m, 0));
     } else if (selectedPeriodo === "personalizado") {
       if (!dataInicio || !dataFim) {
         toast.error("Selecione as datas de início e fim");
         return;
       }
-      inicioStr = new Date(dataInicio + "T00:00:00").toISOString();
-      fimStr = new Date(dataFim + "T23:59:59").toISOString();
+      inicioStr = dataInicio;
+      fimStr = dataFim;
     }
 
     window.open(`/imprimir/acerto-motorista?motoristaId=${selectedMotoristaId}&inicio=${inicioStr}&fim=${fimStr}`, "_blank");
@@ -604,8 +600,9 @@ export default function RelatoriosPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="ghost" onClick={() => {
-                  const inicio = new Date(ano, mes - 1, 1, 0, 0, 0, 0).toISOString();
-                  const fim = new Date(ano, mes, 0, 23, 59, 59, 999).toISOString();
+                  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                  const inicio = ymd(new Date(ano, mes - 1, 1));
+                  const fim = ymd(new Date(ano, mes, 0));
                   window.open(`/imprimir/acerto-motorista?motoristaId=${motoristaDetail.id}&inicio=${inicio}&fim=${fim}`, "_blank");
                 }}>
                   <Download size={12} className="mr-1" /> Imprimir Acerto
