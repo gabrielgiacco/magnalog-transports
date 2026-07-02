@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, Legend, PieChart, Pie, Cell,
 } from "recharts";
-import { TrendingUp, Package, DollarSign, Weight, Users, Download, ChevronRight, X, Truck, MapPin } from "lucide-react";
+import { TrendingUp, Package, DollarSign, Weight, Users, Download, ChevronRight, X, Truck, MapPin, Warehouse, Printer, RefreshCw } from "lucide-react";
 
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const STATUS_COLORS: Record<string,string> = {
@@ -27,7 +27,7 @@ const TOOLTIP_STYLE = {
 
 export default function RelatoriosPage() {
   const now = new Date();
-  const [tab, setTab] = useState<"mensal"|"anual"|"motoristas">("mensal");
+  const [tab, setTab] = useState<"mensal"|"anual"|"motoristas"|"fornecedor">("mensal");
   const [ano, setAno] = useState(now.getFullYear());
   const [mes, setMes] = useState(now.getMonth() + 1);
   const [data, setData] = useState<any>(null);
@@ -42,6 +42,12 @@ export default function RelatoriosPage() {
   const [dataFim, setDataFim] = useState("");
 
   const fetchData = useCallback(async () => {
+    // Aba fornecedor tem sua própria API/tela — não usa o /api/relatorios global
+    if (tab === "fornecedor") {
+      setLoading(false);
+      setData(null);
+      return;
+    }
     setLoading(true);
     try {
       const params = new URLSearchParams({ tipo: tab, ano: String(ano), mes: String(mes) });
@@ -163,15 +169,15 @@ export default function RelatoriosPage() {
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Tabs */}
           <div className="flex rounded-xl overflow-hidden w-full sm:w-auto" style={{ border:"1px solid var(--border)" }}>
-            {(["mensal","anual","motoristas"] as const).map((t) => (
+            {(["mensal","anual","motoristas","fornecedor"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-all capitalize"
                 style={{
                   background: tab === t ? "var(--accent)" : "var(--surface)",
                   color: tab === t ? "white" : "var(--text2)",
-                  borderRight: t !== "motoristas" ? "1px solid var(--border)" : "none",
+                  borderRight: t !== "fornecedor" ? "1px solid var(--border)" : "none",
                 }}>
-                {t === "mensal" ? "Mensal" : t === "anual" ? "Anual" : "Motoristas"}
+                {t === "mensal" ? "Mensal" : t === "anual" ? "Anual" : t === "motoristas" ? "Motoristas" : "Fornecedor"}
               </button>
             ))}
           </div>
@@ -577,6 +583,11 @@ export default function RelatoriosPage() {
                 )}
               </div>
             )}
+
+            {/* ─── FORNECEDOR ────────────────────────────────────────────── */}
+            {tab === "fornecedor" && (
+              <FornecedorTab />
+            )}
           </>
         )}
       </div>
@@ -719,5 +730,295 @@ export default function RelatoriosPage() {
         </div>
       )}
     </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FornecedorTab — Relatório de NFs por fornecedor
+// ═══════════════════════════════════════════════════════════════
+
+interface FornecedorOpcao {
+  cnpj: string;
+  nome: string;
+  totalNotas: number;
+}
+
+interface FornecedorItem {
+  id: string;
+  numero: string;
+  serie: string | null;
+  dataEmissao: string;
+  valorNota: number;
+  pesoBruto: number;
+  volumes: number;
+  destinatario: { cnpj: string; razaoSocial: string; cidade: string; uf: string | null };
+  entrega: {
+    id: string;
+    codigo: string;
+    status: string;
+    dataChegada: string | null;
+    dataAgendada: string | null;
+    dataEntrega: string | null;
+    diasArmazenagem: number;
+    quantidadePaletes: number;
+    valorArmazenagem: number;
+    valorFrete: number;
+    valorDescarga: number;
+    motorista: string | null;
+    observacoes: string | null;
+  } | null;
+  tipo: "SEM_ENTREGA" | "ENTREGUE" | "REENTREGA" | "ARMAZENADA" | "OCORRENCIA";
+  diasArmazenados: number | null;
+}
+
+interface FornecedorData {
+  fornecedor: { cnpj: string; nome: string };
+  periodo: { inicio: string | null; fim: string | null };
+  itens: FornecedorItem[];
+  kpis: {
+    totalNotas: number;
+    entregues: number;
+    reentregas: number;
+    armazenadas: number;
+    ocorrencias: number;
+    semEntrega: number;
+    valorTotalArmazenagem: number;
+    valorTotalFrete: number;
+    valorTotalDescarga: number;
+    valorTotalNotas: number;
+    pesoTotal: number;
+    volumesTotal: number;
+    valorArmazenagemPendente: number;
+  };
+}
+
+const TIPO_META: Record<string, { label: string; color: string; bg: string }> = {
+  ENTREGUE:    { label: "Entregue",       color: "#059669", bg: "rgba(5,150,105,.12)" },
+  REENTREGA:   { label: "Reentrega",      color: "#2563eb", bg: "rgba(37,99,235,.12)" },
+  ARMAZENADA:  { label: "Armazenada",     color: "#d97706", bg: "rgba(217,119,6,.12)" },
+  OCORRENCIA:  { label: "Ocorrência",     color: "#dc2626", bg: "rgba(220,38,38,.12)" },
+  SEM_ENTREGA: { label: "Sem entrega",    color: "#6b7280", bg: "rgba(107,114,128,.12)" },
+};
+
+function FornecedorTab() {
+  const hoje = new Date();
+  const [fornecedores, setFornecedores] = useState<FornecedorOpcao[]>([]);
+  const [selectedCnpj, setSelectedCnpj] = useState("");
+  const [inicio, setInicio] = useState(() => {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [fim, setFim] = useState(() => {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [data, setData] = useState<FornecedorData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState<string>("");
+  const [filtroBusca, setFiltroBusca] = useState("");
+
+  // Carrega lista de fornecedores
+  useEffect(() => {
+    fetch("/api/relatorios/fornecedor?fornecedores=true")
+      .then((r) => r.json())
+      .then((r) => setFornecedores(r.fornecedores || []));
+  }, []);
+
+  const carregar = useCallback(async () => {
+    if (!selectedCnpj) {
+      toast.error("Selecione um fornecedor");
+      return;
+    }
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ cnpj: selectedCnpj, inicio, fim });
+      const res = await fetch(`/api/relatorios/fornecedor?${params}`);
+      if (res.ok) setData(await res.json());
+      else toast.error("Erro ao carregar relatório");
+    } finally { setLoading(false); }
+  }, [selectedCnpj, inicio, fim]);
+
+  const itensFiltrados = (data?.itens || []).filter((i) => {
+    if (filtroTipo && i.tipo !== filtroTipo) return false;
+    if (filtroBusca) {
+      const q = filtroBusca.toLowerCase();
+      return (
+        i.numero.toLowerCase().includes(q) ||
+        i.destinatario.razaoSocial.toLowerCase().includes(q) ||
+        (i.destinatario.cidade || "").toLowerCase().includes(q) ||
+        (i.entrega?.codigo || "").toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Filtros */}
+      <Card className="flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[240px]">
+          <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Fornecedor *</label>
+          <select
+            value={selectedCnpj}
+            onChange={(e) => setSelectedCnpj(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-sm border"
+            style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }}
+          >
+            <option value="">Selecione um fornecedor</option>
+            {fornecedores.map((f) => (
+              <option key={f.cnpj} value={f.cnpj}>{f.nome} ({f.totalNotas} NFs)</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>De</label>
+          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)}
+            className="px-3 py-2 rounded-lg text-sm border"
+            style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }} />
+        </div>
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Até</label>
+          <input type="date" value={fim} onChange={(e) => setFim(e.target.value)}
+            className="px-3 py-2 rounded-lg text-sm border"
+            style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }} />
+        </div>
+        <Button onClick={carregar} loading={loading}>
+          <RefreshCw size={14} /> Gerar Relatório
+        </Button>
+        {data && (
+          <Button variant="ghost" onClick={() => window.print()}>
+            <Printer size={14} /> Imprimir
+          </Button>
+        )}
+      </Card>
+
+      {loading && <Loading />}
+
+      {!loading && data && (
+        <>
+          {/* Header (impressão) */}
+          <div className="hidden print:block text-center mb-4">
+            <h1 className="text-2xl font-bold">Relatório por Fornecedor</h1>
+            <div className="text-sm">{data.fornecedor.nome}</div>
+            <div className="text-xs">{data.periodo.inicio} a {data.periodo.fim}</div>
+          </div>
+
+          {/* KPIs */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+            <KpiF label="Total de NFs" value={String(data.kpis.totalNotas)} color="#f97316" />
+            <KpiF label="Entregues" value={String(data.kpis.entregues)} color="#059669" />
+            <KpiF label="Reentregas" value={String(data.kpis.reentregas)} color="#2563eb" />
+            <KpiF label="Armazenadas" value={String(data.kpis.armazenadas)} color="#d97706" />
+            <KpiF label="Ocorrências" value={String(data.kpis.ocorrencias)} color="#dc2626" />
+            <KpiF label="Sem entrega" value={String(data.kpis.semEntrega)} color="#6b7280" />
+          </div>
+
+          {/* KPIs financeiros */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            <KpiF label="Total Armazenagem" value={formatCurrency(data.kpis.valorTotalArmazenagem)} color="#d97706" icon={Warehouse} />
+            <KpiF label="Armazenagem Pendente" value={formatCurrency(data.kpis.valorArmazenagemPendente)} color="#dc2626" />
+            <KpiF label="Total Frete" value={formatCurrency(data.kpis.valorTotalFrete)} color="#059669" icon={DollarSign} />
+            <KpiF label="Valor das Notas" value={formatCurrency(data.kpis.valorTotalNotas)} color="#2563eb" icon={Package} />
+          </div>
+
+          {/* Filtros da tabela */}
+          <Card className="flex flex-wrap items-end gap-2 print:hidden">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Buscar</label>
+              <input value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)}
+                placeholder="NF, cliente, cidade ou código"
+                className="w-full px-3 py-2 rounded-lg text-sm border"
+                style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }} />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Filtrar tipo</label>
+              <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}
+                className="px-3 py-2 rounded-lg text-sm border"
+                style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }}>
+                <option value="">Todos ({data.itens.length})</option>
+                <option value="ENTREGUE">Só Entregues</option>
+                <option value="REENTREGA">Só Reentregas</option>
+                <option value="ARMAZENADA">Só Armazenadas</option>
+                <option value="OCORRENCIA">Só Ocorrências</option>
+                <option value="SEM_ENTREGA">Sem entrega</option>
+              </select>
+            </div>
+          </Card>
+
+          {/* Tabela */}
+          <Card className="p-0 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-xs min-w-[1100px]">
+                <thead>
+                  <tr style={{ background: "var(--surface2)" }}>
+                    {["Tipo","NF","Emissão","Cliente","Cidade","Chegada","Entrega","Dias","Paletes","Peso","R$ Armaz.","R$ Frete","Código"].map((h) => (
+                      <th key={h} className="text-left px-3 py-2 text-[10px] uppercase tracking-widest font-bold" style={{ color: "var(--text2)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {itensFiltrados.map((i) => {
+                    const t = TIPO_META[i.tipo];
+                    return (
+                      <tr key={i.id} style={{ borderTop: "1px solid var(--border)" }}>
+                        <td className="px-3 py-2">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: t.bg, color: t.color }}>{t.label}</span>
+                        </td>
+                        <td className="px-3 py-2 font-mono font-bold" style={{ color: "var(--accent)" }}>{i.numero}{i.serie ? `/${i.serie}` : ""}</td>
+                        <td className="px-3 py-2 font-mono">{formatDate(i.dataEmissao)}</td>
+                        <td className="px-3 py-2 max-w-[180px] truncate" title={i.destinatario.razaoSocial}>{i.destinatario.razaoSocial}</td>
+                        <td className="px-3 py-2 max-w-[120px] truncate" title={`${i.destinatario.cidade} ${i.destinatario.uf || ""}`}>{i.destinatario.cidade}{i.destinatario.uf ? ` - ${i.destinatario.uf}` : ""}</td>
+                        <td className="px-3 py-2 font-mono">{i.entrega?.dataChegada ? formatDate(i.entrega.dataChegada) : "—"}</td>
+                        <td className="px-3 py-2 font-mono" style={{ color: i.entrega?.dataEntrega ? "#059669" : "var(--text3)" }}>{i.entrega?.dataEntrega ? formatDate(i.entrega.dataEntrega) : "—"}</td>
+                        <td className="px-3 py-2 font-mono text-center">{i.diasArmazenados != null ? i.diasArmazenados : "—"}</td>
+                        <td className="px-3 py-2 font-mono text-center">{i.entrega?.quantidadePaletes || 0}</td>
+                        <td className="px-3 py-2 font-mono">{formatWeight(i.pesoBruto)}</td>
+                        <td className="px-3 py-2 font-mono" style={{ color: "#d97706" }}>{formatCurrency(i.entrega?.valorArmazenagem || 0)}</td>
+                        <td className="px-3 py-2 font-mono" style={{ color: "#059669" }}>{formatCurrency(i.entrega?.valorFrete || 0)}</td>
+                        <td className="px-3 py-2 font-mono text-[10px]" style={{ color: "var(--text3)" }}>{i.entrega?.codigo || "—"}</td>
+                      </tr>
+                    );
+                  })}
+                  {itensFiltrados.length === 0 && (
+                    <tr>
+                      <td colSpan={13} className="text-center py-8 text-sm" style={{ color: "var(--text3)" }}>Nenhum resultado com esses filtros</td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr style={{ background: "var(--surface2)", fontWeight: "bold" }}>
+                    <td colSpan={9} className="px-3 py-2 text-right">Totais:</td>
+                    <td className="px-3 py-2 font-mono">{formatWeight(itensFiltrados.reduce((s, i) => s + (i.pesoBruto || 0), 0))}</td>
+                    <td className="px-3 py-2 font-mono" style={{ color: "#d97706" }}>{formatCurrency(itensFiltrados.reduce((s, i) => s + (i.entrega?.valorArmazenagem || 0), 0))}</td>
+                    <td className="px-3 py-2 font-mono" style={{ color: "#059669" }}>{formatCurrency(itensFiltrados.reduce((s, i) => s + (i.entrega?.valorFrete || 0), 0))}</td>
+                    <td className="px-3 py-2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {!loading && !data && (
+        <Card className="text-center py-12 text-sm" style={{ color: "var(--text3)" }}>
+          Selecione um fornecedor e clique em "Gerar Relatório"
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function KpiF({ label, value, color, icon: Icon }: { label: string; value: string; color: string; icon?: any }) {
+  return (
+    <Card className="text-center p-3">
+      {Icon && (
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-1" style={{ background: color + "15" }}>
+          <Icon size={14} style={{ color }} />
+        </div>
+      )}
+      <div className="text-sm sm:text-base font-head font-bold font-mono truncate" style={{ color }}>{value}</div>
+      <div className="text-[9px] font-mono mt-0.5 uppercase truncate" style={{ color: "var(--text3)" }}>{label}</div>
+    </Card>
   );
 }
