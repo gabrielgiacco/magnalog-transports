@@ -108,13 +108,12 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  // Tabelas de armazenagem por CNPJ de destinatário (para cálculo on-the-fly)
-  // Chave sempre por CNPJ do CLIENTE destinatário — ele que "aluga" espaço
-  const destCnpjs = Array.from(new Set(notas.map((n) => n.destinatarioCnpj).filter(Boolean)));
-  const tabelas = await prisma.tabelaArmazenagem.findMany({
-    where: { cnpjCliente: { in: destCnpjs } },
+  // Tabelas de armazenagem — quem paga a armazenagem é o FORNECEDOR (emitente da NF).
+  // No modelo TabelaArmazenagem o campo se chama cnpjCliente mas na prática guarda
+  // o CNPJ do fornecedor (mesma convenção usada em /armazenagem-pendente).
+  const tabela = await prisma.tabelaArmazenagem.findUnique({
+    where: { cnpjCliente: cnpj },
   });
-  const tabelaPorCnpj = new Map(tabelas.map((t) => [t.cnpjCliente, t]));
 
   // Enriquecer com tipo e calcular dias armazenados atuais
   const hoje = new Date();
@@ -130,12 +129,11 @@ export async function GET(req: NextRequest) {
       diasArmazenados = Math.max(0, Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
     }
 
-    // Cálculo dinâmico de armazenagem — usa tabela do cliente + dias armazenados
+    // Cálculo dinâmico de armazenagem — usa tabela do fornecedor + dias armazenados
     let valorArmazenagemCalculado = 0;
     let diasCobraveis = 0;
     let diasFree = 0;
     let valorPaleteDia = 0;
-    const tabela = tabelaPorCnpj.get(n.destinatarioCnpj);
     if (tabela && e && diasArmazenados != null && e.quantidadePaletes > 0) {
       diasFree = tabela.diasFree;
       valorPaleteDia = tabela.valorPaleteDia;
