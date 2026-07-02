@@ -79,20 +79,37 @@ export async function GET(req: NextRequest) {
 
 
   if (busca) {
-    const orConditions: any[] = [
-      { numero: { contains: busca } },
-      { destinatarioRazao: { contains: busca, mode: "insensitive" } },
-      { emitenteRazao: { contains: busca, mode: "insensitive" } },
-      { cidade: { contains: busca, mode: "insensitive" } },
-      { endereco: { contains: busca, mode: "insensitive" } },
-      { bairro: { contains: busca, mode: "insensitive" } },
-      { cep: { contains: busca, mode: "insensitive" } },
-      { chaveAcesso: { contains: busca } },
-      { xmlOriginal: { contains: busca, mode: "insensitive" } },
-    ];
-    const digits = busca.replace(/\D/g, "");
-    if (digits.length > 0) {
+    const termo = busca.trim();
+    const digits = termo.replace(/\D/g, "");
+    const isOnlyDigits = digits.length === termo.length && digits.length > 0;
+    const isChaveAcesso = isOnlyDigits && digits.length === 44;
+    const isCnpjLike = isOnlyDigits && digits.length >= 11 && digits.length <= 14;
+    const isNumeroNF = isOnlyDigits && digits.length < 11;
+
+    const orConditions: any[] = [];
+
+    if (isNumeroNF) {
+      // Busca EXATA por número de NF — evita falsos positivos dentro de xmlOriginal
+      orConditions.push({ numero: termo });
+    } else if (isChaveAcesso) {
+      orConditions.push({ chaveAcesso: termo });
+    } else if (isCnpjLike) {
       orConditions.push({ destinatarioCnpj: { contains: digits } });
+      orConditions.push({ emitenteCnpj: { contains: digits } });
+    } else {
+      orConditions.push(
+        { numero: { contains: termo } },
+        { destinatarioRazao: { contains: termo, mode: "insensitive" } },
+        { emitenteRazao: { contains: termo, mode: "insensitive" } },
+        { cidade: { contains: termo, mode: "insensitive" } },
+        { endereco: { contains: termo, mode: "insensitive" } },
+        { bairro: { contains: termo, mode: "insensitive" } },
+        { cep: { contains: termo, mode: "insensitive" } },
+        { chaveAcesso: { contains: termo } },
+      );
+      if (digits.length > 0) {
+        orConditions.push({ destinatarioCnpj: { contains: digits } });
+      }
     }
     where.OR = orConditions;
   }

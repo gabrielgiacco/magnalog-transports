@@ -71,22 +71,44 @@ export async function GET(req: NextRequest) {
 
     // Global search bar (searches across many fields)
     if (cliente) {
-      const orConditions: any[] = [
-        { razaoSocial: { contains: cliente, mode: "insensitive" } },
-        { cidade: { contains: cliente, mode: "insensitive" } },
-        { endereco: { contains: cliente, mode: "insensitive" } },
-        { bairro: { contains: cliente, mode: "insensitive" } },
-        { cep: { contains: cliente, mode: "insensitive" } },
-        { codigo: { contains: cliente, mode: "insensitive" } },
-        { notas: { some: { numero: { contains: cliente } } } },
-        { notas: { some: { emitenteRazao: { contains: cliente, mode: "insensitive" } } } },
-        { notas: { some: { chaveAcesso: { contains: cliente } } } },
-        { notas: { some: { xmlOriginal: { contains: cliente, mode: "insensitive" } } } },
-        { motorista: { nome: { contains: cliente, mode: "insensitive" } } },
-        { rota: { codigo: { contains: cliente, mode: "insensitive" } } },
-      ];
-      const digits = cliente.replace(/\D/g, "");
-      if (digits.length > 0) orConditions.push({ cnpj: { contains: digits } });
+      const termo = cliente.trim();
+      const digits = termo.replace(/\D/g, "");
+      const isOnlyDigits = digits.length === termo.length && digits.length > 0;
+      const isChaveAcesso = isOnlyDigits && digits.length === 44;
+      const isCnpjLike = isOnlyDigits && digits.length >= 11 && digits.length <= 14;
+      const isNumeroNF = isOnlyDigits && digits.length < 11;
+
+      const orConditions: any[] = [];
+
+      if (isNumeroNF) {
+        // Busca EXATA por número de NF ou código de entrega — evita falsos positivos
+        // dentro de xmlOriginal (que contém NCM, CFOP, EANs etc.)
+        orConditions.push({ notas: { some: { numero: termo } } });
+        orConditions.push({ codigo: termo });
+      } else if (isChaveAcesso) {
+        orConditions.push({ notas: { some: { chaveAcesso: termo } } });
+        orConditions.push({ chaveAcesso: termo });
+      } else if (isCnpjLike) {
+        orConditions.push({ cnpj: { contains: digits } });
+        orConditions.push({ notas: { some: { emitenteCnpj: { contains: digits } } } });
+        orConditions.push({ notas: { some: { destinatarioCnpj: { contains: digits } } } });
+      } else {
+        // Texto livre: busca em campos descritivos (sem XML)
+        orConditions.push(
+          { razaoSocial: { contains: termo, mode: "insensitive" } },
+          { cidade: { contains: termo, mode: "insensitive" } },
+          { endereco: { contains: termo, mode: "insensitive" } },
+          { bairro: { contains: termo, mode: "insensitive" } },
+          { cep: { contains: termo, mode: "insensitive" } },
+          { codigo: { contains: termo, mode: "insensitive" } },
+          { notas: { some: { numero: { contains: termo } } } },
+          { notas: { some: { emitenteRazao: { contains: termo, mode: "insensitive" } } } },
+          { notas: { some: { chaveAcesso: { contains: termo } } } },
+          { motorista: { nome: { contains: termo, mode: "insensitive" } } },
+          { rota: { codigo: { contains: termo, mode: "insensitive" } } },
+        );
+        if (digits.length > 0) orConditions.push({ cnpj: { contains: digits } });
+      }
       andConditions.push({ OR: orConditions });
     }
 
