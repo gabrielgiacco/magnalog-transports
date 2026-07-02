@@ -108,6 +108,14 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  // Tabelas de armazenagem por CNPJ de destinatário (para cálculo on-the-fly)
+  // Chave sempre por CNPJ do CLIENTE destinatário — ele que "aluga" espaço
+  const destCnpjs = Array.from(new Set(notas.map((n) => n.destinatarioCnpj).filter(Boolean)));
+  const tabelas = await prisma.tabelaArmazenagem.findMany({
+    where: { cnpjCliente: { in: destCnpjs } },
+  });
+  const tabelaPorCnpj = new Map(tabelas.map((t) => [t.cnpjCliente, t]));
+
   // Enriquecer com tipo e calcular dias armazenados atuais
   const hoje = new Date();
   const items = notas.map((n) => {
@@ -121,6 +129,23 @@ export async function GET(req: NextRequest) {
       const end = e.dataEntrega ? new Date(e.dataEntrega) : hoje;
       diasArmazenados = Math.max(0, Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
     }
+
+    // Cálculo dinâmico de armazenagem — usa tabela do cliente + dias armazenados
+    let valorArmazenagemCalculado = 0;
+    let diasCobraveis = 0;
+    let diasFree = 0;
+    let valorPaleteDia = 0;
+    const tabela = tabelaPorCnpj.get(n.destinatarioCnpj);
+    if (tabela && e && diasArmazenados != null && e.quantidadePaletes > 0) {
+      diasFree = tabela.diasFree;
+      valorPaleteDia = tabela.valorPaleteDia;
+      diasCobraveis = Math.max(0, diasArmazenados - diasFree);
+      valorArmazenagemCalculado = diasCobraveis * valorPaleteDia * e.quantidadePaletes;
+    }
+    // Se a entrega já foi faturada (valor armazenagem preenchido), usa o valor real
+    const valorArmazenagemFinal = e?.valorArmazenagem && e.valorArmazenagem > 0
+      ? e.valorArmazenagem
+      : valorArmazenagemCalculado;
 
     return {
       id: n.id,
@@ -146,7 +171,12 @@ export async function GET(req: NextRequest) {
             dataEntrega: e.dataEntrega,
             diasArmazenagem: e.diasArmazenagem,
             quantidadePaletes: e.quantidadePaletes,
-            valorArmazenagem: e.valorArmazenagem,
+            valorArmazenagem: valorArmazenagemFinal,
+            valorArmazenagemFaturado: e.valorArmazenagem || 0,
+            valorArmazenagemCalculado,
+            diasCobraveis,
+            diasFree,
+            valorPaleteDia,
             valorFrete: e.valorFrete,
             valorDescarga: e.valorDescarga,
             motorista: e.motorista?.nome || null,

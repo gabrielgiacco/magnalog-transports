@@ -814,7 +814,7 @@ function FornecedorTab() {
   });
   const [data, setData] = useState<FornecedorData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [filtroTipo, setFiltroTipo] = useState<string>("");
+  const [filtrosTipo, setFiltrosTipo] = useState<Set<string>>(new Set());
   const [filtroBusca, setFiltroBusca] = useState("");
 
   // Carrega lista de fornecedores
@@ -839,7 +839,7 @@ function FornecedorTab() {
   }, [selectedCnpj, inicio, fim]);
 
   const itensFiltrados = (data?.itens || []).filter((i) => {
-    if (filtroTipo && i.tipo !== filtroTipo) return false;
+    if (filtrosTipo.size > 0 && !filtrosTipo.has(i.tipo)) return false;
     if (filtroBusca) {
       const q = filtroBusca.toLowerCase();
       return (
@@ -851,6 +851,147 @@ function FornecedorTab() {
     }
     return true;
   });
+
+  function toggleFiltro(tipo: string) {
+    const next = new Set(filtrosTipo);
+    if (next.has(tipo)) next.delete(tipo);
+    else next.add(tipo);
+    setFiltrosTipo(next);
+  }
+
+  function imprimirRelatorio() {
+    if (!data) return;
+    const win = window.open("", "_blank");
+    if (!win) { toast.error("Bloqueado pelo navegador. Habilite pop-ups."); return; }
+    const fmtCur = (v: number) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    const fmtWt = (v: number) => v >= 1000 ? `${(v / 1000).toFixed(2).replace(".", ",")}t` : `${(v || 0).toLocaleString("pt-BR")}kg`;
+    const fmtDt = (d: string | null | undefined) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
+    const totPeso = itensFiltrados.reduce((s, i) => s + (i.pesoBruto || 0), 0);
+    const totArmaz = itensFiltrados.reduce((s, i) => s + (i.entrega?.valorArmazenagem || 0), 0);
+    const totFrete = itensFiltrados.reduce((s, i) => s + (i.entrega?.valorFrete || 0), 0);
+    const rows = itensFiltrados.map((i) => `
+      <tr>
+        <td class="badge" style="background:${TIPO_META[i.tipo].bg};color:${TIPO_META[i.tipo].color}">${TIPO_META[i.tipo].label}</td>
+        <td class="mono">${i.numero}${i.serie ? "/" + i.serie : ""}</td>
+        <td class="mono">${fmtDt(i.dataEmissao)}</td>
+        <td class="trunc">${i.destinatario.razaoSocial}</td>
+        <td class="trunc">${i.destinatario.cidade || ""}${i.destinatario.uf ? "-" + i.destinatario.uf : ""}</td>
+        <td class="mono">${fmtDt(i.entrega?.dataChegada)}</td>
+        <td class="mono">${fmtDt(i.entrega?.dataEntrega)}</td>
+        <td class="mono center">${i.diasArmazenados ?? "—"}</td>
+        <td class="mono center">${i.entrega?.quantidadePaletes || 0}</td>
+        <td class="mono">${fmtWt(i.pesoBruto)}</td>
+        <td class="mono right" style="color:#d97706">${fmtCur(i.entrega?.valorArmazenagem || 0)}</td>
+        <td class="mono right" style="color:#059669">${fmtCur(i.entrega?.valorFrete || 0)}</td>
+      </tr>
+    `).join("");
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+      <title>Relatório ${data.fornecedor.nome}</title>
+      <style>
+        @page { size: A4 landscape; margin: 8mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 9px; color: #000; margin: 0; padding: 0; }
+        h1 { font-size: 14px; margin: 0 0 2px 0; text-align: center; }
+        .sub { font-size: 10px; text-align: center; margin-bottom: 4px; color: #333; }
+        .periodo { font-size: 9px; text-align: center; margin-bottom: 8px; color: #666; }
+        .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-bottom: 8px; }
+        .kpi { border: 1px solid #ccc; padding: 4px 6px; border-radius: 4px; text-align: center; }
+        .kpi .v { font-size: 12px; font-weight: bold; }
+        .kpi .l { font-size: 7px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+        thead th { background: #f0f0f0; text-align: left; padding: 4px 5px; border: 1px solid #999; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        tbody td { padding: 3px 5px; border: 1px solid #ddd; }
+        tfoot td { padding: 4px 5px; border: 1px solid #999; background: #f0f0f0; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .mono { font-family: 'Courier New', monospace; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .trunc { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .badge { font-size: 8px; font-weight: bold; padding: 1px 4px; border-radius: 3px; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-btn { margin: 8px; padding: 8px 20px; background: #f97316; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        @media print { .print-btn { display: none; } }
+      </style></head><body>
+      <button class="print-btn" onclick="window.print()">Imprimir</button>
+      <h1>Relatório por Fornecedor</h1>
+      <div class="sub">${data.fornecedor.nome}</div>
+      <div class="periodo">Período: ${data.periodo.inicio || ""} a ${data.periodo.fim || ""} · Emitido em ${new Date().toLocaleDateString("pt-BR")}</div>
+      <div class="kpis">
+        <div class="kpi"><div class="v">${data.kpis.totalNotas}</div><div class="l">Total NFs</div></div>
+        <div class="kpi"><div class="v" style="color:#059669">${data.kpis.entregues}</div><div class="l">Entregues</div></div>
+        <div class="kpi"><div class="v" style="color:#2563eb">${data.kpis.reentregas}</div><div class="l">Reentregas</div></div>
+        <div class="kpi"><div class="v" style="color:#d97706">${data.kpis.armazenadas}</div><div class="l">Armazenadas</div></div>
+        <div class="kpi"><div class="v" style="color:#dc2626">${data.kpis.ocorrencias}</div><div class="l">Ocorrências</div></div>
+        <div class="kpi"><div class="v" style="color:#6b7280">${data.kpis.semEntrega}</div><div class="l">Sem Entrega</div></div>
+      </div>
+      <div class="kpis" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="kpi"><div class="v" style="color:#d97706">${fmtCur(data.kpis.valorTotalArmazenagem)}</div><div class="l">Total Armazenagem</div></div>
+        <div class="kpi"><div class="v" style="color:#dc2626">${fmtCur(data.kpis.valorArmazenagemPendente)}</div><div class="l">Armaz. Pendente</div></div>
+        <div class="kpi"><div class="v" style="color:#059669">${fmtCur(data.kpis.valorTotalFrete)}</div><div class="l">Total Frete</div></div>
+        <div class="kpi"><div class="v" style="color:#2563eb">${fmtCur(data.kpis.valorTotalNotas)}</div><div class="l">Valor das Notas</div></div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Tipo</th><th>NF</th><th>Emissão</th><th>Cliente</th><th>Cidade</th>
+          <th>Chegada</th><th>Entrega</th><th>Dias</th><th>Pal.</th><th>Peso</th>
+          <th class="right">R$ Armaz.</th><th class="right">R$ Frete</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td colspan="9" class="right">Totais (${itensFiltrados.length} NFs):</td>
+          <td class="mono">${fmtWt(totPeso)}</td>
+          <td class="mono right" style="color:#d97706">${fmtCur(totArmaz)}</td>
+          <td class="mono right" style="color:#059669">${fmtCur(totFrete)}</td>
+        </tr></tfoot>
+      </table>
+      </body></html>`;
+    win.document.write(html);
+    win.document.close();
+  }
+
+  function exportarCSV() {
+    if (!data || itensFiltrados.length === 0) return;
+    const linhas = [
+      ["Tipo","NF","Serie","Emissao","Cliente","CNPJ Cliente","Cidade","UF","Chegada","Agendado","Entrega","Dias Armazenados","Dias Cobraveis","Dias Free","Paletes","Valor/Palete/Dia","Peso (kg)","Volumes","Valor Nota","R$ Armazenagem","R$ Frete","R$ Descarga","Codigo Entrega","Motorista","Observacoes"],
+    ];
+    for (const i of itensFiltrados) {
+      const t = TIPO_META[i.tipo]?.label || i.tipo;
+      linhas.push([
+        t,
+        i.numero,
+        i.serie || "",
+        i.dataEmissao ? new Date(i.dataEmissao).toLocaleDateString("pt-BR") : "",
+        i.destinatario.razaoSocial,
+        i.destinatario.cnpj,
+        i.destinatario.cidade,
+        i.destinatario.uf || "",
+        i.entrega?.dataChegada ? new Date(i.entrega.dataChegada).toLocaleDateString("pt-BR") : "",
+        i.entrega?.dataAgendada ? new Date(i.entrega.dataAgendada).toLocaleDateString("pt-BR") : "",
+        i.entrega?.dataEntrega ? new Date(i.entrega.dataEntrega).toLocaleDateString("pt-BR") : "",
+        String(i.diasArmazenados ?? ""),
+        String((i.entrega as any)?.diasCobraveis ?? ""),
+        String((i.entrega as any)?.diasFree ?? ""),
+        String(i.entrega?.quantidadePaletes ?? ""),
+        String((i.entrega as any)?.valorPaleteDia ?? "").replace(".", ","),
+        String(i.pesoBruto ?? "").replace(".", ","),
+        String(i.volumes ?? ""),
+        String(i.valorNota ?? "").replace(".", ","),
+        String(i.entrega?.valorArmazenagem ?? 0).replace(".", ","),
+        String(i.entrega?.valorFrete ?? 0).replace(".", ","),
+        String(i.entrega?.valorDescarga ?? 0).replace(".", ","),
+        i.entrega?.codigo || "",
+        i.entrega?.motorista || "",
+        (i.entrega?.observacoes || "").replace(/[\r\n]+/g, " "),
+      ]);
+    }
+    const csv = linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const nome = (data.fornecedor.nome || "fornecedor").replace(/[^a-z0-9]+/gi, "_").slice(0, 30);
+    a.download = `relatorio_${nome}_${data.periodo.inicio || "inicio"}_${data.periodo.fim || "fim"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="space-y-4">
@@ -886,7 +1027,7 @@ function FornecedorTab() {
           <RefreshCw size={14} /> Gerar Relatório
         </Button>
         {data && (
-          <Button variant="ghost" onClick={() => window.print()}>
+          <Button variant="ghost" onClick={imprimirRelatorio}>
             <Printer size={14} /> Imprimir
           </Button>
         )}
@@ -922,26 +1063,53 @@ function FornecedorTab() {
           </div>
 
           {/* Filtros da tabela */}
-          <Card className="flex flex-wrap items-end gap-2 print:hidden">
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Buscar</label>
-              <input value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)}
-                placeholder="NF, cliente, cidade ou código"
-                className="w-full px-3 py-2 rounded-lg text-sm border"
-                style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }} />
+          <Card className="space-y-3 print:hidden">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Buscar</label>
+                <input value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)}
+                  placeholder="NF, cliente, cidade ou código"
+                  className="w-full px-3 py-2 rounded-lg text-sm border"
+                  style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }} />
+              </div>
+              <Button variant="ghost" onClick={exportarCSV}>
+                <Download size={14} /> Exportar CSV
+              </Button>
             </div>
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Filtrar tipo</label>
-              <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}
-                className="px-3 py-2 rounded-lg text-sm border"
-                style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }}>
-                <option value="">Todos ({data.itens.length})</option>
-                <option value="ENTREGUE">Só Entregues</option>
-                <option value="REENTREGA">Só Reentregas</option>
-                <option value="ARMAZENADA">Só Armazenadas</option>
-                <option value="OCORRENCIA">Só Ocorrências</option>
-                <option value="SEM_ENTREGA">Sem entrega</option>
-              </select>
+              <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text2)" }}>
+                Filtrar por tipo · {filtrosTipo.size === 0 ? `Todos (${data.itens.length})` : `${itensFiltrados.length} de ${data.itens.length}`}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(["ENTREGUE","REENTREGA","ARMAZENADA","OCORRENCIA","SEM_ENTREGA"] as const).map((tipo) => {
+                  const meta = TIPO_META[tipo];
+                  const ativo = filtrosTipo.has(tipo);
+                  const count = data.itens.filter((i) => i.tipo === tipo).length;
+                  return (
+                    <button
+                      key={tipo}
+                      onClick={() => toggleFiltro(tipo)}
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all flex items-center gap-1.5"
+                      style={{
+                        background: ativo ? meta.color : "transparent",
+                        color: ativo ? "white" : meta.color,
+                        borderColor: meta.color,
+                        opacity: count === 0 ? 0.3 : 1,
+                      }}
+                      disabled={count === 0}
+                    >
+                      {meta.label} <span className="text-[10px] font-mono opacity-80">({count})</span>
+                    </button>
+                  );
+                })}
+                {filtrosTipo.size > 0 && (
+                  <button onClick={() => setFiltrosTipo(new Set())}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg hover:underline"
+                    style={{ color: "var(--text3)" }}>
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
             </div>
           </Card>
 
