@@ -11,6 +11,7 @@ import {
   Table, Th, Td, Tr, Modal, Input, Select, Textarea, ComboboxMotorista
 } from "@/components/ui";
 import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/utils";
+import { QUALIDADE_ENABLED } from "@/lib/features";
 import {
   Plus, Filter, RefreshCw, Search, Eye, ChevronLeft, ChevronRight,
   Package, MapPin, User, Truck, Trash2, ArrowUp, ArrowDown, ArrowUpDown, X, Calendar,
@@ -663,7 +664,7 @@ export default function EntregasPage() {
                         <Td>
                           <div className="flex flex-col items-start gap-1.5">
                             <StatusBadge status={e.status} />
-                            {e.qualidade?.id && (
+                            {QUALIDADE_ENABLED && e.qualidade?.id && (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
                                 style={{ background: "rgba(234, 179, 8, 0.15)", color: "#ca8a04", border: "1px solid rgba(234, 179, 8, 0.3)" }}
                                 title="Entrega possui registro de Qualidade">

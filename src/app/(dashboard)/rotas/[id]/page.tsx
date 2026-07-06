@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
+import { QUALIDADE_ENABLED } from "@/lib/features";
 
 const STATUS_ROTA: { key: string; label: string; icon: string; color: string; next?: string }[] = [
   { key: "PLANEJADA",    label: "Planejada",    icon: "📋", color: "#f59e0b", next: "EM_ANDAMENTO" },
@@ -68,7 +69,7 @@ export default function RotaDetailPage() {
       });
       toast.success("Status atualizado");
       fetchRota();
-      if (newStatus === "CONCLUIDA") {
+      if (newStatus === "CONCLUIDA" && QUALIDADE_ENABLED) {
         setShowQualityPrompt(true);
       }
     } finally { setSaving(false); }
@@ -194,7 +195,7 @@ export default function RotaDetailPage() {
                 <div className="text-[10px] font-mono uppercase tracking-widest mb-0.5 text-slate-500">Status</div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={rota.status} />
-                  {rota.qualidade?.id && (
+                  {QUALIDADE_ENABLED && rota.qualidade?.id && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"
                       style={{ background: "rgba(234, 179, 8, 0.15)", color: "#ca8a04", border: "1px solid rgba(234, 179, 8, 0.3)" }}
                       title="Rota possui registro de Qualidade">
@@ -220,7 +221,7 @@ export default function RotaDetailPage() {
         {/* Tabs */}
         <div className="flex gap-2 border-b border-slate-100">
           <TabButton active={tab === "info"} onClick={() => setTab("info")} icon={FileText}>Visão Geral</TabButton>
-          {isAdmin && (
+          {isAdmin && QUALIDADE_ENABLED && (
             <TabButton active={tab === "qualidade"} onClick={() => setTab("qualidade")} icon={ShieldCheck}>Qualidade Operacional</TabButton>
           )}
         </div>
@@ -323,7 +324,7 @@ export default function RotaDetailPage() {
           </>
         )}
 
-        {tab === "qualidade" && isAdmin && (
+        {tab === "qualidade" && isAdmin && QUALIDADE_ENABLED && (
           <Card>
             <div className="flex items-center gap-2 mb-6">
               <ShieldCheck className="text-accent" />

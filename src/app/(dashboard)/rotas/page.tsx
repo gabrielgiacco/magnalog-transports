@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, StatusBadge, Modal, Input, Select, ComboboxMotorista } from "@/components/ui";
 import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
+import { QUALIDADE_ENABLED } from "@/lib/features";
 import { Plus, RefreshCw, ChevronDown, ChevronUp, Truck, User, Package, Calendar, Route, Search, Trash2, Filter } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -193,7 +194,7 @@ export default function RotasPage() {
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                   <span className="font-mono text-[11px]" style={{ color: "var(--text3)" }}>{rota.codigo}</span>
                   <StatusBadge status={rota.status} />
-                  {rota.qualidade?.id && (
+                  {QUALIDADE_ENABLED && rota.qualidade?.id && (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
                       style={{ background: "rgba(234, 179, 8, 0.15)", color: "#ca8a04", border: "1px solid rgba(234, 179, 8, 0.3)" }}>
                       Avaliada

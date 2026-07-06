@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLayoutStore } from "@/hooks/useLayoutStore";
+import { QUALIDADE_ENABLED } from "@/lib/features";
 import {
   LayoutDashboard, Package, Calendar, Users, FileText,
   DollarSign, Settings, BarChart2, Wallet, FileUp,
@@ -38,7 +39,10 @@ export function Sidebar() {
   const { isSidebarOpen, isSidebarCollapsed, toggleSidebar, toggleCollapse, setSidebarOpen } = useLayoutStore();
   const role = (session?.user as any)?.role || "OPERACIONAL";
 
-  const allowed = navItems.filter((item) => item.roles.includes(role));
+  const allowed = navItems.filter((item) => {
+    if (item.href === "/qualidade" && !QUALIDADE_ENABLED) return false;
+    return item.roles.includes(role);
+  });
 
   return (
     <>

@@ -25,6 +25,7 @@ import { Button, Loading, StatusBadge, Modal } from "@/components/ui";
 import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
 import { RefreshCw, ExternalLink, GripVertical, User, Package, Search, ShieldCheck } from "lucide-react";
 import { QualityScoring } from "@/components/quality/QualityScoring";
+import { QUALIDADE_ENABLED } from "@/lib/features";
 
 const COLS = [
   { key: "PROGRAMADO",    label: "Programado",    icon: "📋", color: "#9ca3af" }, // cinza
@@ -94,7 +95,7 @@ function KanbanCard({ entrega, overlay = false }: { entrega: any; overlay?: bool
             : entrega.codigo}
         </span>
         <div className="flex items-center gap-1">
-          {entrega.qualidade?.id && (
+          {QUALIDADE_ENABLED && entrega.qualidade?.id && (
             <span className="text-[10px] items-center text-center justify-center font-bold px-1 py-0.5 rounded"
               title="Possui registro de Qualidade" style={{ background: "rgba(234, 179, 8, 0.15)", color: "#ca8a04" }}>
               ⭐
@@ -256,7 +257,7 @@ export default function KanbanPage() {
       });
       if (!res.ok) throw new Error();
       toast.success(`Movido para ${COLS.find((c) => c.key === targetColKey)?.label}`);
-      if (targetColKey === "FINALIZADO") {
+      if (targetColKey === "FINALIZADO" && QUALIDADE_ENABLED) {
         setQualityEntregaId(active.id as string);
       }
     } catch {

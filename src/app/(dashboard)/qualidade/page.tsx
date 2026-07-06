@@ -1,28 +1,35 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Loading, KpiCard, Select, Table, Th, Td, Tr, StatusBadge } from "@/components/ui";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import { 
-  ShieldCheck, 
-  TrendingUp, 
-  AlertCircle, 
-  CheckCircle2, 
-  Package, 
-  Route, 
+import {
+  ShieldCheck,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle2,
+  Package,
+  Route,
   Calendar,
   Award,
   BarChart3
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { QUALIDADE_ENABLED } from "@/lib/features";
 
 export default function QualityDashboardPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
+    if (!QUALIDADE_ENABLED) {
+      router.replace("/dashboard");
+      return;
+    }
     async function fetchData() {
       setLoading(true);
       try {
@@ -30,7 +37,7 @@ export default function QualityDashboardPage() {
           fetch(`/api/qualidade/resumo?month=${month}`),
           fetch(`/api/qualidade`)
         ]);
-        
+
         if (resResumo.ok) setData(await resResumo.json());
         if (resHistory.ok) setHistory(await resHistory.json());
       } catch (e) {
@@ -40,7 +47,11 @@ export default function QualityDashboardPage() {
       }
     }
     fetchData();
-  }, [month]);
+  }, [month, router]);
+
+  if (!QUALIDADE_ENABLED) {
+    return <><Topbar title="Qualidade Operacional" /><Loading /></>;
+  }
 
   if (loading && !data) return <><Topbar title="Qualidade Operacional" /><Loading /></>;
 

@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { parseDanfeXML } from "@/lib/danfe-parser";
+import { QUALIDADE_ENABLED } from "@/lib/features";
 
 const STATUS_FLOW = [
   { key: "PROGRAMADO", label: "Programado", icon: "📋" },
@@ -111,7 +112,7 @@ export default function EntregaDetailPage() {
       const updated = await res.json();
       setEntrega(updated);
       toast.success("Status atualizado");
-      if (newStatus === "FINALIZADO") {
+      if (newStatus === "FINALIZADO" && QUALIDADE_ENABLED) {
         setShowQualityPrompt(true);
       }
     } catch { toast.error("Erro ao atualizar"); }
@@ -156,7 +157,7 @@ export default function EntregaDetailPage() {
       setShowEdit(false);
       toast.success("Entrega atualizada");
 
-      if (editForm.status === "FINALIZADO" && entrega?.status !== "FINALIZADO") {
+      if (editForm.status === "FINALIZADO" && entrega?.status !== "FINALIZADO" && QUALIDADE_ENABLED) {
         setShowQualityPrompt(true);
       }
     } catch (err: any) {
@@ -403,7 +404,7 @@ export default function EntregaDetailPage() {
             <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Fluxo Operacional</span>
             <div className="flex items-center gap-2">
               <StatusBadge status={entrega.status} />
-              {entrega.qualidade?.id && (
+              {QUALIDADE_ENABLED && entrega.qualidade?.id && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"
                   style={{ background: "rgba(234, 179, 8, 0.15)", color: "#ca8a04", border: "1px solid rgba(234, 179, 8, 0.3)" }}
                   title="Entrega possui registro de Qualidade">
@@ -473,7 +474,7 @@ export default function EntregaDetailPage() {
           <TabButton active={tab === "historico"} onClick={() => setTab("historico")} icon={History}>Histórico</TabButton>
           <TabButton active={tab === "avarias"} onClick={() => setTab("avarias")} icon={AlertTriangle}>Avarias</TabButton>
           <TabButton active={tab === "paletes"} onClick={() => setTab("paletes")} icon={Layers}>Paletização</TabButton>
-          {isAdmin && (
+          {isAdmin && QUALIDADE_ENABLED && (
             <TabButton active={tab === "qualidade"} onClick={() => setTab("qualidade")} icon={ShieldCheck}>Qualidade Operacional</TabButton>
           )}
         </div>
@@ -715,7 +716,7 @@ export default function EntregaDetailPage() {
           <AvariasTab entregaId={id} entrega={entrega} />
         )}
 
-        {tab === "qualidade" && isAdmin && (
+        {tab === "qualidade" && isAdmin && QUALIDADE_ENABLED && (
           <Card>
             <div className="flex items-center gap-2 mb-6">
               <ShieldCheck className="text-accent" />
