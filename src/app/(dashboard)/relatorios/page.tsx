@@ -774,6 +774,7 @@ interface FornecedorItem {
 interface FornecedorData {
   fornecedor: { cnpj: string; nome: string };
   periodo: { inicio: string | null; fim: string | null };
+  modo?: "periodo" | "armazem";
   itens: FornecedorItem[];
   kpis: {
     totalNotas: number;
@@ -816,6 +817,7 @@ function FornecedorTab() {
   const [loading, setLoading] = useState(false);
   const [filtrosTipo, setFiltrosTipo] = useState<Set<string>>(new Set());
   const [filtroBusca, setFiltroBusca] = useState("");
+  const [modo, setModo] = useState<"periodo" | "armazem">("periodo");
 
   // Carrega lista de fornecedores
   useEffect(() => {
@@ -831,12 +833,18 @@ function FornecedorTab() {
     }
     setLoading(true);
     try {
-      const params = new URLSearchParams({ cnpj: selectedCnpj, inicio, fim });
+      const params = new URLSearchParams({ cnpj: selectedCnpj });
+      if (modo === "armazem") {
+        params.set("modo", "armazem");
+      } else {
+        params.set("inicio", inicio);
+        params.set("fim", fim);
+      }
       const res = await fetch(`/api/relatorios/fornecedor?${params}`);
       if (res.ok) setData(await res.json());
       else toast.error("Erro ao carregar relatório");
     } finally { setLoading(false); }
-  }, [selectedCnpj, inicio, fim]);
+  }, [selectedCnpj, inicio, fim, modo]);
 
   const itensFiltrados = (data?.itens || []).filter((i) => {
     if (filtrosTipo.size > 0 && !filtrosTipo.has(i.tipo)) return false;
@@ -911,9 +919,9 @@ function FornecedorTab() {
         @media print { .print-btn { display: none; } }
       </style></head><body>
       <button class="print-btn" onclick="window.print()">Imprimir</button>
-      <h1>Relatório por Fornecedor</h1>
+      <h1>Relatório por Fornecedor${data.modo === "armazem" ? " — Cargas em Armazém" : ""}</h1>
       <div class="sub">${data.fornecedor.nome}</div>
-      <div class="periodo">Período: ${data.periodo.inicio || ""} a ${data.periodo.fim || ""} · Emitido em ${new Date().toLocaleDateString("pt-BR")}</div>
+      <div class="periodo">${data.modo === "armazem" ? `Situação atual do CD (snapshot em ${new Date().toLocaleDateString("pt-BR")})` : `Período: ${data.periodo.inicio || ""} a ${data.periodo.fim || ""} · Emitido em ${new Date().toLocaleDateString("pt-BR")}`}</div>
       <div class="kpis">
         <div class="kpi"><div class="v">${data.kpis.totalNotas}</div><div class="l">Total NFs</div></div>
         <div class="kpi"><div class="v" style="color:#059669">${data.kpis.entregues}</div><div class="l">Entregues</div></div>
@@ -988,13 +996,50 @@ function FornecedorTab() {
     const a = document.createElement("a");
     a.href = url;
     const nome = (data.fornecedor.nome || "fornecedor").replace(/[^a-z0-9]+/gi, "_").slice(0, 30);
-    a.download = `relatorio_${nome}_${data.periodo.inicio || "inicio"}_${data.periodo.fim || "fim"}.csv`;
+    const sufixo = data.modo === "armazem"
+      ? `armazem_${new Date().toISOString().slice(0, 10)}`
+      : `${data.periodo.inicio || "inicio"}_${data.periodo.fim || "fim"}`;
+    a.download = `relatorio_${nome}_${sufixo}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   return (
     <div className="space-y-4">
+      {/* Toggle Modo */}
+      <Card className="space-y-3">
+        <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text2)" }}>Tipo de Relatório</div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setModo("periodo")}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all"
+            style={{
+              background: modo === "periodo" ? "var(--accent)" : "transparent",
+              color: modo === "periodo" ? "white" : "var(--text)",
+              borderColor: "var(--accent)",
+            }}
+          >
+            <Package size={14} /> Por Período
+          </button>
+          <button
+            onClick={() => setModo("armazem")}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all"
+            style={{
+              background: modo === "armazem" ? "#d97706" : "transparent",
+              color: modo === "armazem" ? "white" : "#d97706",
+              borderColor: "#d97706",
+            }}
+          >
+            <Warehouse size={14} /> Somente em Armazém
+          </button>
+        </div>
+        <div className="text-[11px]" style={{ color: "var(--text3)" }}>
+          {modo === "periodo"
+            ? "Mostra todas as NFs do fornecedor emitidas dentro do período informado (entregues, armazenadas, ocorrências)."
+            : "Snapshot atual — apenas cargas que estão fisicamente no CD (chegaram e ainda não foram entregues). Ignora o filtro de data."}
+        </div>
+      </Card>
+
       {/* Filtros */}
       <Card className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[240px]">
@@ -1011,16 +1056,18 @@ function FornecedorTab() {
             ))}
           </select>
         </div>
-        <div>
+        <div style={{ opacity: modo === "armazem" ? 0.4 : 1 }}>
           <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>De</label>
           <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm border"
+            disabled={modo === "armazem"}
+            className="px-3 py-2 rounded-lg text-sm border disabled:cursor-not-allowed"
             style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }} />
         </div>
-        <div>
+        <div style={{ opacity: modo === "armazem" ? 0.4 : 1 }}>
           <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Até</label>
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm border"
+            disabled={modo === "armazem"}
+            className="px-3 py-2 rounded-lg text-sm border disabled:cursor-not-allowed"
             style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }} />
         </div>
         <Button onClick={carregar} loading={loading}>
@@ -1039,9 +1086,9 @@ function FornecedorTab() {
         <>
           {/* Header (impressão) */}
           <div className="hidden print:block text-center mb-4">
-            <h1 className="text-2xl font-bold">Relatório por Fornecedor</h1>
+            <h1 className="text-2xl font-bold">Relatório por Fornecedor{data.modo === "armazem" ? " — Cargas em Armazém" : ""}</h1>
             <div className="text-sm">{data.fornecedor.nome}</div>
-            <div className="text-xs">{data.periodo.inicio} a {data.periodo.fim}</div>
+            <div className="text-xs">{data.modo === "armazem" ? `Situação atual do CD` : `${data.periodo.inicio} a ${data.periodo.fim}`}</div>
           </div>
 
           {/* KPIs */}

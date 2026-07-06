@@ -37,6 +37,9 @@ export async function GET(req: NextRequest) {
   const inicio = searchParams.get("inicio");
   const fim = searchParams.get("fim");
   const listarFornecedores = searchParams.get("fornecedores") === "true";
+  // modo=armazem → snapshot atual (só cargas fisicamente no CD, chegaram e não foram entregues)
+  // modo=periodo (padrão) → todas as NFs emitidas no período informado
+  const modo = searchParams.get("modo") === "armazem" ? "armazem" : "periodo";
 
   // Listar fornecedores disponíveis (para o dropdown)
   if (listarFornecedores) {
@@ -65,7 +68,16 @@ export async function GET(req: NextRequest) {
   };
 
   const where: any = { emitenteCnpj: cnpj };
-  if (inicio || fim) {
+  if (modo === "armazem") {
+    // Só cargas fisicamente no CD: entrega existe, chegou e ainda não foi entregue.
+    // Ignora range de datas — é um snapshot da situação atual.
+    where.entrega = {
+      is: {
+        dataChegada: { not: null },
+        dataEntrega: null,
+      },
+    };
+  } else if (inicio || fim) {
     where.dataEmissao = {};
     if (inicio) where.dataEmissao.gte = parseDate(inicio);
     if (fim) where.dataEmissao.lte = parseDate(fim, true);
@@ -213,6 +225,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     fornecedor: { cnpj, nome: notas[0]?.emitenteRazao || "" },
     periodo: { inicio, fim },
+    modo,
     itens: items,
     kpis,
   });

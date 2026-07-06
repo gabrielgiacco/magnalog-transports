@@ -24,7 +24,13 @@
       "WebFetch(domain:web.meudanfe.com.br)",
       "WebFetch(domain:consultadanfe.com)",
       "WebFetch(domain:danfe.br.com)",
-      "Bash(curl -s -X GET \"https://ws.meudanfe.com.br/v2/fd/init\" -H \"apikey: cbb7a07f-af65-42e7-9f28-2c0b34e951cd\" -H \"cache: no-store\")"
+      "Bash(curl -s -X GET \"https://ws.meudanfe.com.br/v2/fd/init\" -H \"apikey: cbb7a07f-af65-42e7-9f28-2c0b34e951cd\" -H \"cache: no-store\")",
+      "Bash(npx next *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git revert *)",
+      "Bash(git commit *)"
     ]
   }
 }
