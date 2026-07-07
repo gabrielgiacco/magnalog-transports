@@ -52,10 +52,13 @@ export async function GET(req: NextRequest) {
       where.status = { notIn: ["FINALIZADO"] };
     }
 
-    // Excluir entregas com todas as ocorrências resolvidas da listagem principal
+    // Excluir apenas a "casca" original de uma reentrega: status=OCORRENCIA + todas as
+    // ocorrências resolvidas. Sem o filtro por status, a reentrega ativa (que herda a
+    // ocorrência original marcada como resolvida) também sumia da lista.
     andConditions.push({
       NOT: {
         AND: [
+          { status: "OCORRENCIA" },
           { ocorrencias: { some: {} } },
           { ocorrencias: { none: { resolvida: false } } }
         ]

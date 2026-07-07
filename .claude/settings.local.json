@@ -30,7 +30,8 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(git revert *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(npx tsx *)"
     ]
   }
 }
