@@ -5,11 +5,12 @@ import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, StatusBadge, Modal, Input, Select, Textarea, ComboboxMotorista, Table, Th, Td, Tr } from "@/components/ui";
 import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/utils";
-import { Copy, FileText, History, Package, MapPin, Truck, ChevronLeft, Calendar, User, Clock, CheckCircle2, AlertCircle, Trash2, ShieldCheck, DollarSign, Scissors, ChevronDown, ChevronUp, Box, Info, Weight, Layers, AlertTriangle, Printer, Maximize2, Minimize2, Plus, Search, ExternalLink } from "lucide-react";
+import { Copy, FileText, History, Package, MapPin, Truck, ChevronLeft, Calendar, User, Clock, CheckCircle2, AlertCircle, Trash2, ShieldCheck, DollarSign, Scissors, ChevronDown, ChevronUp, Box, Info, Weight, Layers, AlertTriangle, Printer, Maximize2, Minimize2, Plus, Search, ExternalLink, Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { parseDanfeXML } from "@/lib/danfe-parser";
+import { baixarDanfePDF } from "@/lib/danfe-pdf";
 import { QUALIDADE_ENABLED } from "@/lib/features";
 
 const STATUS_FLOW = [
@@ -44,6 +45,7 @@ export default function EntregaDetailPage() {
   const [selectedNotas, setSelectedNotas] = useState<string[]>([]);
   const [separando, setSeparando] = useState(false);
   const [danfeModal, setDanfeModal] = useState<{ open: boolean; xml: string | null; loading: boolean; fullscreen: boolean }>({ open: false, xml: null, loading: false, fullscreen: false });
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showQualityPrompt, setShowQualityPrompt] = useState(false);
 
   const [showResolveModal, setShowResolveModal] = useState(false);
@@ -908,6 +910,46 @@ export default function EntregaDetailPage() {
             <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: "var(--border)" }}>
               <span className="font-bold text-sm" style={{ color: "var(--text)" }}>DANFE</span>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    if (!danfeModal.xml) return;
+                    const parsed = parseDanfeXML(danfeModal.xml);
+                    const blob = new Blob([danfeModal.xml], { type: "text/xml" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `NFe_${parsed.numero || "nfe"}_${parsed.serie || ""}.xml`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1"
+                  title="Baixar XML"
+                >
+                  <Download size={16} className="text-slate-500" />
+                  <span className="text-xs text-slate-500">XML</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    const el = document.getElementById("danfe-print");
+                    if (!el || !danfeModal.xml) return;
+                    setDownloadingPdf(true);
+                    try {
+                      const parsed = parseDanfeXML(danfeModal.xml);
+                      await baixarDanfePDF(el as HTMLElement, `DANFE_${parsed.numero || "nfe"}_${parsed.serie || ""}`);
+                      toast.success("PDF gerado!");
+                    } catch {
+                      toast.error("Erro ao gerar PDF");
+                    } finally {
+                      setDownloadingPdf(false);
+                    }
+                  }}
+                  disabled={downloadingPdf}
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 disabled:opacity-50"
+                  title="Baixar PDF"
+                >
+                  {downloadingPdf ? <Loader2 size={16} className="text-slate-500 animate-spin" /> : <Download size={16} className="text-slate-500" />}
+                  <span className="text-xs text-slate-500">PDF</span>
+                </button>
                 <button
                   onClick={() => {
                     const el = document.getElementById("danfe-print");

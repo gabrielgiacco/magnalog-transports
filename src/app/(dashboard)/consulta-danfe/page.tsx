@@ -6,6 +6,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card } from "@/components/ui";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { DanfeData, parseDanfeXML } from "@/lib/danfe-parser";
+import { baixarDanfePDF } from "@/lib/danfe-pdf";
 import {
   Upload,
   FileText,
@@ -42,6 +43,7 @@ export default function ConsultaDanfePage() {
   const [showDevolucaoConfirm, setShowDevolucaoConfirm] = useState(false);
   const [sendingDevolucao, setSendingDevolucao] = useState(false);
   const [devolucaoResult, setDevolucaoResult] = useState<"nova" | "duplicada" | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const danfeRef = useRef<HTMLDivElement>(null);
 
   const processXml = useCallback((content: string, name: string) => {
@@ -136,6 +138,21 @@ export default function ConsultaDanfePage() {
     a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function handleDownloadPdf() {
+    const el = document.getElementById("danfe-print");
+    if (!el || !danfeData) return;
+    setDownloadingPdf(true);
+    try {
+      const nome = `DANFE_${danfeData.numero || "nfe"}_${danfeData.serie || ""}`;
+      await baixarDanfePDF(el as HTMLElement, nome);
+      toast.success("PDF gerado!");
+    } catch {
+      toast.error("Erro ao gerar PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
   }
 
   async function handleAddToEntrega() {
@@ -540,6 +557,9 @@ export default function ConsultaDanfePage() {
                 )}
                 <Button variant="ghost" size="sm" onClick={handleDownloadXml}>
                   <Download size={14} /> XML
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf}>
+                  {downloadingPdf ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} PDF
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handlePrint}>
                   <Printer size={14} /> Imprimir
