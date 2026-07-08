@@ -21,7 +21,9 @@ import {
   Loader2,
   PackagePlus,
   Check,
+  AlertTriangle,
 } from "lucide-react";
+import { Modal } from "@/components/ui";
 
 type InputMode = "chave" | "xml";
 
@@ -37,6 +39,9 @@ export default function ConsultaDanfePage() {
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ importadas: number; agrupadas: number; duplicadas: number } | null>(null);
+  const [showDevolucaoConfirm, setShowDevolucaoConfirm] = useState(false);
+  const [sendingDevolucao, setSendingDevolucao] = useState(false);
+  const [devolucaoResult, setDevolucaoResult] = useState<"nova" | "duplicada" | null>(null);
   const danfeRef = useRef<HTMLDivElement>(null);
 
   const processXml = useCallback((content: string, name: string) => {
@@ -166,6 +171,38 @@ export default function ConsultaDanfePage() {
     }
   }
 
+  async function handleEnviarParaAvarias() {
+    if (!xmlContent) return;
+    setSendingDevolucao(true);
+    try {
+      const blob = new Blob([xmlContent], { type: "text/xml" });
+      const file = new File([blob], fileName || "nfe.xml", { type: "text/xml" });
+      const formData = new FormData();
+      formData.append("files", file);
+
+      const res = await fetch("/api/avarias/devolucao-avulsa", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || "Erro ao enviar para Avarias");
+        return;
+      }
+
+      if (data.duplicadas > 0) {
+        setDevolucaoResult("duplicada");
+        toast("NF já registrada em Avarias", { icon: "⚠️" });
+      } else if (data.importadas > 0) {
+        setDevolucaoResult("nova");
+        toast.success("NF enviada para Avarias e Devoluções!");
+      }
+      setShowDevolucaoConfirm(false);
+    } catch {
+      toast.error("Erro ao enviar para Avarias");
+    } finally {
+      setSendingDevolucao(false);
+    }
+  }
+
   function handleReset() {
     setDanfeData(null);
     setXmlContent(null);
@@ -174,6 +211,7 @@ export default function ConsultaDanfePage() {
     setZoom(100);
     setChave("");
     setImportResult(null);
+    setDevolucaoResult(null);
   }
 
   return (
@@ -412,7 +450,7 @@ export default function ConsultaDanfePage() {
           <div className="space-y-4 animate-fadeIn">
             {/* Toolbar */}
             <Card className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <FileText size={18} style={{ color: "var(--accent)" }} />
                 <div>
                   <div className="text-sm font-bold font-head">
@@ -425,6 +463,26 @@ export default function ConsultaDanfePage() {
                     {fileName}
                   </div>
                 </div>
+                {/* Botão de Devolução — isolado à esquerda, cor âmbar, longe do "Adicionar à Entrega" */}
+                {!devolucaoResult ? (
+                  <button
+                    onClick={() => setShowDevolucaoConfirm(true)}
+                    disabled={sendingDevolucao}
+                    className="ml-2 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-amber-50 disabled:opacity-50"
+                    style={{ borderColor: "#d97706", color: "#d97706", background: "transparent" }}
+                    title="Registrar como NF de devolução em Avarias"
+                  >
+                    <AlertTriangle size={13} /> Enviar para Avarias
+                  </button>
+                ) : (
+                  <span
+                    className="ml-2 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg"
+                    style={{ background: "rgba(217,119,6,.12)", color: "#d97706" }}
+                  >
+                    <Check size={13} />
+                    {devolucaoResult === "duplicada" ? "Já em Avarias" : "Enviada para Avarias"}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {/* Zoom controls */}
@@ -507,6 +565,47 @@ export default function ConsultaDanfePage() {
             </div>
           </div>
         )}
+
+        {/* Modal de confirmação — Enviar para Avarias */}
+        <Modal
+          open={showDevolucaoConfirm}
+          onClose={() => setShowDevolucaoConfirm(false)}
+          title="Enviar para Avarias e Devoluções?"
+          size="md"
+        >
+          <div className="space-y-4">
+            <div
+              className="flex items-start gap-3 p-4 rounded-xl"
+              style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.3)" }}
+            >
+              <AlertTriangle size={20} style={{ color: "#d97706", flexShrink: 0, marginTop: 2 }} />
+              <div className="text-sm" style={{ color: "var(--text2)" }}>
+                Confirma o envio da <strong>NF-e {danfeData?.numero}</strong> para Avarias e Devoluções?
+                A nota será registrada como recebida para armazenamento temporário.
+              </div>
+            </div>
+            <div
+              className="text-[11px] p-3 rounded-lg"
+              style={{ background: "var(--surface2)", color: "var(--text3)" }}
+            >
+              Se já existir uma devolução <em>PENDENTE</em> do mesmo fornecedor, esta NF será agrupada nela automaticamente.
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+            <Button variant="ghost" onClick={() => setShowDevolucaoConfirm(false)}>Cancelar</Button>
+            <Button
+              onClick={handleEnviarParaAvarias}
+              disabled={sendingDevolucao}
+              style={{ background: "#d97706", borderColor: "#d97706" }}
+            >
+              {sendingDevolucao ? (
+                <><Loader2 size={14} className="animate-spin" /> Enviando...</>
+              ) : (
+                <><AlertTriangle size={14} /> Confirmar envio</>
+              )}
+            </Button>
+          </div>
+        </Modal>
       </div>
     </>
   );
