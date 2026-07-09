@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
-import { Button, Card, Loading, Empty, StatusBadge, Table, Th, Td, Tr } from "@/components/ui";
+import { Button, Card, Loading, Empty, StatusBadge, Table, Th, Td, Tr, Modal } from "@/components/ui";
 import { formatWeight, formatDate, formatCurrency, formatCNPJ } from "@/lib/utils";
 import {
   Upload, FileText, CheckCircle, XCircle, AlertTriangle, X, ChevronRight,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { DanfeData, parseDanfeXML } from "@/lib/danfe-parser";
+import { baixarDanfePDF } from "@/lib/danfe-pdf";
 
 // ── Types ──
 interface ResultItem {
@@ -72,6 +73,10 @@ export default function ImportacaoPage() {
   const [danfeLoading, setDanfeLoading] = useState(false);
   const [danfeImporting, setDanfeImporting] = useState(false);
   const [danfeImportResult, setDanfeImportResult] = useState<{ importadas: number; agrupadas: number; duplicadas: number } | null>(null);
+  const [showDevolucaoConfirm, setShowDevolucaoConfirm] = useState(false);
+  const [sendingDevolucao, setSendingDevolucao] = useState(false);
+  const [devolucaoResult, setDevolucaoResult] = useState<"nova" | "duplicada" | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const danfeRef = useRef<HTMLDivElement>(null);
 
   // ══════════════════════════════════════
@@ -164,7 +169,37 @@ export default function ImportacaoPage() {
 
   function handleDanfeDrop(e: React.DragEvent) { e.preventDefault(); setDanfeDragging(false); const file = e.dataTransfer.files?.[0]; if (file) processFile(file); }
   function handleDanfeFileSelect(e: React.ChangeEvent<HTMLInputElement>) { const file = e.target.files?.[0]; if (file) processFile(file); e.target.value = ""; }
-  function handleDanfeReset() { setDanfeData(null); setXmlContent(null); setFileName(""); setDanfeError(null); setZoom(100); setChave(""); setDanfeImportResult(null); }
+  function handleDanfeReset() { setDanfeData(null); setXmlContent(null); setFileName(""); setDanfeError(null); setZoom(100); setChave(""); setDanfeImportResult(null); setDevolucaoResult(null); }
+
+  async function handleEnviarParaAvarias() {
+    if (!xmlContent) return;
+    setSendingDevolucao(true);
+    try {
+      const blob = new Blob([xmlContent], { type: "text/xml" });
+      const file = new File([blob], fileName || "nfe.xml", { type: "text/xml" });
+      const formData = new FormData();
+      formData.append("files", file);
+      const res = await fetch("/api/avarias/devolucao-avulsa", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Erro ao enviar para Avarias"); return; }
+      if (data.duplicadas > 0) { setDevolucaoResult("duplicada"); toast("NF já registrada em Avarias", { icon: "⚠️" }); }
+      else if (data.importadas > 0) { setDevolucaoResult("nova"); toast.success("NF enviada para Avarias e Devoluções!"); }
+      setShowDevolucaoConfirm(false);
+    } catch { toast.error("Erro ao enviar para Avarias"); }
+    finally { setSendingDevolucao(false); }
+  }
+
+  async function handleDownloadPdf() {
+    const el = document.getElementById("danfe-print");
+    if (!el || !danfeData) return;
+    setDownloadingPdf(true);
+    try {
+      const nome = `DANFE_${danfeData.numero || "nfe"}_${danfeData.serie || ""}`;
+      await baixarDanfePDF(el as HTMLElement, nome);
+      toast.success("PDF gerado!");
+    } catch { toast.error("Erro ao gerar PDF"); }
+    finally { setDownloadingPdf(false); }
+  }
   async function handleAddToEntrega() {
     if (!xmlContent) return;
     setDanfeImporting(true);
@@ -538,12 +573,29 @@ export default function ImportacaoPage() {
               {danfeData && (
                 <div className="space-y-4 animate-fadeIn">
                   <Card className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <FileText size={18} style={{ color: "var(--accent)" }} />
                       <div>
                         <div className="text-sm font-bold font-head">NF-e {danfeData.numero} · Série {danfeData.serie}</div>
                         <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>{fileName}</div>
                       </div>
+                      {/* Enviar para Avarias — isolado à esquerda, cor âmbar */}
+                      {!devolucaoResult ? (
+                        <button
+                          onClick={() => setShowDevolucaoConfirm(true)}
+                          disabled={sendingDevolucao}
+                          className="ml-2 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-amber-50 disabled:opacity-50"
+                          style={{ borderColor: "#d97706", color: "#d97706", background: "transparent" }}
+                          title="Registrar como NF de devolução em Avarias"
+                        >
+                          <AlertTriangle size={13} /> Enviar para Avarias
+                        </button>
+                      ) : (
+                        <span className="ml-2 flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg" style={{ background: "rgba(217,119,6,.12)", color: "#d97706" }}>
+                          <Check size={13} />
+                          {devolucaoResult === "duplicada" ? "Já em Avarias" : "Enviada para Avarias"}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1 rounded-lg px-2 py-1" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
@@ -562,6 +614,9 @@ export default function ImportacaoPage() {
                         </span>
                       )}
                       <Button variant="ghost" size="sm" onClick={handleDownloadXml}><Download size={14} /> XML</Button>
+                      <Button variant="ghost" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf}>
+                        {downloadingPdf ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} PDF
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => window.print()}><Printer size={14} /> Imprimir</Button>
                       <Button variant="ghost" size="sm" onClick={handleDanfeReset}><RotateCcw size={14} /> Novo</Button>
                     </div>
@@ -577,6 +632,44 @@ export default function ImportacaoPage() {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmação — Enviar para Avarias */}
+      <Modal
+        open={showDevolucaoConfirm}
+        onClose={() => setShowDevolucaoConfirm(false)}
+        title="Enviar para Avarias e Devoluções?"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div
+            className="flex items-start gap-3 p-4 rounded-xl"
+            style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.3)" }}
+          >
+            <AlertTriangle size={20} style={{ color: "#d97706", flexShrink: 0, marginTop: 2 }} />
+            <div className="text-sm" style={{ color: "var(--text2)" }}>
+              Confirma o envio da <strong>NF-e {danfeData?.numero}</strong> para Avarias e Devoluções?
+              A nota será registrada como recebida para armazenamento temporário.
+            </div>
+          </div>
+          <div className="text-[11px] p-3 rounded-lg" style={{ background: "var(--surface2)", color: "var(--text3)" }}>
+            Se já existir uma devolução <em>PENDENTE</em> do mesmo fornecedor, esta NF será agrupada nela automaticamente.
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <Button variant="ghost" onClick={() => setShowDevolucaoConfirm(false)}>Cancelar</Button>
+          <Button
+            onClick={handleEnviarParaAvarias}
+            disabled={sendingDevolucao}
+            style={{ background: "#d97706", borderColor: "#d97706" }}
+          >
+            {sendingDevolucao ? (
+              <><Loader2 size={14} className="animate-spin" /> Enviando...</>
+            ) : (
+              <><AlertTriangle size={14} /> Confirmar envio</>
+            )}
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 }

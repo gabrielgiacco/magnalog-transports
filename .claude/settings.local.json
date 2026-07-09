@@ -32,7 +32,8 @@
       "Bash(git revert *)",
       "Bash(git commit *)",
       "Bash(npx tsx *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(git ls-remote *)"
     ]
   }
 }
