@@ -334,6 +334,7 @@ model Entrega {
   qualidade      QualidadeOperacional?
   avarias        Avaria[]
   lancamentos    LancamentoFinanceiro[]
+  notasServico   NotaServico[]
 
   @@index([cnpj])
   @@index([status])
@@ -370,6 +371,7 @@ model NotaFiscal {
   cteId             String?
   cte               CTe?      @relation(fields: [cteId], references: [id])
   avarias           Avaria[]
+  notasServico      NotaServico[]
 
   @@index([emitenteCnpj])
   @@index([destinatarioCnpj])
@@ -763,6 +765,46 @@ enum OrigemLancamento {
   FATURA_ARMAZENAGEM
   ACERTO_MOTORISTA
   CONTA_PAGAR
+  NOTA_SERVICO
+}
+
+model NotaServico {
+  id                 String   @id @default(cuid())
+  numero             String
+  codigoVerificacao  String?
+  dataEmissao        DateTime
+  valorServicos      Float    @default(0)
+  valorIss           Float    @default(0)
+  aliquota           Float    @default(0)
+
+  prestadorCnpj      String
+  prestadorRazao     String?
+  tomadorCnpj        String
+  tomadorRazao       String?
+  tomadorMunicipio   String?
+  tomadorUf          String?
+
+  discriminacao      String?  @db.Text
+  informacoesAdicionais String? @db.Text
+
+  entregaId          String?
+  entrega            Entrega? @relation(fields: [entregaId], references: [id], onDelete: SetNull)
+  notaFiscalId       String?
+  notaFiscal         NotaFiscal? @relation(fields: [notaFiscalId], references: [id], onDelete: SetNull)
+
+  lancamentos        LancamentoFinanceiro[]
+
+  xmlOriginal        String?  @db.Text
+  arquivoNome        String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([prestadorCnpj, numero])
+  @@index([tomadorCnpj])
+  @@index([entregaId])
+  @@index([notaFiscalId])
+  @@index([dataEmissao])
 }
 
 model CategoriaFinanceira {
@@ -822,12 +864,14 @@ model LancamentoFinanceiro {
   faturaId            String?
   faturaArmazenagemId String?
   contaPagarId        String?
+  notaServicoId       String?
 
   rota              Rota?              @relation(fields: [rotaId], references: [id], onDelete: SetNull)
   entrega           Entrega?           @relation(fields: [entregaId], references: [id], onDelete: SetNull)
   fatura            Fatura?            @relation(fields: [faturaId], references: [id], onDelete: SetNull)
   faturaArmazenagem FaturaArmazenagem? @relation(fields: [faturaArmazenagemId], references: [id], onDelete: SetNull)
   contaPagar        ContaPagar?        @relation(fields: [contaPagarId], references: [id], onDelete: SetNull)
+  notaServico       NotaServico?       @relation(fields: [notaServicoId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -839,6 +883,7 @@ model LancamentoFinanceiro {
   @@index([faturaId])
   @@index([faturaArmazenagemId])
   @@index([contaPagarId])
+  @@index([notaServicoId])
   @@index([status, dataPagamento])
   @@index([tipo, dataPagamento])
 }

@@ -78,7 +78,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       notas: { orderBy: { createdAt: "asc" } },
       ocorrencias: { orderBy: { createdAt: "desc" } },
       cliente: true,
-      qualidade: { select: { id: true } }
+      qualidade: { select: { id: true } },
+      notasServico: { orderBy: { dataEmissao: "desc" } },
     },
   });
 

@@ -9,10 +9,12 @@ import {
   Upload, FileText, CheckCircle, XCircle, AlertTriangle, X, ChevronRight,
   Search, RefreshCw, ChevronLeft, ExternalLink, FileSearch,
   Printer, Download, RotateCcw, FileX, Eye, ZoomIn, ZoomOut, Key, Loader2, PackagePlus, Check,
+  Receipt, Link2, Trash2,
 } from "lucide-react";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { DanfeData, parseDanfeXML } from "@/lib/danfe-parser";
 import { baixarDanfePDF } from "@/lib/danfe-pdf";
+import { NfseTab } from "./NfseTab";
 
 // ── Types ──
 interface ResultItem {
@@ -25,7 +27,7 @@ interface ImportResult {
   notas: ResultItem[]; ctes: any[];
 }
 
-type Tab = "importar" | "notas" | "danfe";
+type Tab = "importar" | "notas" | "danfe" | "nfse";
 type InputMode = "chave" | "xml";
 
 // ── Tab Button ──
@@ -236,6 +238,7 @@ export default function ImportacaoPage() {
           <TabBtn active={tab === "importar"} onClick={() => setTab("importar")} icon={Upload}>Importar XML</TabBtn>
           <TabBtn active={tab === "notas"} onClick={() => setTab("notas")} icon={FileText}>Notas Fiscais</TabBtn>
           <TabBtn active={tab === "danfe"} onClick={() => setTab("danfe")} icon={FileSearch}>Consulta DANFE</TabBtn>
+          <TabBtn active={tab === "nfse"} onClick={() => setTab("nfse")} icon={Receipt}>Notas de Serviço</TabBtn>
         </div>
 
         <div className="p-6 space-y-5">
@@ -630,6 +633,9 @@ export default function ImportacaoPage() {
               )}
             </>
           )}
+
+          {/* ═══════ TAB: NOTAS DE SERVIÇO (NFS-e) ═══════ */}
+          {tab === "nfse" && <NfseTab />}
         </div>
       </div>
 

@@ -711,6 +711,47 @@ export default function EntregaDetailPage() {
                   </div>
                 )}
              </Card>
+
+             {/* NFS-e vinculadas — mostra se houver alguma */}
+             {entrega.notasServico?.length > 0 && (
+               <Card>
+                 <div className="flex items-center gap-2 mb-3">
+                   <FileText size={14} className="text-emerald-500" />
+                   <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Notas de Serviço (NFS-e) — {entrega.notasServico.length}</span>
+                   <button
+                     onClick={() => router.push("/importacao?tab=nfse")}
+                     className="ml-auto text-[10px] font-bold hover:underline"
+                     style={{ color: "var(--accent)" }}
+                   >
+                     Ver todas <ExternalLink size={9} className="inline" />
+                   </button>
+                 </div>
+                 <div className="space-y-2">
+                   {entrega.notasServico.map((n: any) => (
+                     <div key={n.id} className="flex items-center justify-between p-2.5 rounded-lg" style={{ background: "rgba(16,185,129,.06)", border: "1px solid rgba(16,185,129,.2)" }}>
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-2 flex-wrap">
+                           <span className="text-sm font-bold font-mono text-emerald-700">NFS-e {n.numero}</span>
+                           <span className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>{formatDate(n.dataEmissao)}</span>
+                         </div>
+                         <div className="text-[11px] truncate mt-0.5" style={{ color: "var(--text2)" }} title={n.discriminacao || n.informacoesAdicionais || ""}>
+                           {n.discriminacao || n.informacoesAdicionais || "—"}
+                         </div>
+                         <div className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text3)" }}>
+                           Tomador: {n.tomadorRazao || formatCNPJ(n.tomadorCnpj)}
+                         </div>
+                       </div>
+                       <div className="text-right ml-3">
+                         <div className="text-sm font-bold font-mono text-emerald-700">{formatCurrency(n.valorServicos)}</div>
+                         {n.codigoVerificacao && (
+                           <div className="text-[9px] font-mono" style={{ color: "var(--text3)" }}>Cód: {n.codigoVerificacao}</div>
+                         )}
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </Card>
+             )}
           </div>
         )}
 
