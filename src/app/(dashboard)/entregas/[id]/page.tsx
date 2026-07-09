@@ -712,6 +712,59 @@ export default function EntregaDetailPage() {
                 )}
              </Card>
 
+             {/* CT-e da transportadora — mostra os CT-es únicos das notas desta entrega */}
+             {(() => {
+               const ctesUnicos = new Map<string, any>();
+               for (const n of entrega.notas || []) {
+                 if (n.cte?.id) ctesUnicos.set(n.cte.id, { ...n.cte, notasVinculadas: [] });
+               }
+               for (const n of entrega.notas || []) {
+                 if (n.cte?.id) ctesUnicos.get(n.cte.id)?.notasVinculadas.push(n.numero);
+               }
+               const ctesList = Array.from(ctesUnicos.values());
+               if (ctesList.length === 0) return null;
+               return (
+                 <Card>
+                   <div className="flex items-center gap-2 mb-3">
+                     <Truck size={14} className="text-blue-500" />
+                     <span className="text-xs font-mono uppercase tracking-widest text-slate-500">CT-e da Transportadora — {ctesList.length}</span>
+                     <button
+                       onClick={() => router.push("/importacao?tab=cte")}
+                       className="ml-auto text-[10px] font-bold hover:underline"
+                       style={{ color: "var(--accent)" }}
+                     >
+                       Gerenciar <ExternalLink size={9} className="inline" />
+                     </button>
+                   </div>
+                   <div className="space-y-2">
+                     {ctesList.map((c: any) => (
+                       <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg" style={{ background: "rgba(59,130,246,.06)", border: "1px solid rgba(59,130,246,.2)" }}>
+                         <div className="flex-1 min-w-0">
+                           <div className="flex items-center gap-2 flex-wrap">
+                             <span className="text-sm font-bold font-mono text-blue-700">CT-e {c.numero}{c.serie ? `/${c.serie}` : ""}</span>
+                             <span className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>{c.dataEmissao ? formatDate(c.dataEmissao) : "—"}</span>
+                           </div>
+                           <div className="text-[11px] mt-0.5" style={{ color: "var(--text2)" }}>
+                             Transportadora: <strong>{c.emitenteNome || formatCNPJ(c.emitenteCnpj)}</strong>
+                           </div>
+                           <div className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text3)" }}>
+                             Tomador: {c.tomadorNome || formatCNPJ(c.tomadorCnpj)}
+                             {c.notasVinculadas.length > 0 && <> · NFs: {c.notasVinculadas.join(", ")}</>}
+                           </div>
+                         </div>
+                         <div className="text-right ml-3">
+                           <div className="text-sm font-bold font-mono text-blue-700">{formatCurrency(c.valorReceber)}</div>
+                           {c.valorPedagio > 0 && (
+                             <div className="text-[9px] font-mono" style={{ color: "var(--text3)" }}>Pedágio: {formatCurrency(c.valorPedagio)}</div>
+                           )}
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </Card>
+               );
+             })()}
+
              {/* NFS-e vinculadas — mostra se houver alguma */}
              {entrega.notasServico?.length > 0 && (
                <Card>
