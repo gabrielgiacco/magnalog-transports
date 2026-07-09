@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Card, Loading, Modal, Input, Empty } from "@/components/ui";
 import toast from "react-hot-toast";
-import { Upload, Search, Trash2, Link2, Receipt, RefreshCw, ExternalLink, CheckCircle, AlertTriangle } from "lucide-react";
+import { Upload, Search, Trash2, Link2, Receipt, RefreshCw, ExternalLink, CheckCircle, AlertTriangle, X } from "lucide-react";
 import { formatCurrency, formatDate, formatCNPJ } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
