@@ -283,10 +283,26 @@ export function DanfeViewer({ data }: { data: DanfeData }) {
       {/* ═══ PRODUTOS ═══ */}
       <div className="danfe-section-title">DADOS DOS PRODUTOS / SERVIÇOS</div>
       <table className="danfe-table danfe-produtos-table">
+        <colgroup>
+          <col style={{ width: "7%" }} />   {/* CÓDIGO */}
+          <col style={{ width: "30%" }} />  {/* DESCRIÇÃO */}
+          <col style={{ width: "6%" }} />   {/* NCM */}
+          <col style={{ width: "3%" }} />   {/* CST */}
+          <col style={{ width: "4%" }} />   {/* CFOP */}
+          <col style={{ width: "3%" }} />   {/* UN */}
+          <col style={{ width: "6%" }} />   {/* QUANT */}
+          <col style={{ width: "6%" }} />   {/* VL. UNIT */}
+          <col style={{ width: "7%" }} />   {/* VL. TOTAL */}
+          <col style={{ width: "6%" }} />   {/* BC ICMS */}
+          <col style={{ width: "6%" }} />   {/* VL. ICMS */}
+          <col style={{ width: "5%" }} />   {/* VL. IPI */}
+          <col style={{ width: "5%" }} />   {/* % ICMS */}
+          <col style={{ width: "6%" }} />   {/* % IPI */}
+        </colgroup>
         <thead>
           <tr className="danfe-produtos-header">
             <th>CÓDIGO</th>
-            <th style={{ width: "30%" }}>DESCRIÇÃO DO PRODUTO / SERVIÇO</th>
+            <th>DESCRIÇÃO DO PRODUTO / SERVIÇO</th>
             <th>NCM/SH</th>
             <th>CST</th>
             <th>CFOP</th>
@@ -306,10 +322,10 @@ export function DanfeViewer({ data }: { data: DanfeData }) {
             <tr key={i} className="danfe-produto-row">
               <td className="danfe-mono">{prod.codigo}</td>
               <td>{prod.descricao}</td>
-              <td className="danfe-mono">{prod.ncm}</td>
-              <td className="danfe-mono">{`${prod.origem}${prod.cst}`}</td>
-              <td className="danfe-mono">{prod.cfop}</td>
-              <td>{prod.unidade}</td>
+              <td className="danfe-mono danfe-right">{prod.ncm}</td>
+              <td className="danfe-mono danfe-right">{`${prod.origem}${prod.cst}`}</td>
+              <td className="danfe-mono danfe-right">{prod.cfop}</td>
+              <td className="danfe-mono" style={{ textAlign: "center" }}>{prod.unidade}</td>
               <td className="danfe-mono danfe-right">{fmtNum(prod.quantidade, 4)}</td>
               <td className="danfe-mono danfe-right">{fmtNum(prod.valorUnitario, 4)}</td>
               <td className="danfe-mono danfe-right">{fmtNum(prod.valorTotal)}</td>
