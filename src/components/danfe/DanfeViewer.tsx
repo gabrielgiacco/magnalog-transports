@@ -69,10 +69,15 @@ export function DanfeViewer({ data }: { data: DanfeData }) {
     <div className="danfe-container" id="danfe-print">
       {/* ═══ HEADER ═══ */}
       <table className="danfe-table">
+        <colgroup>
+          <col style={{ width: "45%" }} />
+          <col style={{ width: "20%" }} />
+          <col style={{ width: "35%" }} />
+        </colgroup>
         <tbody>
           <tr>
             {/* Emitente info */}
-            <td className="danfe-cell danfe-emitente-header" rowSpan={3} style={{ width: "45%" }}>
+            <td className="danfe-cell danfe-emitente-header" rowSpan={2}>
               <div className="danfe-emitente-nome">{emitente.razaoSocial}</div>
               {emitente.nomeFantasia && (
                 <div className="danfe-emitente-fantasia">{emitente.nomeFantasia}</div>
@@ -91,7 +96,7 @@ export function DanfeViewer({ data }: { data: DanfeData }) {
             </td>
 
             {/* DANFE Title */}
-            <td className="danfe-cell danfe-title-cell" rowSpan={3} style={{ width: "20%", textAlign: "center", verticalAlign: "top" }}>
+            <td className="danfe-cell danfe-title-cell" rowSpan={2} style={{ textAlign: "center", verticalAlign: "top" }}>
               <div className="danfe-title">DANFE</div>
               <div className="danfe-title-sub">Documento Auxiliar da Nota Fiscal Eletrônica</div>
               <div className="danfe-title-op" style={{ marginTop: 6 }}>
@@ -109,7 +114,7 @@ export function DanfeViewer({ data }: { data: DanfeData }) {
             </td>
 
             {/* Barcode + Key */}
-            <td className="danfe-cell" rowSpan={2} style={{ width: "35%", textAlign: "center", verticalAlign: "top", padding: "4px 2px" }}>
+            <td className="danfe-cell" style={{ textAlign: "center", verticalAlign: "top", padding: "4px 4px" }}>
               {data.chaveAcesso && (
                 <div className="danfe-barcode-wrapper">
                   <Barcode
@@ -126,7 +131,6 @@ export function DanfeViewer({ data }: { data: DanfeData }) {
               <div className="danfe-chave">{formatChave(data.chaveAcesso)}</div>
             </td>
           </tr>
-          <tr />
           <tr>
             <td className="danfe-cell" style={{ textAlign: "center", verticalAlign: "top", padding: "3px 4px" }}>
               <div className="danfe-cell-label">PROTOCOLO DE AUTORIZAÇÃO DE USO</div>
