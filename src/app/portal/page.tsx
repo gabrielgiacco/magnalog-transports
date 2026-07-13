@@ -120,7 +120,7 @@ export default function PortalPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-[1800px] mx-auto px-4 py-6">
         {/* Stats / Dashboard */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <button
@@ -267,10 +267,24 @@ export default function PortalPage() {
             </div>
           ) : (
             <>
-              <table className="w-full border-collapse min-w-[1100px]">
+              <table className="w-full border-collapse table-fixed text-[13px]">
+                <colgroup>
+                  <col style={{ width: "6%" }} />   {/* NF */}
+                  <col style={{ width: "12%" }} />  {/* Emitente */}
+                  <col style={{ width: "13%" }} />  {/* Destinatário */}
+                  <col style={{ width: "9%" }} />   {/* Cidade */}
+                  <col style={{ width: "5%" }} />   {/* Volumes */}
+                  <col style={{ width: "6%" }} />   {/* Peso */}
+                  <col style={{ width: "7%" }} />   {/* Emissão */}
+                  <col style={{ width: "7%" }} />   {/* Agendamento */}
+                  <col style={{ width: "7%" }} />   {/* Chegada */}
+                  <col style={{ width: "11%" }} />  {/* Entrega */}
+                  <col style={{ width: "13%" }} />  {/* Status */}
+                  <col style={{ width: "4%" }} />   {/* Ver */}
+                </colgroup>
                 <thead>
                   <tr>
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>NF / Série</span>
@@ -301,7 +315,7 @@ export default function PortalPage() {
                       )}
                     </th>
                     
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Emitente</span>
@@ -335,7 +349,7 @@ export default function PortalPage() {
                       )}
                     </th>
 
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Destinatário</span>
@@ -369,7 +383,7 @@ export default function PortalPage() {
                       )}
                     </th>
                     
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Cidade</span>
@@ -403,7 +417,7 @@ export default function PortalPage() {
                       )}
                     </th>
 
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Volumes</span>
@@ -434,7 +448,7 @@ export default function PortalPage() {
                       )}
                     </th>
                     
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Peso</span>
@@ -465,7 +479,7 @@ export default function PortalPage() {
                       )}
                     </th>
                     
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Emissão</span>
@@ -516,7 +530,7 @@ export default function PortalPage() {
                       )}
                     </th>
 
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Agendamento</span>
@@ -568,7 +582,7 @@ export default function PortalPage() {
                       )}
                     </th>
 
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Chegada</span>
@@ -620,7 +634,7 @@ export default function PortalPage() {
                       )}
                     </th>
                     
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Entrega</span>
@@ -672,7 +686,7 @@ export default function PortalPage() {
                       )}
                     </th>
                     
-                    <th className="text-left px-4 py-3 text-[10px] uppercase tracking-widest font-normal font-mono relative"
+                    <th className="text-left px-2 py-2 text-[10px] uppercase tracking-widest font-normal font-mono relative"
                       style={{ color: "var(--text3)", borderBottom: "1px solid var(--border)" }}>
                       <div className="flex items-center gap-1.5">
                         <span>Status</span>
@@ -713,31 +727,31 @@ export default function PortalPage() {
                   {notas.map((n) => (
                     <tr key={n.id} style={{ borderBottom: "1px solid var(--border)" }}
                       className="transition-colors hover:bg-[#162030]">
-                      <td className="px-4 py-3 cursor-pointer group" onClick={() => { setSearch(n.numero); setPage(1); }}>
+                      <td className="px-2 py-2 cursor-pointer group" onClick={() => { setSearch(n.numero); setPage(1); }}>
                         <div className="font-mono text-sm font-semibold group-hover:underline group-hover:text-blue-400 transition-colors" style={{ color: "var(--accent)" }}>NF {n.numero}</div>
                         {n.serie && <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>Série {n.serie}</div>}
                       </td>
-                      <td className="px-4 py-3 cursor-pointer group max-w-[180px]" onClick={() => { setFilterEmitente(n.emitenteRazao); setPage(1); }}>
-                        <div className="text-sm font-medium group-hover:underline group-hover:text-blue-400 transition-colors truncate" title={n.emitenteRazao}>{n.emitenteRazao}</div>
+                      <td className="px-2 py-2 cursor-pointer group" onClick={() => { setFilterEmitente(n.emitenteRazao); setPage(1); }}>
+                        <div className="text-[12px] font-medium group-hover:underline group-hover:text-blue-400 transition-colors truncate" title={n.emitenteRazao}>{n.emitenteRazao}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm cursor-pointer hover:underline hover:text-blue-400 transition-colors max-w-[180px]"
+                      <td className="px-2 py-2 cursor-pointer hover:underline hover:text-blue-400 transition-colors"
                         onClick={() => { setFilterDestinatario(n.destinatarioRazao); setPage(1); }}>
-                        <div className="truncate" title={n.destinatarioRazao}>{n.destinatarioRazao}</div>
+                        <div className="text-[12px] truncate" title={n.destinatarioRazao}>{n.destinatarioRazao}</div>
                       </td>
-                      <td className="px-4 py-3 text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors max-w-[140px] whitespace-nowrap"
+                      <td className="px-2 py-2 text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors whitespace-nowrap"
                         onClick={() => { setFilterCidade(n.cidade); setPage(1); }}
                         style={{ color: "var(--text2)" }}>
                         <div className="truncate" title={`${n.cidade}${n.uf ? ` - ${n.uf}` : ""}`}>{n.cidade}{n.uf ? ` — ${n.uf}` : ""}</div>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
+                      <td className="px-2 py-2 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
                         onClick={() => { setFilterVolumes(String(n.volumes)); setPage(1); }}>
                         {n.volumes}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
+                      <td className="px-2 py-2 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
                         onClick={() => { setFilterPeso(String(n.pesoBruto)); setPage(1); }}>
                         {formatWeight(n.pesoBruto)}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
+                      <td className="px-2 py-2 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
                         onClick={() => {
                           const d = new Date(n.dataEmissao);
                           const dateStr = typeof n.dataEmissao === "string" ? n.dataEmissao.split('T')[0] : d.toISOString().split('T')[0];
@@ -747,7 +761,7 @@ export default function PortalPage() {
                         style={{ color: "var(--text3)" }}>
                         {formatDate(n.dataEmissao)}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
+                      <td className="px-2 py-2 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
                         onClick={() => {
                           if (n.entrega?.dataAgendada) {
                             const d = new Date(n.entrega.dataAgendada);
@@ -759,7 +773,7 @@ export default function PortalPage() {
                         style={{ color: "var(--text3)" }}>
                         {n.entrega?.dataAgendada ? formatDate(n.entrega.dataAgendada) : "—"}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
+                      <td className="px-2 py-2 font-mono text-xs cursor-pointer hover:underline hover:text-blue-400 transition-colors"
                         onClick={() => {
                           if (n.entrega?.dataChegada) {
                             const d = new Date(n.entrega.dataChegada);
@@ -771,14 +785,19 @@ export default function PortalPage() {
                         style={{ color: "var(--text3)" }}>
                         {n.entrega?.dataChegada ? formatDate(n.entrega.dataChegada) : "—"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2">
                         {n.entrega ? (
                           <div>
-                            <div className="font-mono text-[10px]" style={{ color: "var(--text3)" }}>
-                              {n.entrega.notas && n.entrega.notas.length > 0 ? n.entrega.notas.map((nt: any) => nt.numero).join(", ") : n.entrega.codigo}
+                            <div className="font-mono text-[10px] truncate" style={{ color: "var(--text3)" }}
+                              title={n.entrega.notas && n.entrega.notas.length > 0 ? n.entrega.notas.map((nt: any) => nt.numero).join(", ") : n.entrega.codigo}>
+                              {n.entrega.notas && n.entrega.notas.length > 3
+                                ? `${n.entrega.notas.length} NFs (${n.entrega.codigo})`
+                                : n.entrega.notas && n.entrega.notas.length > 0
+                                  ? n.entrega.notas.map((nt: any) => nt.numero).join(", ")
+                                  : n.entrega.codigo}
                             </div>
                             {n.entrega.dataEntrega && (
-                              <div className="text-[10px] cursor-pointer hover:underline hover:text-blue-400" 
+                              <div className="text-[10px] cursor-pointer hover:underline hover:text-blue-400 whitespace-nowrap"
                                 onClick={() => {
                                   const d = new Date(n.entrega.dataEntrega);
                                   const dateStr = typeof n.entrega.dataEntrega === "string" ? n.entrega.dataEntrega.split('T')[0] : d.toISOString().split('T')[0];
@@ -788,13 +807,13 @@ export default function PortalPage() {
                                 Entregue: {formatDate(n.entrega.dataEntrega)}
                               </div>
                             )}
-                            {n.entrega.motorista?.nome && <div className="text-[10px]" style={{ color: "var(--text2)" }}>
+                            {n.entrega.motorista?.nome && <div className="text-[10px] truncate" style={{ color: "var(--text2)" }} title={n.entrega.motorista.nome}>
                               🚛 {n.entrega.motorista.nome}
                             </div>}
                           </div>
                         ) : <span className="text-[10px]" style={{ color: "var(--text3)" }}>Aguardando</span>}
                       </td>
-                      <td className="px-4 py-3 cursor-pointer" onClick={() => { setFilterStatus(n.entrega ? n.entrega.status : "PROGRAMADO"); setPage(1); }}>
+                      <td className="px-2 py-2 cursor-pointer" onClick={() => { setFilterStatus(n.entrega ? n.entrega.status : "PROGRAMADO"); setPage(1); }}>
                         {n.entrega ? (
                           <div>
                             <StatusBadge status={n.entrega.status} />
@@ -829,7 +848,7 @@ export default function PortalPage() {
 
               {/* Pagination */}
               {pages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between px-2 py-2" style={{ borderTop: "1px solid var(--border)" }}>
                   <span className="text-xs font-mono" style={{ color: "var(--text3)" }}>Página {page} de {pages} · {total} registros</span>
                   <div className="flex gap-2">
                     <button onClick={() => setPage((p) => p - 1)} disabled={page === 1}
