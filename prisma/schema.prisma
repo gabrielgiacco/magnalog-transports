@@ -335,6 +335,7 @@ model Entrega {
   avarias        Avaria[]
   lancamentos    LancamentoFinanceiro[]
   notasServico   NotaServico[]
+  diarias        Diaria[]
 
   @@index([cnpj])
   @@index([status])
@@ -766,6 +767,41 @@ enum OrigemLancamento {
   ACERTO_MOTORISTA
   CONTA_PAGAR
   NOTA_SERVICO
+  DIARIA
+}
+
+enum StatusDiaria {
+  PENDENTE
+  PAGA
+  CANCELADA
+}
+
+model Diaria {
+  id             String       @id @default(cuid())
+  numero         String       @unique
+  entregaId      String
+  entrega        Entrega      @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+
+  clienteCnpj    String
+  clienteNome    String
+
+  motivo         String?
+  valor          Float        @default(0)
+  status         StatusDiaria @default(PENDENTE)
+
+  dataOcorrencia DateTime     @default(now())
+  dataPagamento  DateTime?
+  formaPagamento FormaPagamento?
+  observacoes    String?      @db.Text
+
+  lancamentos    LancamentoFinanceiro[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([entregaId])
+  @@index([clienteCnpj])
+  @@index([status])
 }
 
 model NotaServico {
@@ -865,6 +901,7 @@ model LancamentoFinanceiro {
   faturaArmazenagemId String?
   contaPagarId        String?
   notaServicoId       String?
+  diariaId            String?
 
   rota              Rota?              @relation(fields: [rotaId], references: [id], onDelete: SetNull)
   entrega           Entrega?           @relation(fields: [entregaId], references: [id], onDelete: SetNull)
@@ -872,6 +909,7 @@ model LancamentoFinanceiro {
   faturaArmazenagem FaturaArmazenagem? @relation(fields: [faturaArmazenagemId], references: [id], onDelete: SetNull)
   contaPagar        ContaPagar?        @relation(fields: [contaPagarId], references: [id], onDelete: SetNull)
   notaServico       NotaServico?       @relation(fields: [notaServicoId], references: [id], onDelete: SetNull)
+  diaria            Diaria?            @relation(fields: [diariaId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -884,6 +922,7 @@ model LancamentoFinanceiro {
   @@index([faturaArmazenagemId])
   @@index([contaPagarId])
   @@index([notaServicoId])
+  @@index([diariaId])
   @@index([status, dataPagamento])
   @@index([tipo, dataPagamento])
 }

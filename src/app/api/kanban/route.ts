@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       notas: { select: { numero: true, emitenteRazao: true } },
       rota: { select: { id: true, codigo: true, valorMotorista: true } },
       qualidade: { select: { id: true } },
+      diarias: { where: { status: { in: ["PENDENTE", "PAGA"] } }, select: { id: true, status: true, valor: true } },
     },
   });
 

@@ -80,6 +80,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       cliente: true,
       qualidade: { select: { id: true } },
       notasServico: { orderBy: { dataEmissao: "desc" } },
+      diarias: { orderBy: { dataOcorrencia: "desc" } },
     },
   });
 

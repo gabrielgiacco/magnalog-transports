@@ -4,9 +4,9 @@ import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, Modal, Input, Table, Th, Td, Tr } from "@/components/ui";
 import { formatCurrency, formatDate, formatCNPJ } from "@/lib/utils";
-import { RefreshCw, FilePlus, CheckCircle2, Eye, ChevronDown, ChevronUp, Search, Warehouse, Truck, Receipt, Trash2 } from "lucide-react";
+import { RefreshCw, FilePlus, CheckCircle2, Eye, ChevronDown, ChevronUp, Search, Warehouse, Truck, Receipt, Trash2, DollarSign, Edit2, AlertTriangle } from "lucide-react";
 
-type TabKey = "fretes" | "armazenagem" | "faturas";
+type TabKey = "fretes" | "armazenagem" | "faturas" | "diarias";
 
 export default function FaturamentoPage() {
   const [tab, setTab] = useState<TabKey>("fretes");
@@ -35,6 +35,15 @@ export default function FaturamentoPage() {
   const [faturaDetalhe, setFaturaDetalhe] = useState<any>(null);
   const [faturaArmDetalhe, setFaturaArmDetalhe] = useState<any>(null);
 
+  // Diárias
+  const [diarias, setDiarias] = useState<any[]>([]);
+  const [diariaEdit, setDiariaEdit] = useState<any>(null);
+  const [diariaEditForm, setDiariaEditForm] = useState({ valor: "", motivo: "", observacoes: "" });
+  const [diariaPagar, setDiariaPagar] = useState<any>(null);
+  const [diariaPagarForm, setDiariaPagarForm] = useState({ dataPagamento: "", formaPagamento: "PIX" });
+  const [savingDiaria, setSavingDiaria] = useState(false);
+  const [showDiariaHist, setShowDiariaHist] = useState(false);
+
   // Expandir grupos
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [expandedArmazens, setExpandedArmazens] = useState<string[]>([]);
@@ -50,16 +59,18 @@ export default function FaturamentoPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [resCtes, resFaturas, resArm, resFatArm] = await Promise.all([
+      const [resCtes, resFaturas, resArm, resFatArm, resDiarias] = await Promise.all([
         fetch("/api/financeiro/ctes-pendentes").then((r) => r.json()),
         fetch("/api/financeiro/faturas").then((r) => r.json()),
         fetch("/api/financeiro/armazenagem-pendente").then((r) => r.json()),
         fetch("/api/financeiro/faturas-armazenagem").then((r) => r.json()),
+        fetch("/api/diarias?limit=500").then((r) => r.json()),
       ]);
       setCtesAgrupados(Array.isArray(resCtes) ? resCtes : []);
       setFaturas(Array.isArray(resFaturas) ? resFaturas : []);
       setArmazenagemPendente(Array.isArray(resArm) ? resArm : []);
       setFaturasArm(Array.isArray(resFatArm) ? resFatArm : []);
+      setDiarias(resDiarias?.itens || []);
     } catch {
       toast.error("Erro ao carregar dados");
     } finally {
@@ -277,6 +288,86 @@ export default function FaturamentoPage() {
     ? armFornecedor.entregas.filter((e: any) => selectedArmIds.includes(e.id)).reduce((s: number, e: any) => s + e.valorCalculado, 0)
     : 0;
 
+  // ─── Diárias ─────────────────────────────────────────────────
+  function openDiariaEdit(d: any) {
+    setDiariaEdit(d);
+    setDiariaEditForm({
+      valor: d.valor > 0 ? String(d.valor).replace(".", ",") : "",
+      motivo: d.motivo || "",
+      observacoes: d.observacoes || "",
+    });
+  }
+
+  async function handleSaveDiariaValor() {
+    if (!diariaEdit) return;
+    setSavingDiaria(true);
+    try {
+      const res = await fetch(`/api/diarias/${diariaEdit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          valor: diariaEditForm.valor ? parseFloat(diariaEditForm.valor.replace(",", ".")) : 0,
+          motivo: diariaEditForm.motivo || null,
+          observacoes: diariaEditForm.observacoes || null,
+        }),
+      });
+      if (!res.ok) { toast.error("Erro ao salvar"); return; }
+      toast.success("Diária atualizada");
+      setDiariaEdit(null);
+      fetchData();
+    } finally {
+      setSavingDiaria(false);
+    }
+  }
+
+  function openDiariaPagar(d: any) {
+    setDiariaPagar(d);
+    setDiariaPagarForm({
+      dataPagamento: new Date().toISOString().slice(0, 10),
+      formaPagamento: "PIX",
+    });
+  }
+
+  async function handlePagarDiaria() {
+    if (!diariaPagar) return;
+    setSavingDiaria(true);
+    try {
+      const res = await fetch(`/api/diarias/${diariaPagar.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "PAGA",
+          dataPagamento: diariaPagarForm.dataPagamento,
+          formaPagamento: diariaPagarForm.formaPagamento,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Erro ao registrar pagamento"); return; }
+      toast.success("Diária paga — lançamento criado em Financeiro");
+      setDiariaPagar(null);
+      fetchData();
+    } finally {
+      setSavingDiaria(false);
+    }
+  }
+
+  const diariasPendentes = diarias.filter((d) => d.status === "PENDENTE");
+  const diariasPagas = diarias.filter((d) => d.status === "PAGA");
+  const totalDiariasPendentes = diariasPendentes.reduce((s, d) => s + (d.valor || 0), 0);
+  const diariasPendentesValor = diariasPendentes.filter((d) => d.valor === 0).length;
+
+  // Agrupamento por cliente
+  const diariasPorCliente: Record<string, { clienteNome: string; clienteCnpj: string; itens: any[]; total: number; pendenteValor: number }> = {};
+  for (const d of diariasPendentes) {
+    if (!diariasPorCliente[d.clienteCnpj]) {
+      diariasPorCliente[d.clienteCnpj] = { clienteNome: d.clienteNome, clienteCnpj: d.clienteCnpj, itens: [], total: 0, pendenteValor: 0 };
+    }
+    diariasPorCliente[d.clienteCnpj].itens.push(d);
+    diariasPorCliente[d.clienteCnpj].total += d.valor || 0;
+    if (d.valor === 0) diariasPorCliente[d.clienteCnpj].pendenteValor += 1;
+  }
+  const gruposDiarias = Object.values(diariasPorCliente).sort((a, b) => a.clienteNome.localeCompare(b.clienteNome));
+
   if (loading) return <><Topbar title="Faturamento" /><Loading /></>;
 
   const tabBtn = (key: TabKey, label: string, Icon: any, count?: number) => (
@@ -347,6 +438,7 @@ export default function FaturamentoPage() {
         <div className="flex gap-1 border-b" style={{ borderColor: "var(--border)" }}>
           {tabBtn("fretes", "Fretes (CT-es)", Truck, ctesAgrupados.reduce((s, g) => s + g.ctes.length, 0))}
           {tabBtn("armazenagem", "Armazenagem", Warehouse, armazenagemPendente.reduce((s: number, g: any) => s + g.entregas.length, 0))}
+          {tabBtn("diarias", "Diárias", DollarSign, diariasPendentes.length)}
           {tabBtn("faturas", "Faturas", Receipt, faturas.length + faturasArm.length)}
         </div>
 
@@ -538,6 +630,150 @@ export default function FaturamentoPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* ─── TAB: DIÁRIAS ────────────────────────────────────── */}
+        {tab === "diarias" && (
+          <div className="space-y-4">
+            {/* Header + KPIs */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Card className="p-4">
+                <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Total Pendente</div>
+                <div className="text-xl font-bold font-mono" style={{ color: "#d97706" }}>{formatCurrency(totalDiariasPendentes)}</div>
+                <div className="text-[10px]" style={{ color: "var(--text3)" }}>{diariasPendentes.length} diária(s)</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Pendentes de Valor</div>
+                <div className="text-xl font-bold font-mono" style={{ color: "#f97316" }}>{diariasPendentesValor}</div>
+                <div className="text-[10px]" style={{ color: "var(--text3)" }}>precisam ser preenchidas</div>
+              </Card>
+              <Card className="p-4">
+                <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Já Pagas</div>
+                <div className="text-xl font-bold font-mono" style={{ color: "#059669" }}>{diariasPagas.length}</div>
+                <button onClick={() => setShowDiariaHist((v) => !v)}
+                  className="text-[10px] hover:underline" style={{ color: "var(--accent)" }}>
+                  {showDiariaHist ? "Ocultar histórico" : "Ver histórico"}
+                </button>
+              </Card>
+            </div>
+
+            {/* Pendentes agrupadas por cliente */}
+            {gruposDiarias.length === 0 ? (
+              <Card><Empty icon="💰" text="Nenhuma diária pendente" /></Card>
+            ) : (
+              <div className="space-y-3">
+                {gruposDiarias.map((grupo) => (
+                  <Card key={grupo.clienteCnpj} className="p-0 overflow-hidden">
+                    <div className="px-4 py-3 border-b flex items-center justify-between"
+                      style={{ background: "var(--surface2)", borderColor: "var(--border)" }}>
+                      <div>
+                        <div className="text-sm font-bold">{grupo.clienteNome}</div>
+                        <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
+                          {formatCNPJ(grupo.clienteCnpj)} · {grupo.itens.length} diária(s)
+                          {grupo.pendenteValor > 0 && <> · <span style={{ color: "#d97706", fontWeight: "bold" }}>{grupo.pendenteValor} sem valor</span></>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[9px] uppercase" style={{ color: "var(--text3)" }}>Total</div>
+                        <div className="text-sm font-mono font-bold" style={{ color: "#d97706" }}>{formatCurrency(grupo.total)}</div>
+                      </div>
+                    </div>
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                      {grupo.itens.map((d: any) => {
+                        const isPendenteValor = d.valor === 0;
+                        return (
+                          <div key={d.id} className="px-4 py-3 flex items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-bold font-mono" style={{ color: "#b45309" }}>{d.numero}</span>
+                                {d.entrega && (
+                                  <button onClick={() => window.open(`/entregas/${d.entrega.id}`, "_blank")}
+                                    className="text-[10px] font-mono hover:underline"
+                                    style={{ color: "var(--accent)" }}>
+                                    Entrega {d.entrega.codigo}
+                                  </button>
+                                )}
+                                <span className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>{formatDate(d.dataOcorrencia)}</span>
+                                {isPendenteValor && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
+                                    style={{ background: "rgba(217,119,6,.15)", color: "#d97706" }}>
+                                    <AlertTriangle size={9} /> VALOR PENDENTE
+                                  </span>
+                                )}
+                              </div>
+                              {d.motivo && (
+                                <div className="text-[11px] mt-0.5" style={{ color: "var(--text2)" }}>{d.motivo}</div>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold font-mono" style={{ color: d.valor > 0 ? "#059669" : "#d97706" }}>
+                                {d.valor > 0 ? formatCurrency(d.valor) : "—"}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => openDiariaEdit(d)}
+                                className="p-1.5 rounded hover:bg-slate-100"
+                                title="Editar valor / motivo"
+                              >
+                                <Edit2 size={13} className="text-slate-500" />
+                              </button>
+                              <button
+                                onClick={() => openDiariaPagar(d)}
+                                disabled={isPendenteValor}
+                                className="text-[10px] font-bold px-2 py-1 rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{ background: "#059669", color: "white" }}
+                                title={isPendenteValor ? "Preencha o valor antes" : "Registrar recebimento"}
+                              >
+                                <CheckCircle2 size={11} className="inline mr-0.5" /> Receber
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Histórico de pagas */}
+            {showDiariaHist && (
+              <Card className="p-0 overflow-hidden">
+                <div className="px-4 py-3 border-b" style={{ background: "var(--surface2)", borderColor: "var(--border)" }}>
+                  <div className="text-sm font-bold">Histórico — Diárias Pagas</div>
+                </div>
+                {diariasPagas.length === 0 ? (
+                  <Empty icon="✓" text="Nenhuma diária paga ainda" />
+                ) : (
+                  <Table>
+                    <thead>
+                      <Tr>
+                        <Th>Número</Th>
+                        <Th>Cliente</Th>
+                        <Th>Entrega</Th>
+                        <Th>Motivo</Th>
+                        <Th>Data Pagamento</Th>
+                        <Th className="text-right">Valor</Th>
+                      </Tr>
+                    </thead>
+                    <tbody>
+                      {diariasPagas.map((d) => (
+                        <Tr key={d.id}>
+                          <Td><span className="font-mono font-bold" style={{ color: "#b45309" }}>{d.numero}</span></Td>
+                          <Td>{d.clienteNome}</Td>
+                          <Td>{d.entrega?.codigo || "—"}</Td>
+                          <Td className="text-xs">{d.motivo || "—"}</Td>
+                          <Td>{d.dataPagamento ? formatDate(d.dataPagamento) : "—"}</Td>
+                          <Td className="text-right font-mono font-bold" style={{ color: "#059669" }}>{formatCurrency(d.valor)}</Td>
+                        </Tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </Card>
+            )}
+          </div>
         )}
 
         {/* ─── TAB: FATURAS ────────────────────────────────────── */}
@@ -835,6 +1071,88 @@ export default function FaturamentoPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Editar Diária */}
+      <Modal open={!!diariaEdit} onClose={() => setDiariaEdit(null)} title={`Editar Diária ${diariaEdit?.numero || ""}`} size="sm">
+        {diariaEdit && (
+          <div className="space-y-4">
+            <div className="text-xs p-3 rounded-lg" style={{ background: "var(--surface2)", color: "var(--text2)" }}>
+              Entrega <strong>{diariaEdit.entrega?.codigo}</strong> — {diariaEdit.clienteNome}
+            </div>
+            <Input
+              label="Valor (R$)"
+              type="text"
+              value={diariaEditForm.valor}
+              onChange={(e) => setDiariaEditForm((f) => ({ ...f, valor: e.target.value }))}
+              placeholder="0,00"
+            />
+            <Input
+              label="Motivo"
+              value={diariaEditForm.motivo}
+              onChange={(e) => setDiariaEditForm((f) => ({ ...f, motivo: e.target.value }))}
+              placeholder="ex: atraso 1 dia"
+            />
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Observações</label>
+              <textarea
+                value={diariaEditForm.observacoes}
+                onChange={(e) => setDiariaEditForm((f) => ({ ...f, observacoes: e.target.value }))}
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg text-sm border"
+                style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }}
+              />
+            </div>
+          </div>
+        )}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <Button variant="ghost" onClick={() => setDiariaEdit(null)}>Cancelar</Button>
+          <Button onClick={handleSaveDiariaValor} loading={savingDiaria}>Salvar</Button>
+        </div>
+      </Modal>
+
+      {/* Registrar recebimento */}
+      <Modal open={!!diariaPagar} onClose={() => setDiariaPagar(null)} title={`Registrar Recebimento — ${diariaPagar?.numero || ""}`} size="sm">
+        {diariaPagar && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: "rgba(5,150,105,.08)", border: "1px solid rgba(5,150,105,.3)" }}>
+              <CheckCircle2 size={16} style={{ color: "#059669", flexShrink: 0, marginTop: 1 }} />
+              <div className="text-xs" style={{ color: "var(--text2)" }}>
+                Confirmando o recebimento de <strong>{formatCurrency(diariaPagar.valor)}</strong> de <strong>{diariaPagar.clienteNome}</strong>. Um lançamento RECEITA será criado em Financeiro.
+              </div>
+            </div>
+            <Input
+              label="Data do Pagamento"
+              type="date"
+              value={diariaPagarForm.dataPagamento}
+              onChange={(e) => setDiariaPagarForm((f) => ({ ...f, dataPagamento: e.target.value }))}
+            />
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-wider mb-1 block" style={{ color: "var(--text2)" }}>Forma de Pagamento</label>
+              <select
+                value={diariaPagarForm.formaPagamento}
+                onChange={(e) => setDiariaPagarForm((f) => ({ ...f, formaPagamento: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg text-sm border"
+                style={{ background: "var(--surface2)", borderColor: "var(--border)", color: "var(--text)" }}
+              >
+                <option value="PIX">PIX</option>
+                <option value="DINHEIRO">Dinheiro</option>
+                <option value="TRANSFERENCIA">Transferência</option>
+                <option value="BOLETO">Boleto</option>
+                <option value="CARTAO_CREDITO">Cartão Crédito</option>
+                <option value="CARTAO_DEBITO">Cartão Débito</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="OUTRO">Outro</option>
+              </select>
+            </div>
+          </div>
+        )}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <Button variant="ghost" onClick={() => setDiariaPagar(null)}>Cancelar</Button>
+          <Button onClick={handlePagarDiaria} loading={savingDiaria}>
+            <CheckCircle2 size={13} /> Confirmar Recebimento
+          </Button>
+        </div>
       </Modal>
     </>
   );

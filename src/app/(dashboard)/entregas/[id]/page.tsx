@@ -37,6 +37,9 @@ export default function EntregaDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [showComplFields, setShowComplFields] = useState(false);
   const [showOcorrencia, setShowOcorrencia] = useState(false);
+  const [showDiaria, setShowDiaria] = useState(false);
+  const [diariaForm, setDiariaForm] = useState({ motivo: "", valor: "", observacoes: "" });
+  const [savingDiaria, setSavingDiaria] = useState(false);
   const [motoristas, setMotoristas] = useState<any[]>([]);
   const [veiculos, setVeiculos] = useState<any[]>([]);
   const [editForm, setEditForm] = useState<any>({});
@@ -166,6 +169,34 @@ export default function EntregaDetailPage() {
       console.error("Erro ao salvar entrega:", err);
       toast.error(err.message || "Erro ao salvar");
     } finally { setSaving(false); }
+  }
+
+  async function handleGerarDiaria() {
+    setSavingDiaria(true);
+    try {
+      const res = await fetch("/api/diarias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entregaId: id,
+          motivo: diariaForm.motivo || null,
+          valor: diariaForm.valor ? parseFloat(diariaForm.valor.replace(",", ".")) : 0,
+          observacoes: diariaForm.observacoes || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Erro ao gerar diária");
+        return;
+      }
+      const updated = await fetch(`/api/entregas/${id}`).then((r) => r.json());
+      setEntrega(updated);
+      setShowDiaria(false);
+      setDiariaForm({ motivo: "", valor: "", observacoes: "" });
+      toast.success(`Diária ${data.numero} criada${data.valor === 0 ? " (valor pendente)" : ""}`);
+    } catch {
+      toast.error("Erro ao gerar diária");
+    } finally { setSavingDiaria(false); }
   }
 
   async function handleOcorrencia() {
@@ -389,6 +420,16 @@ export default function EntregaDetailPage() {
               <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}?motorista=complementar`, '_blank')}>
                 <Printer size={14} /> Carta Frete Compl.
               </Button>
+            )}
+            {!isReadOnly && (
+              <button
+                onClick={() => setShowDiaria(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-amber-50"
+                style={{ borderColor: "#d97706", color: "#d97706", background: "transparent" }}
+                title="Gerar diária (penalidade financeira sem alterar status)"
+              >
+                <DollarSign size={14} /> Gerar Diária
+              </button>
             )}
             {!isReadOnly && entrega.status !== "OCORRENCIA" && entrega.status !== "FINALIZADO" && (
               <Button variant="danger" size="sm" onClick={() => setShowOcorrencia(true)}>
@@ -764,6 +805,55 @@ export default function EntregaDetailPage() {
                  </Card>
                );
              })()}
+
+             {/* Diárias vinculadas — mostra se houver alguma */}
+             {entrega.diarias?.length > 0 && (
+               <Card>
+                 <div className="flex items-center gap-2 mb-3">
+                   <DollarSign size={14} style={{ color: "#d97706" }} />
+                   <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Diárias — {entrega.diarias.length}</span>
+                   <button
+                     onClick={() => router.push("/faturamento?tab=diarias")}
+                     className="ml-auto text-[10px] font-bold hover:underline"
+                     style={{ color: "var(--accent)" }}
+                   >
+                     Ver em Faturamento <ExternalLink size={9} className="inline" />
+                   </button>
+                 </div>
+                 <div className="space-y-2">
+                   {entrega.diarias.map((d: any) => {
+                     const isPaga = d.status === "PAGA";
+                     const isPendenteValor = d.valor === 0 && d.status === "PENDENTE";
+                     return (
+                       <div key={d.id} className="flex items-center justify-between p-2.5 rounded-lg"
+                         style={{ background: "rgba(217,119,6,.06)", border: "1px solid rgba(217,119,6,.25)" }}>
+                         <div className="flex-1 min-w-0">
+                           <div className="flex items-center gap-2 flex-wrap">
+                             <span className="text-sm font-bold font-mono" style={{ color: "#b45309" }}>{d.numero}</span>
+                             <span className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>{formatDate(d.dataOcorrencia)}</span>
+                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                               style={{
+                                 background: isPaga ? "rgba(16,185,129,.15)" : isPendenteValor ? "rgba(217,119,6,.15)" : "rgba(59,130,246,.15)",
+                                 color: isPaga ? "#059669" : isPendenteValor ? "#d97706" : "#2563eb",
+                               }}>
+                               {isPaga ? "PAGA" : isPendenteValor ? "VALOR PENDENTE" : "PENDENTE"}
+                             </span>
+                           </div>
+                           {d.motivo && (
+                             <div className="text-[11px] mt-0.5" style={{ color: "var(--text2)" }}>{d.motivo}</div>
+                           )}
+                         </div>
+                         <div className="text-right ml-3">
+                           <div className="text-sm font-bold font-mono" style={{ color: d.valor > 0 ? "#059669" : "#d97706" }}>
+                             {d.valor > 0 ? formatCurrency(d.valor) : "—"}
+                           </div>
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               </Card>
+             )}
 
              {/* NFS-e vinculadas — mostra se houver alguma */}
              {entrega.notasServico?.length > 0 && (
@@ -1179,6 +1269,53 @@ export default function EntregaDetailPage() {
           >
             <Plus size={13} /> Vincular {selectedNFIds.length > 0 ? `${selectedNFIds.length} NF(s)` : ""}
           </Button>
+        </div>
+      </Modal>
+
+      {/* Diária Modal */}
+      <Modal open={showDiaria} onClose={() => setShowDiaria(false)} title="Gerar Diária" size="sm">
+        <div className="space-y-4">
+          <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.3)" }}>
+            <DollarSign size={16} style={{ color: "#d97706", flexShrink: 0, marginTop: 1 }} />
+            <div className="text-xs" style={{ color: "var(--text2)" }}>
+              Cria uma cobrança de diária pro cliente <strong>{entrega?.razaoSocial}</strong>. A entrega continua com o status atual.
+            </div>
+          </div>
+          <Input
+            label="Motivo (opcional)"
+            value={diariaForm.motivo}
+            onChange={(e) => setDiariaForm((f) => ({ ...f, motivo: e.target.value }))}
+            placeholder="ex: atraso 1 dia, reagendamento"
+          />
+          <div>
+            <Input
+              label="Valor (R$)"
+              type="text"
+              value={diariaForm.valor}
+              onChange={(e) => setDiariaForm((f) => ({ ...f, valor: e.target.value }))}
+              placeholder="0,00"
+            />
+            <div className="text-[10px] mt-1" style={{ color: "var(--text3)" }}>
+              Deixe zerado para preencher o valor depois no Faturamento.
+            </div>
+          </div>
+          <Textarea
+            label="Observações"
+            value={diariaForm.observacoes}
+            onChange={(e) => setDiariaForm((f) => ({ ...f, observacoes: e.target.value }))}
+            rows={3}
+          />
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+          <Button variant="ghost" onClick={() => setShowDiaria(false)}>Cancelar</Button>
+          <button
+            onClick={handleGerarDiaria}
+            disabled={savingDiaria}
+            className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-lg transition-all hover:opacity-90 disabled:opacity-50"
+            style={{ background: "#d97706", color: "white" }}
+          >
+            <DollarSign size={14} /> {savingDiaria ? "Salvando..." : "Gerar Diária"}
+          </button>
         </div>
       </Modal>
 

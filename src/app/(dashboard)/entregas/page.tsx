@@ -671,6 +671,13 @@ export default function EntregasPage() {
                                 ⭐ Avaliada
                               </span>
                             )}
+                            {e.diarias?.length > 0 && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
+                                style={{ background: "rgba(217,119,6,.15)", color: "#d97706", border: "1px solid rgba(217,119,6,.3)" }}
+                                title={`${e.diarias.length} diária(s) — clique na entrega pra ver`}>
+                                💰 Diária{e.diarias.length > 1 ? `s (${e.diarias.length})` : ""}
+                              </span>
+                            )}
                           </div>
                         </Td>
                         <Td><span className="text-xs font-mono" style={{ color: "#10b981" }}>{formatCurrency(e.valorFrete)}</span></Td>

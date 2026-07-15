@@ -101,6 +101,12 @@ function KanbanCard({ entrega, overlay = false }: { entrega: any; overlay?: bool
               ⭐
             </span>
           )}
+          {entrega.diarias?.length > 0 && (
+            <span className="text-[10px] font-bold px-1 py-0.5 rounded"
+              title={`${entrega.diarias.length} diária(s)`} style={{ background: "rgba(217,119,6,.18)", color: "#b45309" }}>
+              💰
+            </span>
+          )}
           {entrega.dataAgendada && new Date(entrega.dataAgendada) < new Date() &&
             !["ENTREGUE", "FINALIZADO"].includes(entrega.status) && !entrega.isRota && (
             <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ background: "rgba(239,68,68,.2)", color: "#ef4444" }}>ATRASADO</span>

@@ -15,7 +15,7 @@ interface DefaultCategoria {
 const DEFAULT_CATEGORIAS: DefaultCategoria[] = [
   // RECEITAS
   { nome: "Frete", tipo: "RECEITA", ordem: 10, subcategorias: ["Frete Dedicado", "Frete Fracionado", "Reentrega"] },
-  { nome: "Armazenagem", tipo: "RECEITA", ordem: 20, subcategorias: ["Armazenagem Mensal", "Movimentação", "Paletização"] },
+  { nome: "Armazenagem", tipo: "RECEITA", ordem: 20, subcategorias: ["Armazenagem Mensal", "Movimentação", "Paletização", "Diária"] },
   { nome: "Reembolso de Pedágio", tipo: "RECEITA", ordem: 30 },
   { nome: "Outras Receitas", tipo: "RECEITA", ordem: 99 },
 
@@ -80,6 +80,20 @@ export async function getOrCreateCategoria(nome: string, tipo: TipoLancamento) {
   });
 }
 
+/**
+ * Garante que uma subcategoria existe dentro de uma categoria (upsert idempotente).
+ * Usado por origens novas (ex: Diária) que dependem de subcategorias adicionadas
+ * depois do seed inicial. Cria a categoria pai se não existir.
+ */
+export async function ensureSubcategoria(categoriaNome: string, tipo: TipoLancamento, subNome: string) {
+  const categoria = await getOrCreateCategoria(categoriaNome, tipo);
+  return prisma.subcategoriaFinanceira.upsert({
+    where: { categoriaId_nome: { categoriaId: categoria.id, nome: subNome } },
+    update: {},
+    create: { categoriaId: categoria.id, nome: subNome, ativo: true },
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Lançamentos automáticos idempotentes
 // ═══════════════════════════════════════════════════════════════
@@ -91,6 +105,7 @@ interface AutoLancamentoInput {
   valor: number;
   dataPagamento: Date;
   categoriaNome: string;
+  subcategoriaNome?: string | null;
   formaPagamento?: FormaPagamento | null;
   favorecido?: string | null;
   // chaves de idempotência (use só uma):
@@ -99,6 +114,7 @@ interface AutoLancamentoInput {
   contaPagarId?: string | null;
   entregaId?: string | null;
   rotaId?: string | null;
+  diariaId?: string | null;
 }
 
 /**
@@ -108,12 +124,16 @@ interface AutoLancamentoInput {
  */
 export async function upsertLancamentoAutomatico(input: AutoLancamentoInput) {
   const categoria = await getOrCreateCategoria(input.categoriaNome, input.tipo);
+  const subcategoria = input.subcategoriaNome
+    ? await ensureSubcategoria(input.categoriaNome, input.tipo, input.subcategoriaNome)
+    : null;
 
   // monta filtro pra buscar lançamento existente
   const where: any = { origem: input.origem };
   if (input.faturaId) where.faturaId = input.faturaId;
   else if (input.faturaArmazenagemId) where.faturaArmazenagemId = input.faturaArmazenagemId;
   else if (input.contaPagarId) where.contaPagarId = input.contaPagarId;
+  else if (input.diariaId) where.diariaId = input.diariaId;
   else if (input.entregaId) where.entregaId = input.entregaId;
   else if (input.rotaId) where.rotaId = input.rotaId;
   else return null; // sem chave de idempotência
@@ -129,6 +149,7 @@ export async function upsertLancamentoAutomatico(input: AutoLancamentoInput) {
     status: "PAGO" as const,
     origem: input.origem,
     categoriaId: categoria.id,
+    subcategoriaId: subcategoria?.id ?? null,
     formaPagamento: input.formaPagamento ?? null,
     favorecido: input.favorecido ?? null,
     faturaId: input.faturaId ?? null,
@@ -136,6 +157,7 @@ export async function upsertLancamentoAutomatico(input: AutoLancamentoInput) {
     contaPagarId: input.contaPagarId ?? null,
     entregaId: input.entregaId ?? null,
     rotaId: input.rotaId ?? null,
+    diariaId: input.diariaId ?? null,
   };
 
   if (existente) {
@@ -150,12 +172,13 @@ export async function upsertLancamentoAutomatico(input: AutoLancamentoInput) {
  */
 export async function removeLancamentoAutomatico(
   origem: OrigemLancamento,
-  key: { faturaId?: string; faturaArmazenagemId?: string; contaPagarId?: string; entregaId?: string; rotaId?: string }
+  key: { faturaId?: string; faturaArmazenagemId?: string; contaPagarId?: string; entregaId?: string; rotaId?: string; diariaId?: string }
 ) {
   const where: any = { origem };
   if (key.faturaId) where.faturaId = key.faturaId;
   else if (key.faturaArmazenagemId) where.faturaArmazenagemId = key.faturaArmazenagemId;
   else if (key.contaPagarId) where.contaPagarId = key.contaPagarId;
+  else if (key.diariaId) where.diariaId = key.diariaId;
   else if (key.entregaId) where.entregaId = key.entregaId;
   else if (key.rotaId) where.rotaId = key.rotaId;
   else return;

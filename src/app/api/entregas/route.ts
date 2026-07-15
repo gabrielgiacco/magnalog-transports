@@ -231,6 +231,7 @@ export async function GET(req: NextRequest) {
           notas: { select: { id: true, numero: true, chaveAcesso: true, valorNota: true, volumes: true, pesoBruto: true, emitenteRazao: true } },
           _count: { select: { notas: true, ocorrencias: true } },
           qualidade: { select: { id: true } },
+          diarias: { where: { status: { in: ["PENDENTE", "PAGA"] } }, select: { id: true, status: true, valor: true } },
         },
       }),
       prisma.entrega.count({ where }),

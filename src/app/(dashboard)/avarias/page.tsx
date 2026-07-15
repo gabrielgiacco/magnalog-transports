@@ -10,8 +10,10 @@ import {
 import { formatCurrency, formatDate, formatCNPJ } from "@/lib/utils";
 import {
   AlertTriangle, Plus, Search, RefreshCw, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calendar, Truck,
-  BarChart2, List, FileText, Package, TrendingUp, User, Filter, Upload, Square, CheckSquare, LogOut,
+  BarChart2, List, FileText, Package, TrendingUp, User, Filter, Upload, Square, CheckSquare, LogOut, DollarSign,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { DiariasTab } from "./DiariasTab";
 
 const TIPO_LABELS: Record<string, string> = {
   AVARIA: "Avaria", FALTA: "Falta", INVERSAO: "Inversão", SOBRA: "Sobra",
@@ -34,17 +36,19 @@ const TIPO_COLORS: Record<string, string> = {
   DEVOLUCAO: "#eab308", SEM_PEDIDO: "#6b7280",
 };
 
-type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias";
+type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias" | "diarias";
 
 export default function AvariasPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "ADMIN";
   const [tab, setTab] = useState<TabView>("dashboard");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const t = params.get("tab");
-      if (t && ["dashboard", "registros", "devolucoes", "ocorrencias"].includes(t)) {
+      if (t && ["dashboard", "registros", "devolucoes", "ocorrencias", "diarias"].includes(t)) {
         setTab(t as TabView);
       }
     }
@@ -448,6 +452,7 @@ export default function AvariasPage() {
             { key: "registros", label: "Registros", icon: List },
             { key: "devolucoes", label: "Devoluções", icon: FileText },
             { key: "ocorrencias", label: "Ocorrências", icon: AlertTriangle },
+            { key: "diarias", label: "Diárias", icon: DollarSign },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === t.key ? "bg-orange-500/10 text-orange-500 shadow-sm" : "text-[var(--text2)] hover:bg-[var(--surface)]"}`}>
@@ -1073,6 +1078,9 @@ export default function AvariasPage() {
             </Card>
           </>
         )}
+
+        {/* DIARIAS TAB */}
+        {tab === "diarias" && <DiariasTab isAdmin={isAdmin} />}
       </div>
 
       {/* BULK SAÍDA MODAL */}
