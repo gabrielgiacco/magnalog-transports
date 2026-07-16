@@ -89,11 +89,17 @@ export default function EntregaTrackingPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                {[
-                  { l: "Data Agendada", v: fmtDate(entrega.dataAgendada) },
-                  { l: "NFs", v: entrega._count?.notas ?? entrega.notas?.length ?? 0 },
-                  { l: "Data Entrega", v: ["ENTREGUE", "FINALIZADO"].includes(entrega.status) ? fmtDate(entrega.dataEntrega) : "—" },
-                ].map(item => (
+                {(() => {
+                  const entregue = ["ENTREGUE", "FINALIZADO"].includes(entrega.status);
+                  // Fallback: se dataAgendada é null e dataEntrega tem valor sem estar entregue,
+                  // provavelmente a data foi salva no campo errado — mostra como agendada
+                  const agendadaFallback = entrega.dataAgendada || (!entregue ? entrega.dataEntrega : null);
+                  return [
+                    { l: "Data Agendada", v: fmtDate(agendadaFallback) },
+                    { l: "NFs", v: entrega._count?.notas ?? entrega.notas?.length ?? 0 },
+                    { l: "Data Entrega", v: entregue ? fmtDate(entrega.dataEntrega) : "—" },
+                  ];
+                })().map(item => (
                   <div key={item.l} className="rounded-xl p-3 text-center" style={{ background: "var(--surface2)" }}>
                     <div className="text-[9px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>{item.l}</div>
                     <div className="font-mono text-sm font-semibold">{item.v}</div>
