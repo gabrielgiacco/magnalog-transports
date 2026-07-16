@@ -92,7 +92,7 @@ export default function EntregaTrackingPage() {
                 {[
                   { l: "Data Agendada", v: fmtDate(entrega.dataAgendada) },
                   { l: "NFs", v: entrega._count?.notas ?? entrega.notas?.length ?? 0 },
-                  { l: "Data Entrega", v: fmtDate(entrega.dataEntrega) },
+                  { l: "Data Entrega", v: ["ENTREGUE", "FINALIZADO"].includes(entrega.status) ? fmtDate(entrega.dataEntrega) : "—" },
                 ].map(item => (
                   <div key={item.l} className="rounded-xl p-3 text-center" style={{ background: "var(--surface2)" }}>
                     <div className="text-[9px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>{item.l}</div>
@@ -187,7 +187,7 @@ export default function EntregaTrackingPage() {
                                 style={{ background: `${STATUS_COLORS[step.key]}20`, color: STATUS_COLORS[step.key] }}>ATUAL</span>}
                             </div>
                             <div className="text-xs mt-0.5" style={{ color: "var(--text3)" }}>{step.desc}</div>
-                            {step.key === "ENTREGUE" && entrega.dataEntrega && (
+                            {step.key === "ENTREGUE" && ["ENTREGUE", "FINALIZADO"].includes(entrega.status) && entrega.dataEntrega && (
                               <div className="text-xs mt-0.5 font-mono" style={{ color: "#10b981" }}>
                                 Entregue em {fmtDate(entrega.dataEntrega)}
                               </div>
