@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       cnh: body.cnh || null,
       categoriaCnh: body.categoriaCnh || null,
       telefone: body.telefone || null,
+      pix: body.pix || null,
       tipo: body.tipo || "TERCEIRO",
       valorDiaria: body.valorDiaria ? parseFloat(body.valorDiaria) : null,
     },

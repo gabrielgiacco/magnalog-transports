@@ -189,6 +189,7 @@ model Motorista {
   cnh           String?
   categoriaCnh  String?
   telefone      String?
+  pix           String?
   ativo         Boolean       @default(true)
   tipo          TipoMotorista @default(TERCEIRO)
   valorDiaria   Float? // Usado se tipo == DIARIA

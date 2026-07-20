@@ -212,6 +212,7 @@ export default async function AcertoMotoristaPage({ searchParams }: { searchPara
             <div className="w-[55%] space-y-1 pl-2">
               <div className="flex"><div className="font-bold w-20">CNH:</div><div>{motorista.cnh || "—"}</div><div className="font-bold ml-6 mr-2">CATEGORIA:</div><div>{motorista.categoriaCnh || "—"}</div></div>
               <div className="flex"><div className="font-bold w-20">TELEFONE:</div><div>{motorista.telefone || "—"}</div></div>
+              <div className="flex"><div className="font-bold w-20">PIX:</div><div className="font-mono">{motorista.pix || "—"}</div></div>
             </div>
           </div>
 

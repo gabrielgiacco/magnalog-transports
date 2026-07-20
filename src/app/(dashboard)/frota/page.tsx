@@ -5,7 +5,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, Modal, Input, Select } from "@/components/ui";
 import { Plus, Edit2, Phone, FileText, User as UserIcon, Truck as TruckIcon, Search, X } from "lucide-react";
 
-const B_MOT = { nome: "", cpf: "", cnh: "", categoriaCnh: "E", telefone: "", tipo: "TERCEIRO", valorDiaria: "" };
+const B_MOT = { nome: "", cpf: "", cnh: "", categoriaCnh: "E", telefone: "", pix: "", tipo: "TERCEIRO", valorDiaria: "" };
 const B_VEI = { placa: "", tipo: "TRUCK", modelo: "", ano: "", capacidadeKg: "", motoristaId: "", donoId: "" };
 
 const TIPOS: Record<string, { label: string; icon: string; color: string }> = {
@@ -54,7 +54,7 @@ export default function FrotaPage() {
 
   function openEditMot(m: any) {
     setFormType("motorista"); setEditing(m);
-    setFormMot({ nome: m.nome, cpf: m.cpf || "", cnh: m.cnh || "", categoriaCnh: m.categoriaCnh || "E", telefone: m.telefone || "", tipo: m.tipo || "TERCEIRO", valorDiaria: m.valorDiaria ? String(m.valorDiaria) : "" });
+    setFormMot({ nome: m.nome, cpf: m.cpf || "", cnh: m.cnh || "", categoriaCnh: m.categoriaCnh || "E", telefone: m.telefone || "", pix: m.pix || "", tipo: m.tipo || "TERCEIRO", valorDiaria: m.valorDiaria ? String(m.valorDiaria) : "" });
     setShowModal(true);
   }
 
@@ -242,7 +242,8 @@ export default function FrotaPage() {
               {["A", "B", "AB", "C", "D", "E", "AC", "AD", "AE"].map((c) => <option key={c} value={c}>Categoria {c}</option>)}
             </Select>
             <Input label="Telefone" value={formMot.telefone} onChange={(e) => setM("telefone", e.target.value)} placeholder="(11) 99999-9999" />
-            
+            <Input label="Pix" value={formMot.pix} onChange={(e) => setM("pix", e.target.value)} placeholder="CPF, telefone, e-mail ou chave aleatória" />
+
             <Select label="Tipo de Contrato" value={formMot.tipo} onChange={(e) => setM("tipo", e.target.value)}>
               <option value="TERCEIRO">Frete a Combinar (Terceiro)</option>
               <option value="FROTA">Salário Fixo (Frota Própria - Custo R$0)</option>
