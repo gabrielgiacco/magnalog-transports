@@ -356,11 +356,43 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       },
     });
 
-    // Parse XML of each NF to include products and additional data
+    // Fetch palletizing rules pra enriquecer os produtos (mesma lógica do GET) —
+    // sem isso, o frontend perde `p.norma` no response do PATCH e a aba
+    // Paletização mostra "Sem norma" até o próximo refresh.
+    const emitentesCnpjsRes = Array.from(new Set(entrega.notas.map((n: any) => n.emitenteCnpj).filter(Boolean))) as string[];
+    const cleanClienteCnpj = String(entrega.cnpj).replace(/\D/g, "");
+    const cleanEmitentesCnpjsRes = emitentesCnpjsRes.map((c) => String(c).replace(/\D/g, ""));
+    const normasRes = await prisma.normaPaletizacao.findMany({
+      where: { clienteCnpj: cleanClienteCnpj, fornecedorCnpj: { in: cleanEmitentesCnpjsRes } },
+    });
+    const normasMapRes = new Map<string, any>();
+    for (const n of normasRes) {
+      normasMapRes.set(`${n.fornecedorCnpj}_${n.codigoProduto}`, n);
+    }
+
+    // Parse XML of each NF to include products, additional data and palletizing rules
     const notasComProdutos = entrega.notas.map((nf) => {
       const { produtos, infAdicionais, infFisco, emitente } = parseNFProducts(nf.xmlOriginal);
+      const cleanFornecedorCnpj = String(nf.emitenteCnpj).replace(/\D/g, "");
+      const produtosComNormas = produtos.map((p: any) => {
+        const norma = normasMapRes.get(`${cleanFornecedorCnpj}_${p.codigo}`);
+        if (norma) {
+          const paletesEstimados = p.quantidade / (norma.quantidadeCaixasPalete || 1);
+          return {
+            ...p,
+            norma: {
+              lastro: norma.lastro,
+              altura: norma.altura,
+              quantidadeCaixasPalete: norma.quantidadeCaixasPalete,
+              embalagem: norma.embalagem,
+            },
+            paletesEstimados,
+          };
+        }
+        return { ...p, norma: null, paletesEstimados: 0 };
+      });
       const { xmlOriginal, ...nfSemXml } = nf;
-      return { ...nfSemXml, produtos, infAdicionais, infFisco, emitente };
+      return { ...nfSemXml, produtos: produtosComNormas, infAdicionais, infFisco, emitente };
     });
 
     // Compute armazenagem automatically from TabelaArmazenagem per fornecedor/emitente das NFs
