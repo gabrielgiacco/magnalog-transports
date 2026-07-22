@@ -407,13 +407,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
         {/* Tabs */}
         <div className="flex items-center gap-6 border-b" style={{ borderColor: "var(--border)" }}>
           <button 
-            className={`pb-3 font-head font-bold text-sm transition-colors ${abaAtiva === "acertos" ? "text-rose-600 border-b-2 border-rose-600" : "text-gray-400 hover:text-gray-600"}`}
+            className={`pb-3 font-head font-bold text-sm transition-colors ${abaAtiva === "acertos" ? "text-rose-600 border-b-2 border-rose-600" : "text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300"}`}
             onClick={() => setAbaAtiva("acertos")}
           >
             Acertos Pendentes
           </button>
           <button 
-            className={`pb-3 font-head font-bold text-sm transition-colors ${abaAtiva === "previsao" ? "text-rose-600 border-b-2 border-rose-600" : "text-gray-400 hover:text-gray-600"}`}
+            className={`pb-3 font-head font-bold text-sm transition-colors ${abaAtiva === "previsao" ? "text-rose-600 border-b-2 border-rose-600" : "text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300"}`}
             onClick={() => setAbaAtiva("previsao")}
           >
             Previsões de Pagamento
@@ -462,7 +462,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
               <div className="font-head text-xs sm:text-sm font-black truncate" style={{ color: "#ef4444" }}>{formatCurrency(filteredTotais.descontosMotorista ?? 0)}</div>
             </div>
           </Card>
-          <Card className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border border-rose-200 col-span-2 sm:col-span-1">
+          <Card className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border border-rose-200 dark:border-rose-900/40 col-span-2 sm:col-span-1">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: "rgba(244,63,94,.1)", border: "1px solid rgba(244,63,94,.25)" }}>
               <Clock size={16} style={{ color: "#f43f5e" }} />
@@ -541,7 +541,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
               {(dataInicio || dataFim) && (
                 <button
                   onClick={() => { handlePresetChange("todos"); }}
-                  className="text-[10px] font-bold text-rose-500 hover:text-rose-600 px-2 py-1 rounded-md hover:bg-rose-50 transition-colors"
+                  className="text-[10px] font-bold text-rose-500 hover:text-rose-600 px-2 py-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   Limpar
                 </button>
@@ -620,7 +620,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                 setFilterSaldo(null);
                 setFilterDataPgto("");
               }}
-              className="text-xs font-bold text-rose-500 hover:text-rose-600 px-2 py-1 rounded hover:bg-rose-50 transition-colors ml-auto"
+              className="text-xs font-bold text-rose-500 hover:text-rose-600 px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors ml-auto"
             >
               Limpar Todos
             </button>
@@ -635,7 +635,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
               {filteredEntregas.map((e) => {
                 const isSelected = selectedIds.some(s => s.id === e.id);
                 return (
-                <div key={e.id} className={`p-3 transition-colors active:bg-slate-50 ${e.isDiariaExtra ? "opacity-60" : ""} ${isSelected ? "bg-rose-50/40" : ""}`}>
+                <div key={e.id} className={`p-3 transition-colors active:bg-slate-50 dark:active:bg-neutral-900 ${e.isDiariaExtra ? "opacity-60" : ""} ${isSelected ? "bg-rose-50/40 dark:bg-rose-950/30" : ""}`}>
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-2 min-w-0 flex-wrap">
                       <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer"
@@ -648,38 +648,38 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase ${e.isRota ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-blue-100 text-blue-700 border border-blue-200"}`}>
                         {e.isRota ? "Rota" : "Direta"}
                       </span>
-                      <span className="font-mono text-xs font-bold text-gray-700 truncate">{getIdentificador(e)}</span>
+                      <span className="font-mono text-xs font-bold text-gray-700 dark:text-neutral-300 truncate">{getIdentificador(e)}</span>
                       {e.isDiariaPrincipal && e.diariaQtdViagens > 1 && (
                         <span className="px-1.5 py-0.5 rounded-md text-[8px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           DIARIA {e.diariaQtdSaidas} {e.diariaQtdSaidas === 1 ? "saida" : "saidas"}{e.diariaQtdDiretas > 0 && e.diariaQtdRotas > 0 ? ` + ${e.diariaQtdDiretas} dir.` : ""}
                         </span>
                       )}
                       {e.isDiariaExtra && (
-                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-bold bg-gray-100 text-gray-400 border border-gray-200">
+                        <span className="px-1.5 py-0.5 rounded-md text-[8px] font-bold bg-gray-100 dark:bg-neutral-800 text-gray-400 dark:text-neutral-500 border border-gray-200 dark:border-neutral-700">
                           Incluso na diaria
                         </span>
                       )}
                     </div>
                     <StatusBadge status={e.statusCanhoto || "PENDENTE"} />
                   </div>
-                  <div onClick={() => setFilterMotorista(e.donoVeiculo?.nome || e.motorista?.nome || "")} className="font-bold text-sm text-gray-800 uppercase truncate cursor-pointer hover:underline" title={e.donoVeiculo ? `Dono: ${e.donoVeiculo.nome}${e.donoVeiculo.telefone ? ` · ${e.donoVeiculo.telefone}` : ""}` : ""}>
+                  <div onClick={() => setFilterMotorista(e.donoVeiculo?.nome || e.motorista?.nome || "")} className="font-bold text-sm text-gray-800 dark:text-neutral-100 uppercase truncate cursor-pointer hover:underline" title={e.donoVeiculo ? `Dono: ${e.donoVeiculo.nome}${e.donoVeiculo.telefone ? ` · ${e.donoVeiculo.telefone}` : ""}` : ""}>
                     {e.donoVeiculo?.nome || e.motorista?.nome || "Motorista nao vinculado"}
                     {e.donoVeiculo && <span className="ml-1 text-[9px] font-mono px-1.5 py-0.5 rounded align-middle" style={{ background: "rgba(245,158,11,.15)", color: "#d97706" }}>DONO</span>}
                   </div>
                   {e.donoVeiculo && e.motorista && e.donoVeiculo.nome !== e.motorista.nome && (
-                    <div className="text-[10px] text-gray-500 truncate -mt-0.5">🚛 Dirigiu: {e.motorista.nome}</div>
+                    <div className="text-[10px] text-gray-500 dark:text-neutral-400 truncate -mt-0.5">🚛 Dirigiu: {e.motorista.nome}</div>
                   )}
                   <div onClick={() => {
                     const d = e.dataEntrega || e.dataAgendada || "";
                     if (d) setFilterDataFrete(new Date(d).toISOString().slice(0, 10));
-                  }} className="text-[10px] text-gray-400 font-mono truncate cursor-pointer hover:underline">Para: {e.cidade} - {formatDate(e.dataEntrega || e.dataAgendada) || "-"}</div>
+                  }} className="text-[10px] text-gray-400 dark:text-neutral-500 font-mono truncate cursor-pointer hover:underline">Para: {e.cidade} - {formatDate(e.dataEntrega || e.dataAgendada) || "-"}</div>
                   <div className="grid grid-cols-2 gap-1.5 mt-2 text-[11px]">
-                    <div onClick={() => setFilterFreteCombinado(e.valorMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400">Combinado: </span><span className="font-mono font-bold text-orange-500">{formatCurrency(e.valorMotorista)}</span></div>
-                    <div onClick={() => setFilterValesSaida(e.valorSaida)} className="cursor-pointer hover:underline"><span className="text-gray-400">Vales: </span><span className="font-mono text-gray-600">{formatCurrency(e.valorSaida)}</span></div>
-                    <div onClick={() => setFilterAdiantamento(e.adiantamentoMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400">Adiant.: </span><span className="font-mono text-blue-500 font-bold">{formatCurrency(e.adiantamentoMotorista)}</span></div>
-                    <div onClick={() => setFilterDesconto(e.descontosMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400">Desc.: </span><span className="font-mono text-red-500 font-bold">{formatCurrency(e.descontosMotorista)}</span></div>
+                    <div onClick={() => setFilterFreteCombinado(e.valorMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400 dark:text-neutral-500">Combinado: </span><span className="font-mono font-bold text-orange-500">{formatCurrency(e.valorMotorista)}</span></div>
+                    <div onClick={() => setFilterValesSaida(e.valorSaida)} className="cursor-pointer hover:underline"><span className="text-gray-400 dark:text-neutral-500">Vales: </span><span className="font-mono text-gray-600">{formatCurrency(e.valorSaida)}</span></div>
+                    <div onClick={() => setFilterAdiantamento(e.adiantamentoMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400 dark:text-neutral-500">Adiant.: </span><span className="font-mono text-blue-500 font-bold">{formatCurrency(e.adiantamentoMotorista)}</span></div>
+                    <div onClick={() => setFilterDesconto(e.descontosMotorista)} className="cursor-pointer hover:underline"><span className="text-gray-400 dark:text-neutral-500">Desc.: </span><span className="font-mono text-red-500 font-bold">{formatCurrency(e.descontosMotorista)}</span></div>
                   </div>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800">
                     <div>
                       <div className="text-[9px] uppercase font-bold text-rose-500">Saldo</div>
                       <div onClick={() => setFilterSaldo(e.saldoMotorista)} className={`font-mono text-sm font-black cursor-pointer hover:underline ${e.saldoMotorista > 0 ? "text-rose-600" : "text-emerald-500"}`}>
@@ -698,7 +698,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
 
             <div className="hidden lg:block pb-20">
             <Table>
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="bg-gray-50 dark:bg-neutral-900 border-b border-gray-100 dark:border-neutral-800">
                 <tr>
                   <Th className="w-10 text-center">
                     <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer"
@@ -716,7 +716,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       {sortColumn === "motorista" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterMotorista ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterMotorista ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "motorista" && (
@@ -724,13 +724,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("motorista"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "motorista" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "motorista" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("motorista"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "motorista" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "motorista" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -760,7 +760,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterMotorista || sortColumn === "motorista") && (
                           <button
                             onClick={() => { setFilterMotorista(""); if (sortColumn === "motorista") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -774,7 +774,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       {sortColumn === "dataFrete" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterDataFrete ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterDataFrete ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "dataFrete" && (
@@ -782,13 +782,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("dataFrete"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataFrete" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataFrete" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("dataFrete"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataFrete" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataFrete" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -815,7 +815,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterDataFrete || sortColumn === "dataFrete") && (
                           <button
                             onClick={() => { setFilterDataFrete(""); if (sortColumn === "dataFrete") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -830,7 +830,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       {sortColumn === "freteCombinado" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterFreteCombinado !== null ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterFreteCombinado !== null ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "freteCombinado" && (
@@ -838,13 +838,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("freteCombinado"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "freteCombinado" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "freteCombinado" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("freteCombinado"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "freteCombinado" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "freteCombinado" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -864,7 +864,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterFreteCombinado !== null || sortColumn === "freteCombinado") && (
                           <button
                             onClick={() => { setFilterFreteCombinado(null); if (sortColumn === "freteCombinado") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -878,7 +878,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       {sortColumn === "valesSaida" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterValesSaida !== null ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterValesSaida !== null ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "valesSaida" && (
@@ -886,13 +886,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("valesSaida"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "valesSaida" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "valesSaida" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("valesSaida"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "valesSaida" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "valesSaida" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -912,7 +912,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterValesSaida !== null || sortColumn === "valesSaida") && (
                           <button
                             onClick={() => { setFilterValesSaida(null); if (sortColumn === "valesSaida") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -926,7 +926,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       {sortColumn === "descarga" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterDescarga !== null ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterDescarga !== null ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "descarga" && (
@@ -934,13 +934,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("descarga"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "descarga" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "descarga" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("descarga"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "descarga" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "descarga" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -960,7 +960,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterDescarga !== null || sortColumn === "descarga") && (
                           <button
                             onClick={() => { setFilterDescarga(null); if (sortColumn === "descarga") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -974,7 +974,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       {sortColumn === "adiantamento" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterAdiantamento !== null ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterAdiantamento !== null ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "adiantamento" && (
@@ -982,13 +982,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("adiantamento"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "adiantamento" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "adiantamento" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("adiantamento"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "adiantamento" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "adiantamento" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -1008,7 +1008,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterAdiantamento !== null || sortColumn === "adiantamento") && (
                           <button
                             onClick={() => { setFilterAdiantamento(null); if (sortColumn === "adiantamento") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -1022,7 +1022,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       {sortColumn === "desconto" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterDesconto !== null ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterDesconto !== null ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "desconto" && (
@@ -1030,13 +1030,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("desconto"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "desconto" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "desconto" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("desconto"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "desconto" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "desconto" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -1056,7 +1056,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterDesconto !== null || sortColumn === "desconto") && (
                           <button
                             onClick={() => { setFilterDesconto(null); if (sortColumn === "desconto") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -1064,13 +1064,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       </div>
                     )}
                   </Th>
-                  <Th className="text-right bg-rose-50 text-rose-700 relative">
+                  <Th className="text-right bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 relative">
                     <div className="flex items-center justify-end gap-1 cursor-pointer select-none" onClick={() => setOpenDropdown(openDropdown === "saldo" ? null : "saldo")}>
                       <span>Saldo a Pagar</span>
                       {sortColumn === "saldo" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterSaldo !== null ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterSaldo !== null ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "saldo" && (
@@ -1078,13 +1078,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("saldo"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "saldo" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "saldo" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("saldo"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "saldo" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "saldo" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -1104,7 +1104,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterSaldo !== null || sortColumn === "saldo") && (
                           <button
                             onClick={() => { setFilterSaldo(null); if (sortColumn === "saldo") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -1118,7 +1118,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                       {sortColumn === "dataPgto" ? (
                         sortDirection === "asc" ? <ArrowUp size={10} className="text-rose-500" /> : <ArrowDown size={10} className="text-rose-500" />
                       ) : (
-                        <Search size={10} className={filterDataPgto ? "text-rose-500" : "text-gray-400"} />
+                        <Search size={10} className={filterDataPgto ? "text-rose-500" : "text-gray-400 dark:text-neutral-500"} />
                       )}
                     </div>
                     {openDropdown === "dataPgto" && (
@@ -1126,13 +1126,13 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <div className="flex gap-1 mb-2 pb-2 border-b border-[var(--border)]">
                           <button
                             onClick={() => { setSortColumn("dataPgto"); setSortDirection("asc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataPgto" && sortDirection === "asc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataPgto" && sortDirection === "asc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowUp size={10} /> Crescente
                           </button>
                           <button
                             onClick={() => { setSortColumn("dataPgto"); setSortDirection("desc"); setOpenDropdown(null); }}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataPgto" && sortDirection === "desc" ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
+                            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded text-[10px] font-bold border transition-colors ${sortColumn === "dataPgto" && sortDirection === "desc" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40" : "bg-[var(--surface2)] text-[var(--text2)] border-[var(--border)] hover:opacity-85"}`}
                           >
                             <ArrowDown size={10} /> Decrescente
                           </button>
@@ -1159,7 +1159,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         {(filterDataPgto || sortColumn === "dataPgto") && (
                           <button
                             onClick={() => { setFilterDataPgto(""); if (sortColumn === "dataPgto") { setSortColumn(null); setSortDirection(null); } setOpenDropdown(null); }}
-                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
+                            className="w-full text-center mt-2 pt-2 border-t border-gray-100 dark:border-neutral-800 text-[10px] font-bold text-rose-500 hover:text-rose-600 block"
                           >
                             Limpar Filtros / Ordenação
                           </button>
@@ -1174,7 +1174,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                 {sortedEntregas.map((e) => {
                   const isSelected = selectedIds.some(s => s.id === e.id);
                   return (
-                  <Tr key={e.id} className={`hover:bg-slate-50 transition-colors ${e.isDiariaExtra ? "opacity-50" : ""} ${isSelected ? "bg-rose-50/40" : ""}`}>
+                  <Tr key={e.id} className={`hover:bg-slate-50 dark:hover:bg-neutral-900 transition-colors ${e.isDiariaExtra ? "opacity-50" : ""} ${isSelected ? "bg-rose-50/40 dark:bg-rose-950/30" : ""}`}>
                     <Td className="text-center">
                       <input type="checkbox" className="accent-rose-500 w-4 h-4 cursor-pointer"
                         checked={isSelected}
@@ -1189,25 +1189,25 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                         <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase ${e.isRota ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-blue-100 text-blue-700 border border-blue-200"}`}>
                           {e.isRota ? "Rota" : "Direta"}
                         </span>
-                        <span className="font-mono text-xs font-bold text-gray-700">
+                        <span className="font-mono text-xs font-bold text-gray-700 dark:text-neutral-300">
                           {getIdentificador(e)}
                         </span>
                         {e.isDiariaExtra && (
-                          <span className="px-1.5 py-0.5 rounded-md text-[8px] font-bold bg-gray-100 text-gray-400 border border-gray-200">
+                          <span className="px-1.5 py-0.5 rounded-md text-[8px] font-bold bg-gray-100 dark:bg-neutral-800 text-gray-400 dark:text-neutral-500 border border-gray-200 dark:border-neutral-700">
                             Incluso na diaria
                           </span>
                         )}
                       </div>
                     </Td>
-                    <Td onClick={() => setFilterMotorista(e.donoVeiculo?.nome || e.motorista?.nome || "")} className="cursor-pointer hover:bg-rose-50/50 transition-colors">
-                      <div className="font-bold text-sm text-gray-800 uppercase hover:underline" title={e.donoVeiculo ? `Dono: ${e.donoVeiculo.nome}${e.donoVeiculo.telefone ? ` · ${e.donoVeiculo.telefone}` : ""}` : ""}>
+                    <Td onClick={() => setFilterMotorista(e.donoVeiculo?.nome || e.motorista?.nome || "")} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors">
+                      <div className="font-bold text-sm text-gray-800 dark:text-neutral-100 uppercase hover:underline" title={e.donoVeiculo ? `Dono: ${e.donoVeiculo.nome}${e.donoVeiculo.telefone ? ` · ${e.donoVeiculo.telefone}` : ""}` : ""}>
                         {e.donoVeiculo?.nome || e.motorista?.nome || "Motorista não vinculado"}
                         {e.donoVeiculo && <span className="ml-1 text-[9px] font-mono px-1.5 py-0.5 rounded align-middle" style={{ background: "rgba(245,158,11,.15)", color: "#d97706" }}>DONO</span>}
                       </div>
                       {e.donoVeiculo && e.motorista && e.donoVeiculo.nome !== e.motorista.nome && (
-                        <div className="text-[10px] text-gray-500">🚛 Dirigiu: {e.motorista.nome}</div>
+                        <div className="text-[10px] text-gray-500 dark:text-neutral-400">🚛 Dirigiu: {e.motorista.nome}</div>
                       )}
-                      <div className="text-[10px] text-gray-400 font-mono">
+                      <div className="text-[10px] text-gray-400 dark:text-neutral-500 font-mono">
                         {e.isDiariaPrincipal && e.diariaQtdViagens > 1
                           ? <span className="text-emerald-600 font-bold">Diaria — {e.diariaQtdSaidas} {e.diariaQtdSaidas === 1 ? "saida" : "saidas"} no dia{e.diariaQtdDiretas > 0 && e.diariaQtdRotas > 0 ? ` + ${e.diariaQtdDiretas} direta(s)` : ""}</span>
                           : `Rota para: ${e.cidade}`
@@ -1217,7 +1217,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                     <Td onClick={() => {
                       const d = e.dataEntrega || e.dataAgendada || "";
                       if (d) setFilterDataFrete(new Date(d).toISOString().slice(0, 10));
-                    }} className="cursor-pointer hover:bg-rose-50/50 transition-colors">
+                    }} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors">
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-[11px] font-semibold hover:underline" style={{ color: "var(--text2)" }}>
                           {formatDate(e.dataEntrega || e.dataAgendada) || "-"}
@@ -1234,23 +1234,23 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                     <Td>
                       <StatusBadge status={e.statusCanhoto || "PENDENTE"} />
                     </Td>
-                    <Td onClick={() => setFilterFreteCombinado(e.valorMotorista)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right">
+                    <Td onClick={() => setFilterFreteCombinado(e.valorMotorista)} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors text-right">
                       <span className={`font-mono text-sm font-bold hover:underline ${e.isDiariaExtra ? "text-gray-300" : "text-orange-500"}`}>{formatCurrency(e.valorMotorista)}</span>
                     </Td>
-                    <Td onClick={() => setFilterValesSaida(e.valorSaida)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right">
-                      <span className="font-mono text-xs text-gray-500 hover:underline">{formatCurrency(e.valorSaida)}</span>
+                    <Td onClick={() => setFilterValesSaida(e.valorSaida)} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors text-right">
+                      <span className="font-mono text-xs text-gray-500 dark:text-neutral-400 hover:underline">{formatCurrency(e.valorSaida)}</span>
                     </Td>
-                    <Td onClick={() => setFilterDescarga(e.valorDescarga)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right">
-                      <span className="font-mono text-xs text-gray-500 hover:underline">{formatCurrency(e.valorDescarga)}</span>
+                    <Td onClick={() => setFilterDescarga(e.valorDescarga)} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors text-right">
+                      <span className="font-mono text-xs text-gray-500 dark:text-neutral-400 hover:underline">{formatCurrency(e.valorDescarga)}</span>
                     </Td>
-                    <Td onClick={() => setFilterAdiantamento(e.adiantamentoMotorista)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right text-gray-500">
+                    <Td onClick={() => setFilterAdiantamento(e.adiantamentoMotorista)} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors text-right text-gray-500 dark:text-neutral-400">
                         <div className="font-mono text-xs text-blue-500 font-bold hover:underline">{formatCurrency(e.adiantamentoMotorista)}</div>
                         <div className="text-[9px] font-mono">{formatDate(e.dataAdiantamento)}</div>
                     </Td>
-                    <Td onClick={() => setFilterDesconto(e.descontosMotorista)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right">
+                    <Td onClick={() => setFilterDesconto(e.descontosMotorista)} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors text-right">
                       <span className="font-mono text-xs text-red-500 font-bold hover:underline">{formatCurrency(e.descontosMotorista)}</span>
                     </Td>
-                    <Td onClick={() => setFilterSaldo(e.saldoMotorista)} className="cursor-pointer hover:bg-rose-50/50 transition-colors text-right bg-rose-50/30">
+                    <Td onClick={() => setFilterSaldo(e.saldoMotorista)} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors text-right bg-rose-50/30 dark:bg-rose-950/20">
                       <span className={`font-mono text-sm font-black hover:underline ${e.saldoMotorista > 0 ? "text-rose-600" : "text-emerald-500"}`}>
                         {formatCurrency(e.saldoMotorista)}
                       </span>
@@ -1258,7 +1258,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
                     <Td onClick={() => {
                       const d = e.dataPagamentoSaldo || "";
                       if (d) setFilterDataPgto(new Date(d).toISOString().slice(0, 10));
-                    }} className="cursor-pointer hover:bg-rose-50/50 transition-colors">
+                    }} className="cursor-pointer hover:bg-rose-50/50 dark:hover:bg-rose-950/40 transition-colors">
                       <span className="font-mono text-[10px] font-bold hover:underline" style={{ color: "var(--text3)" }}>{formatDate(e.dataPagamentoSaldo) || "-"}</span>
                     </Td>
                     <Td>
@@ -1288,7 +1288,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
           <Button size="sm" onClick={handleBulkRemove} disabled={saving} className="bg-gray-700 hover:bg-gray-600 text-white border-none rounded-full px-4">
             Remover Previsão
           </Button>
-          <button onClick={() => setSelectedIds([])} className="w-6 h-6 flex items-center justify-center hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors" title="Limpar Seleção">
+          <button onClick={() => setSelectedIds([])} className="w-6 h-6 flex items-center justify-center hover:bg-gray-800 rounded-full text-gray-400 dark:text-neutral-500 hover:text-white transition-colors" title="Limpar Seleção">
             ×
           </button>
         </div>
@@ -1299,10 +1299,10 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Defina a data de previsão de pagamento para as <strong>{selectedIds.length}</strong> viagens selecionadas.</p>
           <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Data de Previsão</label>
+            <label className="text-[10px] font-bold text-gray-500 dark:text-neutral-400 uppercase mb-1 block">Data de Previsão</label>
             <Input type="date" value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
           </div>
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100 dark:border-neutral-800">
             <Button variant="ghost" onClick={() => setShowBulkPredict(false)}>Cancelar</Button>
             <Button onClick={handleBulkSave} disabled={saving || !bulkDate} className="bg-rose-600 hover:bg-rose-700 text-white">
               {saving ? "Salvando..." : "Confirmar Agendamento"}
@@ -1332,7 +1332,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
              <Input label="Data de Liberação" type="date" value={editForm.dataAdiantamento} onChange={(e) => set("dataAdiantamento", e.target.value)} />
           </div>
 
-          <div className="border border-red-100 bg-red-50 p-3 rounded-xl space-y-3">
+          <div className="border border-red-100 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 p-3 rounded-xl space-y-3">
              <div className="text-xs font-bold text-red-800 uppercase">Avarias / Controle</div>
              <Select label="Status do Canhoto NF" value={editForm.statusCanhoto} onChange={(e) => set("statusCanhoto", e.target.value)}>
                 <option value="PENDENTE">Pendente</option>
@@ -1355,8 +1355,8 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
             </div>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-6 pt-4 border-t border-gray-100">
-           <div className="text-[10px] text-gray-500 font-mono">Saldo = Combinado - Saida - Adiantamento - Desconto</div>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-neutral-800">
+           <div className="text-[10px] text-gray-500 dark:text-neutral-400 font-mono">Saldo = Combinado - Saida - Adiantamento - Desconto</div>
            <div className="flex gap-3 justify-end">
             <Button variant="ghost" onClick={() => setShowEdit(false)}>Cancelar</Button>
             <Button className="bg-gray-800 text-white" onClick={handleSave} loading={saving}>Salvar Acerto</Button>

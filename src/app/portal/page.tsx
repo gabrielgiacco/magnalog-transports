@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Loading, StatusBadge } from "@/components/ui";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { formatDate, formatWeight } from "@/lib/utils";
 import { Search, LogOut, FileText, ChevronLeft, ChevronRight, Package, AlertTriangle, Filter, X, Eye, Truck, MapPin, Calendar, User, Clock, Building2 } from "lucide-react";
 
@@ -112,6 +113,7 @@ export default function PortalPage() {
             <div className="text-[10px]" style={{ color: "var(--text3)" }}>{user?.email}</div>
           </div>
           {user?.image && <img src={user.image} alt="" className="w-9 h-9 rounded-full" />}
+          <ThemeToggle />
           <button onClick={() => signOut({ callbackUrl: "/login" })}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all hover:opacity-70"
             style={{ background: "var(--surface2)", color: "var(--text2)", border: "1px solid var(--border)" }}>
