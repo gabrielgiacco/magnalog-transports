@@ -483,7 +483,7 @@ export default function EntregaDetailPage() {
             {!isReadOnly && (
               <button
                 onClick={() => setShowDiaria(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-amber-50"
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-amber-50 dark:hover:bg-amber-950/30"
                 style={{ borderColor: "#d97706", color: "#d97706", background: "transparent" }}
                 title="Gerar diária (penalidade financeira sem alterar status)"
               >
@@ -503,7 +503,7 @@ export default function EntregaDetailPage() {
         {/* Status flow card */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Fluxo Operacional</span>
+            <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">Fluxo Operacional</span>
             <div className="flex items-center gap-2">
               <StatusBadge status={entrega.status} />
               {QUALIDADE_ENABLED && entrega.qualidade?.id && (
@@ -516,15 +516,15 @@ export default function EntregaDetailPage() {
             </div>
           </div>
           {entrega.status === "OCORRENCIA" ? (
-             <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-100 flex-wrap">
+             <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 flex-wrap">
                <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
                <span className="text-sm text-red-600 flex-1">Esta entrega possui ocorrência registrada.{!isReadOnly && " Escolha uma ação:"}</span>
                {!isReadOnly && (
                  <div className="flex gap-2">
-                   <Button size="sm" variant="ghost" className="border-red-200 text-red-700 bg-white hover:bg-red-50" onClick={handleReentrega} disabled={saving}>
+                   <Button size="sm" variant="ghost" className="border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-400 bg-white dark:bg-neutral-800 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={handleReentrega} disabled={saving}>
                      Gerar Reentrega (Duplicar)
                    </Button>
-                   <Button size="sm" variant="ghost" className="border-green-200 text-green-700 bg-white hover:bg-green-50" onClick={() => { setResolucaoTexto(""); setStatusFinalEntrega("FINALIZADO"); setShowResolveModal(true); }} disabled={saving}>
+                   <Button size="sm" variant="ghost" className="border-green-200 dark:border-green-900/40 text-green-700 dark:text-green-400 bg-white dark:bg-neutral-800 hover:bg-green-50 dark:hover:bg-green-950/30" onClick={() => { setResolucaoTexto(""); setStatusFinalEntrega("FINALIZADO"); setShowResolveModal(true); }} disabled={saving}>
                      Resolver Ocorrência
                    </Button>
                    <Button size="sm" onClick={() => handleStatusChange("EM_ROTA")} disabled={saving}>
@@ -556,7 +556,7 @@ export default function EntregaDetailPage() {
                         title={next ? `Avançar para ${s.label}` : ""}>
                         {done ? <CheckCircle2 size={18} color="#fff" /> : <span style={{ fontSize: "14px" }}>{s.icon}</span>}
                       </button>
-                      <span className={`text-[9px] font-mono text-center leading-tight ${current ? "text-orange-600 font-bold" : done ? "text-slate-400" : "text-slate-300"}`}>
+                      <span className={`text-[9px] font-mono text-center leading-tight ${current ? "text-orange-600 font-bold" : done ? "text-slate-400 dark:text-neutral-500" : "text-slate-300 dark:text-neutral-600"}`}>
                         {s.label}
                       </span>
                     </div>
@@ -590,7 +590,7 @@ export default function EntregaDetailPage() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <MapPin size={14} className="text-accent" />
-                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Destinatário</span>
+                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">Destinatário</span>
                 </div>
                 <div className="space-y-3">
                   <Field label="Razão Social" value={entrega.razaoSocial} />
@@ -598,7 +598,7 @@ export default function EntregaDetailPage() {
                   {entrega.notas && entrega.notas.length > 0 ? (
                     entrega.notas.map((n: any) => (
                       <div key={n.id} className="cursor-pointer group" onClick={() => handleViewDanfe(n.id)}>
-                        <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 mb-0.5">{`Chave de Acesso (NF ${n.numero})`}</div>
+                        <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 dark:text-neutral-500 mb-0.5">{`Chave de Acesso (NF ${n.numero})`}</div>
                         <div className="text-xs font-mono font-medium text-blue-500 group-hover:text-blue-400 group-hover:underline transition-colors flex items-center gap-1.5">
                           {n.chaveAcesso} <FileText size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
@@ -616,7 +616,7 @@ export default function EntregaDetailPage() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <Truck size={14} className="text-accent" />
-                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Operação</span>
+                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">Operação</span>
                 </div>
                 <div className="space-y-3">
                   <Field label={entrega.motoristaCompl ? "Motorista (Principal)" : "Motorista"} value={entrega.motorista?.nome} />
@@ -656,16 +656,16 @@ export default function EntregaDetailPage() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <DollarSign size={14} className="text-emerald-500" />
-                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Financeiro</span>
+                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">Financeiro</span>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg border border-emerald-100">
+                  <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
                     <span className="text-[10px] font-bold">RECEITA CLIENTE</span>
                     <span className="font-mono text-xs">{formatCurrency(entrega.valorFrete)}</span>
                   </div>
                   {entrega.armazenagemCalc ? (
                     <>
-                      <div className="flex justify-between items-center bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg border border-amber-100">
+                      <div className="flex justify-between items-center bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-lg border border-amber-100 dark:border-amber-900/40">
                         <span className="text-[10px] font-bold">ARMAZENAGEM {entrega.armazenagemCalc?.emAberto ? "(em curso)" : ""}</span>
                         <span className="font-mono text-xs">{formatCurrency(entrega.armazenagemCalc?.valorTotal)}</span>
                       </div>
@@ -673,7 +673,7 @@ export default function EntregaDetailPage() {
                         {entrega.armazenagemCalc?.diasDecorridos} dia(s) · {entrega.quantidadePaletes || 0} palete(s)
                       </div>
                       {entrega.armazenagemCalc?.fornecedores?.map((f: any) => (
-                        <div key={f.cnpjFornecedor || f.cnpjCliente} className="text-[9px] font-mono pl-2 border-l-2 border-amber-200" style={{ color: "var(--text3)" }}>
+                        <div key={f.cnpjFornecedor || f.cnpjCliente} className="text-[9px] font-mono pl-2 border-l-2 border-amber-200 dark:border-amber-900/40" style={{ color: "var(--text3)" }}>
                           <span className="font-bold" style={{ color: "var(--text2)" }}>{f.nomeFornecedor || f.nomeCliente}</span>
                           {" · "}{f.diasFree} dias free · {formatCurrency(f.valorPaleteDia)}/pal/dia · {f.diasCobraveis} cobrável(is) → <span className="text-amber-700 font-bold">{formatCurrency(f.valorCalculado)}</span>
                         </div>
@@ -684,7 +684,7 @@ export default function EntregaDetailPage() {
                       {entrega.quantidadePaletes} palete(s) · nenhum fornecedor desta entrega tem tabela de armazenagem cadastrada
                     </div>
                   ) : null}
-                  <div className="text-[10px] font-bold text-slate-400 uppercase mt-4">
+                  <div className="text-[10px] font-bold text-slate-400 dark:text-neutral-500 uppercase mt-4">
                     {entrega.motoristaCompl ? "Custo Motorista Principal" : "Custo Motorista (Terceiro)"}
                   </div>
                   <Field label="Valor Combinado" value={formatCurrency(entrega.valorMotorista)} color="#f97316" />
@@ -721,7 +721,7 @@ export default function EntregaDetailPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <Package size={14} className="text-accent" />
-                    <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Carga</span>
+                    <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">Carga</span>
                     {entrega.notas?.length > 1 && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--surface2)", color: "var(--text3)" }}>
                         {entrega.notas.length} NFs
@@ -755,17 +755,17 @@ export default function EntregaDetailPage() {
                           onClick={() => !isReadOnly && entrega.notas.length > 1 && toggleNota(nf.id)}
                           className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all ${
                             selected
-                              ? "bg-orange-50 border-orange-300 ring-1 ring-orange-200"
-                              : "bg-slate-50 border-slate-100"
-                          } ${!isReadOnly && entrega.notas.length > 1 ? "cursor-pointer hover:border-orange-200" : ""}`}>
+                              ? "bg-orange-50 dark:bg-orange-950/30 border-orange-300 dark:border-orange-800 ring-1 ring-orange-200 dark:ring-orange-900/50"
+                              : "bg-slate-50 dark:bg-neutral-900 border-slate-100 dark:border-neutral-800"
+                          } ${!isReadOnly && entrega.notas.length > 1 ? "cursor-pointer hover:border-orange-200 dark:hover:border-orange-800/50" : ""}`}>
                           {!isReadOnly && entrega.notas.length > 1 && (
                             <input type="checkbox" checked={selected} readOnly
                               className="accent-orange-500 w-4 h-4 flex-shrink-0 pointer-events-none" />
                           )}
-                          <FileText size={13} className="text-slate-400 flex-shrink-0" />
+                          <FileText size={13} className="text-slate-400 dark:text-neutral-500 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <div className="text-xs font-semibold">NF {nf.numero}</div>
-                            <div className="text-[10px] font-mono truncate text-slate-500">{nf.emitenteRazao}</div>
+                            <div className="text-[10px] font-mono truncate text-slate-500 dark:text-neutral-400">{nf.emitenteRazao}</div>
                           </div>
                           <div className="text-right">
                             <div className="text-xs font-mono text-emerald-600 font-bold">{formatCurrency(nf.valorNota)}</div>
@@ -781,31 +781,31 @@ export default function EntregaDetailPage() {
              <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <AlertCircle size={14} className="text-red-500" />
-                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Ocorrências</span>
+                  <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">Ocorrências</span>
                 </div>
                 {entrega.ocorrencias?.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400">
+                  <div className="text-center py-8 text-slate-400 dark:text-neutral-500">
                     <CheckCircle2 size={24} className="mx-auto mb-2 opacity-30" />
                     <p className="text-xs">Nenhuma ocorrência registrada</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {entrega.ocorrencias?.map((oc: any) => (
-                      <div key={oc.id} className="p-3 rounded-lg bg-red-50 border border-red-100">
+                      <div key={oc.id} className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40">
                          <div className="flex items-center justify-between mb-1">
                            <span className="text-xs font-bold text-red-600">{oc.tipo}</span>
                            <div className="flex items-center gap-1.5">
-                             <span className="text-[10px] text-slate-400">{formatDate(oc.createdAt)}</span>
+                             <span className="text-[10px] text-slate-400 dark:text-neutral-500">{formatDate(oc.createdAt)}</span>
                              <button
                                onClick={() => router.push("/avarias?tab=ocorrencias")}
-                               className="p-1 px-1.5 rounded bg-white text-red-600 hover:bg-red-50 transition-all flex items-center gap-1 text-[9px] font-bold border border-red-200"
+                               className="p-1 px-1.5 rounded bg-white dark:bg-neutral-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all flex items-center gap-1 text-[9px] font-bold border border-red-200 dark:border-red-900/40"
                                title="Ver Painel de Ocorrências"
                              >
                                Ver Painel <ExternalLink size={9} />
                              </button>
                            </div>
                          </div>
-                         <p className="text-xs text-slate-600">{oc.descricao}</p>
+                         <p className="text-xs text-slate-600 dark:text-neutral-300">{oc.descricao}</p>
                       </div>
                     ))}
                   </div>
@@ -827,7 +827,7 @@ export default function EntregaDetailPage() {
                  <Card>
                    <div className="flex items-center gap-2 mb-3">
                      <Truck size={14} className="text-blue-500" />
-                     <span className="text-xs font-mono uppercase tracking-widest text-slate-500">CT-e da Transportadora — {ctesList.length}</span>
+                     <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">CT-e da Transportadora — {ctesList.length}</span>
                      <button
                        onClick={() => router.push("/importacao?tab=cte")}
                        className="ml-auto text-[10px] font-bold hover:underline"
@@ -870,7 +870,7 @@ export default function EntregaDetailPage() {
                <Card>
                  <div className="flex items-center gap-2 mb-3">
                    <DollarSign size={14} style={{ color: "#d97706" }} />
-                   <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Diárias — {entrega.diarias.length}</span>
+                   <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">Diárias — {entrega.diarias.length}</span>
                    <button
                      onClick={() => router.push("/faturamento?tab=diarias")}
                      className="ml-auto text-[10px] font-bold hover:underline"
@@ -919,7 +919,7 @@ export default function EntregaDetailPage() {
                <Card>
                  <div className="flex items-center gap-2 mb-3">
                    <FileText size={14} className="text-emerald-500" />
-                   <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Notas de Serviço (NFS-e) — {entrega.notasServico.length}</span>
+                   <span className="text-xs font-mono uppercase tracking-widest text-slate-500 dark:text-neutral-400">Notas de Serviço (NFS-e) — {entrega.notasServico.length}</span>
                    <button
                      onClick={() => router.push("/importacao?tab=nfse")}
                      className="ml-auto text-[10px] font-bold hover:underline"
@@ -1000,7 +1000,7 @@ export default function EntregaDetailPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="w-full justify-center border-dashed border-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-900"
+                  className="w-full justify-center border-dashed border-2 py-3 hover:bg-slate-50 dark:hover:bg-neutral-900"
                   onClick={() => setShowComplFields(true)}
                 >
                   <Plus size={14} className="mr-2" /> Adicionar Motorista Complementar (Carga Complementar)
@@ -1008,7 +1008,7 @@ export default function EntregaDetailPage() {
               </div>
             ) : (
               <>
-                <div className="col-span-2 flex items-center justify-between py-2 border-b text-[10px] font-bold text-slate-400 uppercase">
+                <div className="col-span-2 flex items-center justify-between py-2 border-b text-[10px] font-bold text-slate-400 dark:text-neutral-500 uppercase">
                   <span>Motorista Complementar</span>
                   <button
                     type="button"
@@ -1112,7 +1112,7 @@ export default function EntregaDetailPage() {
             </Select>
             
             <Input label="Qtd Paletes" type="number" value={editForm.quantidadePaletes} onChange={(e) => set("quantidadePaletes", e.target.value)} />
-            <div className="col-span-2 py-2 border-b text-[10px] font-bold text-slate-400 uppercase">Valores e Financeiro (Motorista Principal)</div>
+            <div className="col-span-2 py-2 border-b text-[10px] font-bold text-slate-400 dark:text-neutral-500 uppercase">Valores e Financeiro (Motorista Principal)</div>
             <Input label="Valor Frete Cliente" type="number" value={editForm.valorFrete} onChange={(e) => set("valorFrete", e.target.value)} className="col-span-2" />
             
             <Input label="Valor Combinado Motorista" type="number" value={editForm.valorMotorista} onChange={(e) => set("valorMotorista", e.target.value)} />
@@ -1165,11 +1165,11 @@ export default function EntregaDetailPage() {
                     a.click();
                     URL.revokeObjectURL(url);
                   }}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1"
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-1"
                   title="Baixar XML"
                 >
-                  <Download size={16} className="text-slate-500" />
-                  <span className="text-xs text-slate-500">XML</span>
+                  <Download size={16} className="text-slate-500 dark:text-neutral-400" />
+                  <span className="text-xs text-slate-500 dark:text-neutral-400">XML</span>
                 </button>
                 <button
                   onClick={async () => {
@@ -1187,11 +1187,11 @@ export default function EntregaDetailPage() {
                     }
                   }}
                   disabled={downloadingPdf}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 disabled:opacity-50"
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-1 disabled:opacity-50"
                   title="Baixar PDF"
                 >
-                  {downloadingPdf ? <Loader2 size={16} className="text-slate-500 animate-spin" /> : <Download size={16} className="text-slate-500" />}
-                  <span className="text-xs text-slate-500">PDF</span>
+                  {downloadingPdf ? <Loader2 size={16} className="text-slate-500 dark:text-neutral-400 animate-spin" /> : <Download size={16} className="text-slate-500 dark:text-neutral-400" />}
+                  <span className="text-xs text-slate-500 dark:text-neutral-400">PDF</span>
                 </button>
                 <button
                   onClick={() => {
@@ -1204,24 +1204,24 @@ export default function EntregaDetailPage() {
                     win.document.close();
                     win.onload = () => { win.print(); };
                   }}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                   title="Imprimir"
                 >
-                  <Printer size={16} className="text-slate-500" />
+                  <Printer size={16} className="text-slate-500 dark:text-neutral-400" />
                 </button>
                 <button
                   onClick={() => setDanfeModal((prev) => ({ ...prev, fullscreen: !prev.fullscreen }))}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                   title={danfeModal.fullscreen ? "Reduzir" : "Ampliar"}
                 >
-                  {danfeModal.fullscreen ? <Minimize2 size={16} className="text-slate-500" /> : <Maximize2 size={16} className="text-slate-500" />}
+                  {danfeModal.fullscreen ? <Minimize2 size={16} className="text-slate-500 dark:text-neutral-400" /> : <Maximize2 size={16} className="text-slate-500 dark:text-neutral-400" />}
                 </button>
                 <button
                   onClick={() => setDanfeModal({ open: false, xml: null, loading: false, fullscreen: false })}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
                   title="Fechar"
                 >
-                  <span className="text-slate-500 text-lg leading-none">&times;</span>
+                  <span className="text-slate-500 dark:text-neutral-400 text-lg leading-none">&times;</span>
                 </button>
               </div>
             </div>
@@ -1241,7 +1241,7 @@ export default function EntregaDetailPage() {
       <Modal open={showAddNF} onClose={() => setShowAddNF(false)} title="Vincular Notas Fiscais a esta Entrega" size="lg">
         <div className="space-y-3">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-neutral-500" />
             <Input
               placeholder="Buscar por número NF, emitente, CNPJ..."
               value={searchNF}
@@ -1252,7 +1252,7 @@ export default function EntregaDetailPage() {
 
           {filteredNotasDisp.length > 0 && (
             <div className="flex items-center justify-between px-1">
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 dark:text-neutral-300">
                 <input
                   type="checkbox"
                   checked={filteredNotasDisp.length > 0 && filteredNotasDisp.every(n => selectedNFIds.includes(n.id))}
@@ -1261,7 +1261,7 @@ export default function EntregaDetailPage() {
                 />
                 Selecionar todos ({filteredNotasDisp.length})
               </label>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-neutral-400">
                 {selectedNFIds.length} selecionada(s)
               </span>
             </div>
@@ -1269,7 +1269,7 @@ export default function EntregaDetailPage() {
 
           <div className="max-h-[50vh] overflow-y-auto border rounded-lg" style={{ borderColor: "var(--border)" }}>
             {filteredNotasDisp.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-xs">
+              <div className="text-center py-8 text-slate-400 dark:text-neutral-500 text-xs">
                 {notasDisp.length === 0 ? "Nenhuma NF sem entrega disponível" : "Nenhuma NF encontrada"}
               </div>
             ) : (
@@ -1281,7 +1281,7 @@ export default function EntregaDetailPage() {
                       key={nf.id}
                       onClick={() => toggleNF(nf.id)}
                       className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
-                        selected ? "bg-orange-50" : "hover:bg-slate-50"
+                        selected ? "bg-orange-50 dark:bg-orange-950/30" : "hover:bg-slate-50 dark:hover:bg-neutral-900"
                       }`}
                     >
                       <input
@@ -1290,16 +1290,16 @@ export default function EntregaDetailPage() {
                         readOnly
                         className="accent-orange-500 w-4 h-4 flex-shrink-0 pointer-events-none"
                       />
-                      <FileText size={14} className="text-slate-400 flex-shrink-0" />
+                      <FileText size={14} className="text-slate-400 dark:text-neutral-500 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold">NF {nf.numero}</span>
                           {nf.emitenteCnpj && (
-                            <span className="text-[10px] font-mono text-slate-400">{formatCNPJ(nf.emitenteCnpj)}</span>
+                            <span className="text-[10px] font-mono text-slate-400 dark:text-neutral-500">{formatCNPJ(nf.emitenteCnpj)}</span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-500 truncate">{nf.emitenteRazao}</div>
-                        <div className="text-[10px] text-slate-400 truncate">→ {nf.destinatarioRazao}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400 truncate">{nf.emitenteRazao}</div>
+                        <div className="text-[10px] text-slate-400 dark:text-neutral-500 truncate">→ {nf.destinatarioRazao}</div>
                         {nf.entrega && (
                           <div className="text-[10px] text-amber-600 font-semibold mt-0.5">
                             ⚠ Vinculada a {nf.entrega.codigo} — será movida
@@ -1308,7 +1308,7 @@ export default function EntregaDetailPage() {
                       </div>
                       <div className="text-right flex-shrink-0">
                         <div className="text-xs font-mono text-emerald-600 font-bold">{formatCurrency(nf.valorNota)}</div>
-                        <div className="text-[10px] text-slate-400">
+                        <div className="text-[10px] text-slate-400 dark:text-neutral-500">
                           {formatWeight(nf.pesoBruto)} · {nf.volumes} vol
                         </div>
                       </div>
@@ -1450,7 +1450,7 @@ function TabButton({ children, active, onClick, icon: Icon }: any) {
     <button
       onClick={onClick}
       className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2 
-        ${active ? "border-accent text-accent" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+        ${active ? "border-accent text-accent" : "border-transparent text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:text-neutral-300"}`}
     >
       <Icon size={16} />
       {children}
@@ -1461,7 +1461,7 @@ function TabButton({ children, active, onClick, icon: Icon }: any) {
 function Field({ label, value, mono, color }: { label: string; value?: string | null; mono?: boolean; color?: string }) {
   return (
     <div>
-      <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 mb-0.5">{label}</div>
+      <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 dark:text-neutral-500 mb-0.5">{label}</div>
       <div className={`text-sm font-medium ${mono ? "font-mono text-xs" : ""}`} style={{ color: value ? (color || "var(--text)") : "var(--text3)" }}>
         {value || "—"}
       </div>
@@ -1479,7 +1479,7 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
     <Card className="p-0 overflow-hidden">
       {/* NF Header - always visible */}
       <div
-        className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50/50 transition-colors"
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-900/50 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -1499,20 +1499,20 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
           {/* Summary stats */}
           <div className="hidden md:flex items-center gap-6 flex-shrink-0">
             <div className="text-center">
-              <div className="text-[9px] font-mono uppercase text-slate-400">Volumes</div>
+              <div className="text-[9px] font-mono uppercase text-slate-400 dark:text-neutral-500">Volumes</div>
               <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{nf?.volumes || 0}</div>
             </div>
             <div className="text-center">
-              <div className="text-[9px] font-mono uppercase text-slate-400">Peso</div>
+              <div className="text-[9px] font-mono uppercase text-slate-400 dark:text-neutral-500">Peso</div>
               <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{formatWeight(nf?.pesoBruto)}</div>
             </div>
             <div className="text-center">
-              <div className="text-[9px] font-mono uppercase text-slate-400">Valor NF</div>
+              <div className="text-[9px] font-mono uppercase text-slate-400 dark:text-neutral-500">Valor NF</div>
               <div className="text-sm font-bold font-mono text-emerald-600">{formatCurrency(nf?.valorNota)}</div>
             </div>
             {hasProdutos && (
               <div className="text-center">
-                <div className="text-[9px] font-mono uppercase text-slate-400">Itens</div>
+                <div className="text-[9px] font-mono uppercase text-slate-400 dark:text-neutral-500">Itens</div>
                 <div className="text-sm font-bold font-mono" style={{ color: "var(--text)" }}>{nf?.produtos?.length}</div>
               </div>
             )}
@@ -1520,7 +1520,7 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
         </div>
 
         <div className="ml-3 flex-shrink-0">
-          {expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+          {expanded ? <ChevronUp size={16} className="text-slate-400 dark:text-neutral-500" /> : <ChevronDown size={16} className="text-slate-400 dark:text-neutral-500" />}
         </div>
       </div>
 
@@ -1542,8 +1542,8 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
               {hasEmitente && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <User size={13} className="text-slate-400" />
-                    <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">Fornecedor / Emitente</span>
+                    <User size={13} className="text-slate-400 dark:text-neutral-500" />
+                    <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400 dark:text-neutral-500">Fornecedor / Emitente</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Field label="Razão Social" value={nf?.emitente?.razaoSocial} />
@@ -1560,15 +1560,15 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
               {/* Dados gerais da NF */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <FileText size={13} className="text-slate-400" />
-                  <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">Dados da Nota Fiscal</span>
+                  <FileText size={13} className="text-slate-400 dark:text-neutral-500" />
+                  <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400 dark:text-neutral-500">Dados da Nota Fiscal</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Número" value={nf?.numero} mono />
                   <Field label="Série" value={nf?.serie} mono />
                   <Field label="Data Emissão" value={formatDate(nf?.dataEmissao)} mono />
                   <div className="cursor-pointer group col-span-2" onClick={(e) => { e.stopPropagation(); onViewDanfe(nf?.id); }}>
-                    <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 mb-0.5">Chave de Acesso</div>
+                    <div className="text-[9px] font-mono uppercase tracking-widest text-slate-400 dark:text-neutral-500 mb-0.5">Chave de Acesso</div>
                     <div className="text-xs font-mono font-medium text-blue-500 group-hover:text-blue-400 group-hover:underline transition-colors flex items-center gap-1.5">
                       {nf?.chaveAcesso} <FileText size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
@@ -1585,8 +1585,8 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
               {hasProdutos && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <Box size={13} className="text-slate-400" />
-                    <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">
+                    <Box size={13} className="text-slate-400 dark:text-neutral-500" />
+                    <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400 dark:text-neutral-500">
                       Produtos / Serviços ({nf?.produtos?.length})
                     </span>
                   </div>
@@ -1594,13 +1594,13 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
                     <table className="w-full text-xs">
                       <thead>
                         <tr style={{ background: "var(--surface2)" }}>
-                          <th className="text-left px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">#</th>
-                          <th className="text-left px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">Descrição</th>
-                          <th className="text-left px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">NCM</th>
-                          <th className="text-right px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">Qtd</th>
-                          <th className="text-left px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">Un</th>
-                          <th className="text-right px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">Valor Un.</th>
-                          <th className="text-right px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">Total</th>
+                          <th className="text-left px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-neutral-500">#</th>
+                          <th className="text-left px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-neutral-500">Descrição</th>
+                          <th className="text-left px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-neutral-500">NCM</th>
+                          <th className="text-right px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-neutral-500">Qtd</th>
+                          <th className="text-left px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-neutral-500">Un</th>
+                          <th className="text-right px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-neutral-500">Valor Un.</th>
+                          <th className="text-right px-2.5 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-neutral-500">Total</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1608,18 +1608,18 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
                           const qtd = typeof p?.quantidade === "number" ? p.quantidade : parseFloat(p?.quantidade || "0") || 0;
                           return (
                             <tr key={idx} style={{ borderTop: idx > 0 ? "1px solid var(--border)" : "none" }}
-                              className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-2.5 py-2 font-mono text-slate-400">{idx + 1}</td>
+                              className="hover:bg-slate-50 dark:hover:bg-neutral-900/50 transition-colors">
+                              <td className="px-2.5 py-2 font-mono text-slate-400 dark:text-neutral-500">{idx + 1}</td>
                               <td className="px-2.5 py-2">
                                 <div className="font-medium leading-tight" style={{ color: "var(--text)" }}>{p?.descricao || "—"}</div>
-                                {p?.codigo && <div className="text-[9px] font-mono text-slate-400 mt-0.5">Cód: {p.codigo}</div>}
+                                {p?.codigo && <div className="text-[9px] font-mono text-slate-400 dark:text-neutral-500 mt-0.5">Cód: {p.codigo}</div>}
                               </td>
-                              <td className="px-2.5 py-2 font-mono text-slate-500">{p?.ncm || "—"}</td>
+                              <td className="px-2.5 py-2 font-mono text-slate-500 dark:text-neutral-400">{p?.ncm || "—"}</td>
                               <td className="px-2.5 py-2 text-right font-mono" style={{ color: "var(--text)" }}>
                                 {qtd % 1 === 0 ? qtd : qtd.toFixed(2)}
                               </td>
-                              <td className="px-2.5 py-2 font-mono text-slate-500">{p?.unidade || "—"}</td>
-                              <td className="px-2.5 py-2 text-right font-mono text-slate-500">
+                              <td className="px-2.5 py-2 font-mono text-slate-500 dark:text-neutral-400">{p?.unidade || "—"}</td>
+                              <td className="px-2.5 py-2 text-right font-mono text-slate-500 dark:text-neutral-400">
                                 {formatCurrency(p?.valorUnitario)}
                               </td>
                               <td className="px-2.5 py-2 text-right font-mono font-bold text-emerald-600">
@@ -1631,7 +1631,7 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
                       </tbody>
                       <tfoot>
                         <tr style={{ borderTop: "2px solid var(--border)", background: "var(--surface2)" }}>
-                          <td colSpan={6} className="px-2.5 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Total Produtos</td>
+                          <td colSpan={6} className="px-2.5 py-2 text-right text-[10px] font-bold uppercase text-slate-500 dark:text-neutral-400">Total Produtos</td>
                           <td className="px-2.5 py-2 text-right font-mono font-bold text-emerald-700">
                             {formatCurrency(nf?.produtos?.reduce((s: number, p: any) => s + (p?.valorTotal || 0), 0))}
                           </td>
@@ -1643,7 +1643,7 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
               )}
 
               {!hasProdutos && (
-                <div className="text-center py-8 text-slate-400">
+                <div className="text-center py-8 text-slate-400 dark:text-neutral-500">
                   <Box size={24} className="mx-auto mb-2 opacity-30" />
                   <p className="text-xs">Dados de produtos não disponíveis</p>
                 </div>
@@ -1655,8 +1655,8 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
           {hasInfoAdicional && (
             <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
               <div className="flex items-center gap-2 mb-2">
-                <Info size={13} className="text-slate-400" />
-                <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">Dados Adicionais</span>
+                <Info size={13} className="text-slate-400 dark:text-neutral-500" />
+                <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400 dark:text-neutral-500">Dados Adicionais</span>
               </div>
               <div className="p-3 rounded-lg text-xs leading-relaxed whitespace-pre-wrap" style={{ background: "var(--surface2)", color: "var(--text2)", border: "1px solid var(--border)" }}>
                 {nf?.infAdicionais}
@@ -1667,8 +1667,8 @@ function NFDetailCard({ nf, onViewDanfe }: { nf: any; onViewDanfe: (notaId: stri
           {nf?.infFisco && nf.infFisco.trim() && (
             <div className="px-4 pb-4">
               <div className="flex items-center gap-2 mb-2">
-                <Info size={13} className="text-slate-400" />
-                <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400">Informações ao Fisco</span>
+                <Info size={13} className="text-slate-400 dark:text-neutral-500" />
+                <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-slate-400 dark:text-neutral-500">Informações ao Fisco</span>
               </div>
               <div className="p-3 rounded-lg text-xs leading-relaxed whitespace-pre-wrap" style={{ background: "rgba(249,115,22,.04)", color: "var(--text2)", border: "1px solid rgba(249,115,22,.12)" }}>
                 {nf.infFisco}
@@ -1707,7 +1707,7 @@ function AvariasTab({ entregaId, entrega }: { entregaId: string; entrega: any })
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono uppercase tracking-widest text-slate-400">{avarias.length} avaria(s) registrada(s)</span>
+        <span className="text-xs font-mono uppercase tracking-widest text-slate-400 dark:text-neutral-500">{avarias.length} avaria(s) registrada(s)</span>
         <Button size="sm" onClick={() => router.push("/avarias")}>
           <AlertTriangle size={13} /> Ir para Avarias
         </Button>
@@ -1958,47 +1958,47 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="flex items-center justify-between p-5 relative overflow-hidden">
           <div>
-            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 mb-1">Paletes Estimados</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 dark:text-neutral-400 mb-1">Paletes Estimados</div>
             <div className="font-head text-3xl font-black text-orange-400">
               {totalPaletesEstimadosCarga.toFixed(2)}
             </div>
-            <div className="text-xs text-slate-400 mt-1">Cálculo de volume ocupado</div>
+            <div className="text-xs text-slate-400 dark:text-neutral-500 mt-1">Cálculo de volume ocupado</div>
           </div>
           <div className="text-4xl opacity-10">
-            <Layers size={40} className="text-slate-400" />
+            <Layers size={40} className="text-slate-400 dark:text-neutral-500" />
           </div>
         </Card>
 
         <Card className="flex items-center justify-between p-5 relative overflow-hidden">
           <div>
-            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 mb-1">Total de Caixas</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 dark:text-neutral-400 mb-1">Total de Caixas</div>
             <div className="font-head text-3xl font-black text-emerald-400">
               {totalCaixas}
             </div>
-            <div className="text-xs text-slate-400 mt-1">Soma de volumes das NFs</div>
+            <div className="text-xs text-slate-400 dark:text-neutral-500 mt-1">Soma de volumes das NFs</div>
           </div>
           <div className="text-4xl opacity-10">
-            <Box size={40} className="text-slate-400" />
+            <Box size={40} className="text-slate-400 dark:text-neutral-500" />
           </div>
         </Card>
 
         <Card className="flex items-center justify-between p-5 relative overflow-hidden">
           <div>
-            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 mb-1">Itens com Normas</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 dark:text-neutral-400 mb-1">Itens com Normas</div>
             <div className="font-head text-3xl font-black text-blue-400">
-              {totalComNorma} <span className="text-sm font-normal text-slate-500">de {totalProdutos} ({pctNormas}%)</span>
+              {totalComNorma} <span className="text-sm font-normal text-slate-500 dark:text-neutral-400">de {totalProdutos} ({pctNormas}%)</span>
             </div>
-            <div className="text-xs text-slate-400 mt-1">Cobertura das regras físicas</div>
+            <div className="text-xs text-slate-400 dark:text-neutral-500 mt-1">Cobertura das regras físicas</div>
           </div>
           <div className="text-4xl opacity-10">
-            <ShieldCheck size={40} className="text-slate-400" />
+            <ShieldCheck size={40} className="text-slate-400 dark:text-neutral-500" />
           </div>
         </Card>
       </div>
 
       {/* Ações da Aba */}
       <div className="flex justify-between items-center p-3 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-        <div className="text-xs text-slate-400 flex items-center gap-2">
+        <div className="text-xs text-slate-400 dark:text-neutral-500 flex items-center gap-2">
           <Info size={14} className="text-[var(--accent)]" />
           <span>Forneça esta ficha aos conferentes para guiar a montagem física no pátio.</span>
         </div>
@@ -2010,7 +2010,7 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
       {/* Tabela de Produtos e Normas */}
       <Card className="p-0 overflow-hidden">
         <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)", background: "var(--surface2)" }}>
-          <span className="text-xs font-mono uppercase tracking-widest text-slate-400 font-bold">Listagem de Itens e Normas de Paletização</span>
+          <span className="text-xs font-mono uppercase tracking-widest text-slate-400 dark:text-neutral-500 font-bold">Listagem de Itens e Normas de Paletização</span>
         </div>
         <div className="overflow-x-auto">
           <Table>
@@ -2029,7 +2029,7 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
             <tbody>
               {todosProdutos.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-xs text-slate-500">
+                  <td colSpan={8} className="text-center py-10 text-xs text-slate-500 dark:text-neutral-400">
                     Nenhum produto extraído do XML desta entrega.
                   </td>
                 </tr>
@@ -2057,7 +2057,7 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
                       <Td className="font-mono text-xs font-semibold text-orange-400">{p.codigo}</Td>
                       <Td className="max-w-xs truncate" title={p.descricao || ""}>
                         <div className="font-medium text-slate-200">{p.descricao || "—"}</div>
-                        <div className="text-[9px] text-slate-500">Fornecedor: {p.fornecedorRazao}</div>
+                        <div className="text-[9px] text-slate-500 dark:text-neutral-400">Fornecedor: {p.fornecedorRazao}</div>
                       </Td>
                       <Td className="text-center font-mono font-semibold">{p.quantidade}</Td>
                       <Td className="text-center font-mono text-emerald-400 font-semibold">
@@ -2070,7 +2070,7 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
                         {hasNorma ? (
                           <div className="flex flex-col items-center">
                             <span>{p.paletesEstimados.toFixed(2)} paletes</span>
-                            <span className="text-[10px] text-slate-400 font-normal">{paletesText}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-neutral-500 font-normal">{paletesText}</span>
                           </div>
                         ) : (
                           <span className="text-red-400 font-normal italic text-xs">Sem norma</span>
