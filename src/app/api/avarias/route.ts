@@ -104,6 +104,10 @@ export async function POST(req: NextRequest) {
         registradoPorId: userId,
         dataOcorrencia: new Date(body.dataOcorrencia),
         localOcorrencia: body.localOcorrencia || null,
+        dataChegada: body.dataChegada ? new Date(body.dataChegada) : null,
+        transportadoraChegada: body.transportadoraChegada || null,
+        motoristaChegada: body.motoristaChegada || null,
+        placaChegada: body.placaChegada || null,
         produtos: {
           create: produtos.map((p: any) => ({
             codigoProduto: p.codigoProduto,
@@ -114,6 +118,8 @@ export async function POST(req: NextRequest) {
             quantidadeAvaria: p.quantidadeAvaria,
             valorUnitario: p.valorUnitario || 0,
             valorTotal: (p.quantidadeAvaria || 0) * (p.valorUnitario || 0),
+            tipoDivergencia: p.tipoDivergencia || null,
+            notaFiscalId: p.notaFiscalId || null,
           })),
         },
       },

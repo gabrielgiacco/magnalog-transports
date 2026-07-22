@@ -373,6 +373,7 @@ model NotaFiscal {
   cteId             String?
   cte               CTe?      @relation(fields: [cteId], references: [id])
   avarias           Avaria[]
+  avariaProdutos    AvariaProduto[] @relation("AvariaProdutoNota")
   notasServico      NotaServico[]
 
   @@index([emitenteCnpj])
@@ -656,9 +657,15 @@ model AvariaProduto {
   observacoes      String?  @db.Text
   createdAt        DateTime @default(now())
 
-  avaria Avaria @relation(fields: [avariaId], references: [id], onDelete: Cascade)
+  // Declaração de Recebimento — tipo por linha (declaração pode misturar Falta/Sobra/Avaria/etc)
+  tipoDivergencia TipoAvaria?
+  notaFiscalId    String?
+
+  avaria     Avaria      @relation(fields: [avariaId], references: [id], onDelete: Cascade)
+  notaFiscal NotaFiscal? @relation("AvariaProdutoNota", fields: [notaFiscalId], references: [id])
 
   @@index([avariaId])
+  @@index([notaFiscalId])
 }
 
 // ─── Controle de Paletes CHEP ────────────────────────────────────────────

@@ -89,7 +89,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         rota: { select: { id: true, codigo: true } },
         registradoPor: { select: { id: true, name: true } },
         resolvidoPor: { select: { id: true, name: true } },
-        produtos: { orderBy: { createdAt: "asc" } },
+        produtos: {
+          orderBy: { createdAt: "asc" },
+          include: { notaFiscal: { select: { id: true, numero: true, emitenteRazao: true, emitenteCnpj: true } } },
+        },
         devolucoes: { orderBy: { createdAt: "desc" } },
       },
     });

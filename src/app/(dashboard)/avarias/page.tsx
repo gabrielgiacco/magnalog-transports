@@ -11,6 +11,7 @@ import { formatCurrency, formatDate, formatCNPJ } from "@/lib/utils";
 import {
   AlertTriangle, Plus, Search, RefreshCw, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calendar, Truck,
   BarChart2, List, FileText, Package, TrendingUp, User, Filter, Upload, Square, CheckSquare, LogOut, DollarSign,
+  ClipboardCheck, Printer,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { DiariasTab } from "./DiariasTab";
@@ -36,7 +37,7 @@ const TIPO_COLORS: Record<string, string> = {
   DEVOLUCAO: "#eab308", SEM_PEDIDO: "#6b7280",
 };
 
-type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias" | "diarias";
+type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias" | "diarias" | "declaracao";
 
 export default function AvariasPage() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function AvariasPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const t = params.get("tab");
-      if (t && ["dashboard", "registros", "devolucoes", "ocorrencias", "diarias"].includes(t)) {
+      if (t && ["dashboard", "registros", "devolucoes", "ocorrencias", "diarias", "declaracao"].includes(t)) {
         setTab(t as TabView);
       }
     }
@@ -117,6 +118,19 @@ export default function AvariasPage() {
   const [nfProdutos, setNfProdutos] = useState<any[]>([]);
   const [produtosSelecionados, setProdutosSelecionados] = useState<any[]>([]);
   const [motoristas, setMotoristas] = useState<any[]>([]);
+
+  // Declaração de Recebimento
+  const [declaracoesList, setDeclaracoesList] = useState<any[]>([]);
+  const [loadingDeclaracoes, setLoadingDeclaracoes] = useState(false);
+  const [showDeclModal, setShowDeclModal] = useState(false);
+  const [declStep, setDeclStep] = useState(1);
+  const [declSavingPrint, setDeclSavingPrint] = useState(false);
+  const [declEntregaSearch, setDeclEntregaSearch] = useState("");
+  const [declEntregaResults, setDeclEntregaResults] = useState<any[]>([]);
+  const [declEntrega, setDeclEntrega] = useState<any>(null);
+  const [declProdutosPorNf, setDeclProdutosPorNf] = useState<Record<string, any[]>>({});
+  const [declLinhas, setDeclLinhas] = useState<Array<{ key: string; notaFiscalId: string; nfNumero: string; codigoProduto: string; descricao: string; ncm: string; unidade: string; quantidadeNF: number; valorUnitario: number; quantidadeAvaria: number; tipoDivergencia: string }>>([]);
+  const [declDados, setDeclDados] = useState({ transportadora: "", motoristaNome: "", motoristaCpf: "", placa: "", observacoes: "" });
 
   // Debounce
   useEffect(() => {
@@ -417,6 +431,157 @@ export default function AvariasPage() {
     finally { setBulkSaving(false); }
   }
 
+  // ─── Declaração de Recebimento ─────────────────────────────────────────
+
+  const fetchDeclaracoes = useCallback(async () => {
+    setLoadingDeclaracoes(true);
+    try {
+      const res = await fetch("/api/avarias?fase=CONFERENCIA&limit=100", { cache: "no-store" });
+      const data = await res.json();
+      setDeclaracoesList(data.avarias || []);
+    } catch { toast.error("Erro ao carregar declarações"); }
+    finally { setLoadingDeclaracoes(false); }
+  }, []);
+
+  useEffect(() => { if (tab === "declaracao") fetchDeclaracoes(); }, [tab, fetchDeclaracoes]);
+
+  // busca entregas para o modal de declaração
+  useEffect(() => {
+    if (!declEntregaSearch || declEntregaSearch.length < 2) { setDeclEntregaResults([]); return; }
+    const t = setTimeout(async () => {
+      const res = await fetch(`/api/entregas?cliente=${encodeURIComponent(declEntregaSearch)}&limit=10`);
+      const data = await res.json();
+      setDeclEntregaResults(data.entregas || []);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [declEntregaSearch]);
+
+  async function selectDeclEntrega(e: any) {
+    setDeclEntrega(e);
+    setDeclEntregaSearch("");
+    setDeclEntregaResults([]);
+
+    // auto-preenche dados da entrega
+    setDeclDados((d) => ({
+      ...d,
+      motoristaNome: d.motoristaNome || e.motorista?.nome || "",
+      motoristaCpf: d.motoristaCpf || e.motorista?.cpf || "",
+      placa: d.placa || e.veiculo?.placa || "",
+    }));
+
+    // busca produtos de TODAS as NFs da entrega
+    if (e.notas?.length > 0) {
+      const map: Record<string, any[]> = {};
+      await Promise.all(
+        e.notas.map(async (nf: any) => {
+          try {
+            const res = await fetch(`/api/notas/${nf.id}/produtos`);
+            const data = await res.json();
+            map[nf.id] = data.produtos || [];
+          } catch { map[nf.id] = []; }
+        })
+      );
+      setDeclProdutosPorNf(map);
+    } else {
+      setDeclProdutosPorNf({});
+    }
+  }
+
+  function toggleDeclLinha(nfId: string, nfNumero: string, idx: number, prod: any) {
+    const key = `${nfId}_${idx}`;
+    setDeclLinhas((prev) => {
+      const exists = prev.find((l) => l.key === key);
+      if (exists) return prev.filter((l) => l.key !== key);
+      return [
+        ...prev,
+        {
+          key,
+          notaFiscalId: nfId,
+          nfNumero,
+          codigoProduto: prod.codigoProduto,
+          descricao: prod.descricao,
+          ncm: prod.ncm || "",
+          unidade: prod.unidade || "FARDOS",
+          quantidadeNF: prod.quantidade,
+          valorUnitario: prod.valorUnitario || 0,
+          quantidadeAvaria: prod.quantidade,
+          tipoDivergencia: "FALTA",
+        },
+      ];
+    });
+  }
+
+  function updateDeclLinha(key: string, patch: Partial<{ quantidadeAvaria: number; tipoDivergencia: string }>) {
+    setDeclLinhas((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  }
+
+  function resetDeclForm() {
+    setDeclStep(1);
+    setDeclEntrega(null);
+    setDeclEntregaSearch("");
+    setDeclEntregaResults([]);
+    setDeclProdutosPorNf({});
+    setDeclLinhas([]);
+    setDeclDados({ transportadora: "", motoristaNome: "", motoristaCpf: "", placa: "", observacoes: "" });
+  }
+
+  async function handleSalvarEImprimirDeclaracao() {
+    if (declLinhas.length === 0) { toast.error("Selecione ao menos um produto com divergência"); return; }
+    // tipo mais frequente entre as linhas → tipo da Avaria pai
+    const counts = declLinhas.reduce((acc: Record<string, number>, l) => {
+      acc[l.tipoDivergencia] = (acc[l.tipoDivergencia] || 0) + 1;
+      return acc;
+    }, {});
+    const tipoPrincipal = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+
+    setDeclSavingPrint(true);
+    try {
+      const body = {
+        tipo: tipoPrincipal,
+        fase: "CONFERENCIA",
+        dataOcorrencia: new Date().toISOString().slice(0, 10),
+        localOcorrencia: "Aparecida de Goiânia",
+        descricao: `Declaração de Recebimento — ${declEntrega?.razaoSocial || "Sem entrega vinculada"}`,
+        observacoes: declDados.observacoes || null,
+        entregaId: declEntrega?.id || null,
+        motoristaId: declEntrega?.motorista?.id || null,
+        transportadoraChegada: declDados.transportadora || null,
+        motoristaChegada: declDados.motoristaNome || null,
+        placaChegada: declDados.placa || null,
+        dataChegada: new Date().toISOString(),
+        produtos: declLinhas.map((l) => ({
+          codigoProduto: l.codigoProduto,
+          descricao: l.descricao,
+          ncm: l.ncm || null,
+          unidade: l.unidade || null,
+          quantidadeNF: l.quantidadeNF,
+          quantidadeAvaria: l.quantidadeAvaria,
+          valorUnitario: l.valorUnitario,
+          notaFiscalId: l.notaFiscalId,
+          tipoDivergencia: l.tipoDivergencia,
+        })),
+      };
+      const res = await fetch("/api/avarias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Erro ao salvar");
+      const created = await res.json();
+      toast.success(`Declaração ${created.codigo} criada!`);
+      window.open(`/imprimir/declaracao-recebimento/${created.id}`, "_blank");
+      setShowDeclModal(false);
+      resetDeclForm();
+      fetchDeclaracoes();
+      fetchResumo();
+      fetchAvarias();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao salvar declaração");
+    } finally {
+      setDeclSavingPrint(false);
+    }
+  }
+
   async function handleSaveAvariaField(avariaId: string, field: string, value: string) {
     try {
       const payload: any = {};
@@ -453,6 +618,7 @@ export default function AvariasPage() {
             { key: "devolucoes", label: "Devoluções", icon: FileText },
             { key: "ocorrencias", label: "Ocorrências", icon: AlertTriangle },
             { key: "diarias", label: "Diárias", icon: DollarSign },
+            { key: "declaracao", label: "Declaração Recebimento", icon: ClipboardCheck },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === t.key ? "bg-orange-500/10 text-orange-500 shadow-sm" : "text-[var(--text2)] hover:bg-[var(--surface)]"}`}>
@@ -1081,6 +1247,77 @@ export default function AvariasPage() {
 
         {/* DIARIAS TAB */}
         {tab === "diarias" && <DiariasTab isAdmin={isAdmin} />}
+
+        {/* DECLARAÇÃO DE RECEBIMENTO TAB */}
+        {tab === "declaracao" && (
+          <>
+            <Card className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                <div className="flex items-start gap-3">
+                  <ClipboardCheck size={20} className="text-orange-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-semibold">Declaração de Recebimento</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--text2)" }}>
+                      Emita declarações formais quando a conferência de uma carga acusar divergência (falta, sobra, avaria, inversão).
+                    </div>
+                  </div>
+                </div>
+                <Button onClick={() => { resetDeclForm(); setShowDeclModal(true); }}>
+                  <Plus size={14} /> Nova Declaração
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="p-0 overflow-hidden">
+              {loadingDeclaracoes ? (
+                <Loading />
+              ) : declaracoesList.length === 0 ? (
+                <Empty icon="📄" text="Nenhuma declaração ainda. Clique em Nova Declaração pra emitir a primeira." />
+              ) : (
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>Código</Th>
+                      <Th>Data</Th>
+                      <Th>Cliente / Entrega</Th>
+                      <Th>Motorista</Th>
+                      <Th>Transportadora</Th>
+                      <Th>Produtos</Th>
+                      <Th></Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {declaracoesList.map((d) => (
+                      <Tr key={d.id}>
+                        <Td><span className="font-mono text-xs font-semibold" style={{ color: "var(--accent)" }}>{d.codigo}</span></Td>
+                        <Td><span className="text-xs font-mono" style={{ color: "var(--text2)" }}>{formatDate(d.dataOcorrencia)}</span></Td>
+                        <Td>
+                          <div className="text-sm">{d.entrega?.razaoSocial || "—"}</div>
+                          <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
+                            {d.entrega?.codigo || ""} {d.entrega?.cidade ? `· ${d.entrega.cidade}` : ""}
+                          </div>
+                        </Td>
+                        <Td><span className="text-xs">{d.motorista?.nome || "—"}</span></Td>
+                        <Td><span className="text-xs">{d.transportadoraChegada || d.registradoPor?.name || "—"}</span></Td>
+                        <Td><span className="text-xs font-mono">{d._count?.produtos || 0}</span></Td>
+                        <Td>
+                          <button
+                            onClick={() => window.open(`/imprimir/declaracao-recebimento/${d.id}`, "_blank")}
+                            className="p-1.5 rounded-lg hover:opacity-70 transition-all inline-flex items-center gap-1"
+                            style={{ background: "var(--surface2)", color: "var(--text2)" }}
+                            title="Reimprimir declaração"
+                          >
+                            <Printer size={13} /> <span className="text-xs">Imprimir</span>
+                          </button>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </Card>
+          </>
+        )}
       </div>
 
       {/* BULK SAÍDA MODAL */}
@@ -1383,6 +1620,191 @@ export default function AvariasPage() {
             <Button onClick={handleResolveOcorrencia} loading={salvandoResolucao}>Confirmar Resolução</Button>
           </div>
         </div>
+      </Modal>
+
+      {/* DECLARAÇÃO DE RECEBIMENTO MODAL */}
+      <Modal open={showDeclModal} onClose={() => { setShowDeclModal(false); resetDeclForm(); }} title={`Nova Declaração de Recebimento — Etapa ${declStep}/3`} size="xl">
+        {/* STEP 1: Selecionar entrega */}
+        {declStep === 1 && (
+          <div className="space-y-4">
+            <p className="text-xs" style={{ color: "var(--text2)" }}>
+              Busque a entrega recebida no armazém. A declaração vai vincular esta carga e listar os produtos das NFs.
+            </p>
+
+            {declEntrega ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold">{declEntrega.razaoSocial}</div>
+                  <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
+                    {declEntrega.codigo} · {declEntrega.cidade} · {declEntrega.notas?.length || 0} NF(s) · {declEntrega.motorista?.nome || "sem motorista"}
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => { setDeclEntrega(null); setDeclProdutosPorNf({}); setDeclLinhas([]); }}>Trocar</Button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  value={declEntregaSearch}
+                  onChange={(e) => setDeclEntregaSearch(e.target.value)}
+                  placeholder="Buscar por NF, cliente ou código..."
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                />
+                {declEntregaResults.length > 0 && (
+                  <div className="absolute z-10 top-full mt-1 w-full rounded-lg shadow-xl max-h-64 overflow-y-auto" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    {declEntregaResults.map((e: any) => (
+                      <div key={e.id} onClick={() => selectDeclEntrega(e)}
+                        className="px-3 py-2 cursor-pointer hover:bg-[var(--surface2)] transition-colors"
+                        style={{ borderBottom: "1px solid var(--border)" }}>
+                        <div className="text-sm font-semibold">{e.razaoSocial}</div>
+                        <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
+                          {e.codigo} · {e.cidade} · {e.notas?.length || 0} NF(s) · {e.motorista?.nome || "sem motorista"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+              <Button variant="ghost" onClick={() => { setShowDeclModal(false); resetDeclForm(); }}>Cancelar</Button>
+              <Button onClick={() => setDeclStep(2)} disabled={!declEntrega}>Próximo</Button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Marcar produtos com divergência */}
+        {declStep === 2 && (
+          <div className="space-y-4">
+            <p className="text-xs" style={{ color: "var(--text2)" }}>
+              Marque os produtos com divergência. Cada linha tem seu próprio tipo (Falta / Sobra / Avaria / Inversão / Outro) e a quantidade divergente.
+            </p>
+
+            {Object.keys(declProdutosPorNf).length === 0 ? (
+              <div className="text-center py-8 text-xs" style={{ color: "var(--text3)" }}>
+                Esta entrega não tem produtos parseáveis (XML pode não estar disponível nas NFs).
+              </div>
+            ) : (
+              declEntrega?.notas?.map((nf: any) => {
+                const produtos = declProdutosPorNf[nf.id] || [];
+                if (produtos.length === 0) return null;
+                return (
+                  <div key={nf.id} className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                    <div className="px-3 py-2 text-xs font-mono font-bold" style={{ background: "var(--surface2)", color: "var(--accent)" }}>
+                      NF {nf.numero} <span style={{ color: "var(--text3)" }}>· {nf.emitenteRazao}</span>
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr style={{ background: "var(--surface2)" }}>
+                          <th className="px-2 py-1.5 text-left w-8"></th>
+                          <th className="px-2 py-1.5 text-left text-[9px] font-bold uppercase" style={{ color: "var(--text3)" }}>Produto</th>
+                          <th className="px-2 py-1.5 text-right text-[9px] font-bold uppercase" style={{ color: "var(--text3)" }}>Qtd NF</th>
+                          <th className="px-2 py-1.5 text-right text-[9px] font-bold uppercase" style={{ color: "var(--text3)" }}>Qtd Diverg.</th>
+                          <th className="px-2 py-1.5 text-left text-[9px] font-bold uppercase" style={{ color: "var(--text3)" }}>Tipo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {produtos.map((p: any, idx: number) => {
+                          const key = `${nf.id}_${idx}`;
+                          const sel = declLinhas.find((l) => l.key === key);
+                          return (
+                            <tr key={idx}
+                              className={`transition-colors ${sel ? "bg-orange-500/10" : ""}`}
+                              style={{ borderTop: "1px solid var(--border)" }}>
+                              <td className="px-2 py-1.5">
+                                <input type="checkbox" checked={!!sel}
+                                  onChange={() => toggleDeclLinha(nf.id, nf.numero, idx, p)}
+                                  className="accent-orange-500 w-4 h-4" />
+                              </td>
+                              <td className="px-2 py-1.5">
+                                <div className="font-medium">{p.descricao}</div>
+                                <div className="text-[9px] font-mono" style={{ color: "var(--text3)" }}>Cód: {p.codigoProduto}</div>
+                              </td>
+                              <td className="px-2 py-1.5 text-right font-mono">{p.quantidade}</td>
+                              <td className="px-2 py-1.5 text-right">
+                                {sel ? (
+                                  <input type="number" min={0} step="any"
+                                    value={sel.quantidadeAvaria}
+                                    onChange={(e) => updateDeclLinha(key, { quantidadeAvaria: parseFloat(e.target.value) || 0 })}
+                                    className="w-20 px-2 py-1 rounded text-right font-mono text-xs outline-none"
+                                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }} />
+                                ) : (
+                                  <span style={{ color: "var(--text3)" }}>—</span>
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5">
+                                {sel ? (
+                                  <select value={sel.tipoDivergencia}
+                                    onChange={(e) => updateDeclLinha(key, { tipoDivergencia: e.target.value })}
+                                    className="px-2 py-1 rounded text-xs outline-none"
+                                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}>
+                                    {Object.entries(TIPO_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                  </select>
+                                ) : (
+                                  <span className="text-[10px]" style={{ color: "var(--text3)" }}>—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })
+            )}
+
+            <div className="text-xs" style={{ color: "var(--text2)" }}>
+              <b>{declLinhas.length}</b> produto(s) marcado(s) com divergência
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+              <Button variant="ghost" onClick={() => setDeclStep(1)}>Voltar</Button>
+              <Button onClick={() => setDeclStep(3)} disabled={declLinhas.length === 0}>Próximo</Button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Dados adicionais + salvar+imprimir */}
+        {declStep === 3 && (
+          <div className="space-y-4">
+            <p className="text-xs" style={{ color: "var(--text2)" }}>
+              Confira os dados que vão no cabeçalho do documento. Placas podem ser combinadas (ex: <span className="font-mono">JBR0D80 / TKY6A14</span>).
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input label="Transportadora" value={declDados.transportadora}
+                onChange={(e) => setDeclDados((d) => ({ ...d, transportadora: e.target.value }))}
+                placeholder="Ex: PORTO LOG E TRANSP LTDA" />
+              <Input label="Motorista" value={declDados.motoristaNome}
+                onChange={(e) => setDeclDados((d) => ({ ...d, motoristaNome: e.target.value }))}
+                placeholder="Nome completo" />
+              <Input label="CPF" value={declDados.motoristaCpf}
+                onChange={(e) => setDeclDados((d) => ({ ...d, motoristaCpf: e.target.value }))}
+                placeholder="000.000.000-00" />
+              <Input label="Placa(s)" value={declDados.placa}
+                onChange={(e) => setDeclDados((d) => ({ ...d, placa: e.target.value.toUpperCase() }))}
+                placeholder="ABC1D23 / XYZ2E34" />
+            </div>
+
+            <Textarea label="Observações" rows={3} value={declDados.observacoes}
+              onChange={(e) => setDeclDados((d) => ({ ...d, observacoes: e.target.value }))}
+              placeholder="Ex: VEÍCULO CHEGOU LACRADO!" />
+
+            <div className="p-3 rounded-lg text-xs" style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text2)" }}>
+              <b>Resumo:</b> {declLinhas.length} produto(s) com divergência de {new Set(declLinhas.map((l) => l.tipoDivergencia)).size} tipo(s) distinto(s).
+              Ao confirmar, a declaração é salva como Avaria (fase Conferência) e a página de impressão abre em nova aba.
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+              <Button variant="ghost" onClick={() => setDeclStep(2)}>Voltar</Button>
+              <Button onClick={handleSalvarEImprimirDeclaracao} loading={declSavingPrint}>
+                <Printer size={14} /> Salvar e Imprimir
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );
