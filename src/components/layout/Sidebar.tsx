@@ -60,10 +60,10 @@ export function Sidebar() {
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           ${isSidebarCollapsed ? "w-[70px] min-w-[70px]" : "w-[240px] min-w-[240px]"}
         `}
-        style={{ background: "#0a0a0a", borderRight: "1px solid #262626", color: "#ededed" }}
+        style={{ background: "var(--sidebar-bg)", borderRight: "1px solid var(--sidebar-border)", color: "var(--sidebar-fg)" }}
       >
         {/* Logo & Toggle */}
-        <div className="px-4 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid #262626" }}>
+        <div className="px-4 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid var(--sidebar-border)" }}>
           {!isSidebarCollapsed && (
             <div className="flex-1 overflow-hidden transition-all duration-300">
               <img src="/logo.png" alt="MAGNALOG" className="h-8 w-auto object-contain bg-white px-2 py-1 rounded" />
@@ -112,7 +112,7 @@ export function Sidebar() {
         </nav>
 
         {/* User info */}
-        <div className={`p-4 transition-all duration-300 ${isSidebarCollapsed ? "items-center" : ""}`} style={{ borderTop: "1px solid #262626" }}>
+        <div className={`p-4 transition-all duration-300 ${isSidebarCollapsed ? "items-center" : ""}`} style={{ borderTop: "1px solid var(--sidebar-border)" }}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 min-w-[36px] rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ring-2 ring-neutral-800"
               style={{ background: "var(--accent)" }}>

@@ -3,6 +3,7 @@ import { signOut } from "next-auth/react";
 import { LogOut, Menu } from "lucide-react";
 import { GlobalSearch } from "./GlobalSearch";
 import { NotificationBell } from "./NotificationBell";
+import { ThemeToggle } from "./ThemeToggle";
 import { useLayoutStore } from "@/hooks/useLayoutStore";
 
 interface TopbarProps {
@@ -41,6 +42,7 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
         <div className="hidden sm:block">
           <GlobalSearch />
         </div>
+        <ThemeToggle />
         <NotificationBell />
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
