@@ -22,7 +22,8 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
       <div className="flex items-center gap-3">
         <button 
           onClick={toggleSidebar}
-          className="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+          className="lg:hidden p-2 rounded-lg hover:bg-neutral-800 transition-colors"
+          style={{ color: "var(--text2)" }}
         >
           <Menu size={22} />
         </button>

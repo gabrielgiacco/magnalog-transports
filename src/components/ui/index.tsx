@@ -12,8 +12,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 export function Button({ variant = "primary", size = "md", loading, children, className, disabled, ...props }: ButtonProps) {
   const base = "inline-flex items-center justify-center gap-2 font-semibold rounded-lg transition-all cursor-pointer border";
   const vars = {
-    primary: "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 active:scale-95 shadow-sm",
-    ghost: "text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-800 active:scale-95",
+    primary: "bg-orange-500 text-white border-orange-500 hover:bg-orange-600 hover:border-orange-600 active:scale-95",
+    ghost: "hover:bg-neutral-800 active:scale-95",
     danger: "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20 active:scale-95",
     success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 active:scale-95",
   };
@@ -21,7 +21,12 @@ export function Button({ variant = "primary", size = "md", loading, children, cl
   return (
     <button {...props} disabled={disabled || loading}
       className={cn(base, vars[variant], sizes[size], (disabled || loading) && "opacity-50 cursor-not-allowed", className)}
-      style={{ background: variant === "ghost" ? "var(--surface2)" : undefined, fontFamily: "'Inter', sans-serif" }}>
+      style={{
+        background: variant === "ghost" ? "var(--surface2)" : undefined,
+        color: variant === "ghost" ? "var(--text2)" : undefined,
+        borderColor: variant === "ghost" ? "var(--border)" : undefined,
+        fontFamily: "'Inter', sans-serif",
+      }}>
       {loading && <Loader2 size={14} className="animate-spin" />}
       {children}
     </button>
@@ -180,8 +185,11 @@ export function Tr({ children, onClick, className, style }: { children: React.Re
   return (
     <tr
       onClick={onClick}
-      className={cn("transition-colors", onClick && "cursor-pointer hover:bg-slate-50", className)}
-      style={{ borderBottom: "1px solid var(--border)", ...style }}>
+      className={cn("transition-colors", onClick && "cursor-pointer", className)}
+      style={{ borderBottom: "1px solid var(--border)", ...style }}
+      onMouseEnter={onClick ? (e) => { e.currentTarget.style.background = "var(--surface2)"; } : undefined}
+      onMouseLeave={onClick ? (e) => { e.currentTarget.style.background = "transparent"; } : undefined}
+    >
       {children}
     </tr>
   );
@@ -253,7 +261,7 @@ export function ComboboxMotorista({
             <button
               type="button"
               onClick={handleClear}
-              className="p-0.5 rounded hover:bg-red-100 transition-colors"
+              className="p-0.5 rounded hover:bg-red-500/20 transition-colors"
               title="Limpar motorista"
             >
               <X size={14} className="text-red-400" />
@@ -269,7 +277,7 @@ export function ComboboxMotorista({
           {/* Opção de limpar motorista */}
           {value && (
             <div
-              className="flex items-center gap-2 p-3 text-sm hover:bg-red-50 cursor-pointer transition-colors"
+              className="flex items-center gap-2 p-3 text-sm cursor-pointer transition-colors hover:bg-red-500/10"
               style={{ borderBottom: "1px solid var(--border)" }}
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -280,19 +288,21 @@ export function ComboboxMotorista({
               }}
             >
               <X size={13} className="text-red-400" />
-              <span className="font-medium text-red-500">Limpar motorista</span>
+              <span className="font-medium text-red-400">Limpar motorista</span>
             </div>
           )}
           {filtered.length === 0 ? (
-            <div className="p-3 text-sm text-center opacity-50">Nenhum encontrado</div>
+            <div className="p-3 text-sm text-center" style={{ color: "var(--text3)" }}>Nenhum encontrado</div>
           ) : (
             filtered.map((m) => {
               // Buscar veiculo associado a este motorista
               const v = veiculos.find((vei) => vei.motoristaId === m.id);
               return (
                 <div key={m.id}
-                  className="flex items-center justify-between p-3 text-sm hover:bg-slate-50 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-3 text-sm cursor-pointer transition-colors"
                   style={{ borderBottom: "1px solid var(--border)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface2)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     onChange(m.id);
@@ -301,8 +311,8 @@ export function ComboboxMotorista({
                     setSearch("");
                   }}
                 >
-                  <span className="font-medium text-slate-800">{m.nome}</span>
-                  <span className="text-xs font-mono text-slate-400">
+                  <span className="font-medium" style={{ color: "var(--text)" }}>{m.nome}</span>
+                  <span className="text-xs font-mono" style={{ color: "var(--text3)" }}>
                     {v ? `${v.placa} · ${v.tipo}` : "Sem veículo"}
                   </span>
                 </div>

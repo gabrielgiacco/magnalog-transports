@@ -3,17 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface2: #f1f5f9;
-  --surface3: #e2e8f0;
-  --border: #e2e8f0;
-  --border2: #cbd5e1;
-  --accent: #2563eb;
-  --accent2: #1d4ed8;
-  --text: #0f172a;
-  --text2: #475569;
-  --text3: #94a3b8;
+  /* Midnight-Vercel theme + Magna Log orange accent */
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface2: #171717;
+  --surface3: #1f1f1f;
+  --border: #262626;
+  --border2: #404040;
+  --accent: #f97316;
+  --accent2: #ea580c;
+  --text: #ededed;
+  --text2: #a3a3a3;
+  --text3: #737373;
 }
 
 * { box-sizing: border-box; }
@@ -39,15 +40,15 @@ body {
   }
 }
 
-/* Scrollbar */
+/* Scrollbar (dark) */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb { background: #404040; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #525252; }
 
 /* Kanban drag */
-.kanban-col-over { background: rgba(37, 99, 235, 0.05) !important; border-color: rgba(37, 99, 235, 0.2) !important; }
-.kanban-card-dragging { opacity: 0.5; transform: rotate(2deg); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.kanban-col-over { background: rgba(249, 115, 22, 0.06) !important; border-color: rgba(249, 115, 22, 0.35) !important; }
+.kanban-card-dragging { opacity: 0.5; transform: rotate(2deg); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
 
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -72,21 +73,22 @@ body {
   white-space: nowrap;
 }
 
-.badge-PROGRAMADO    { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
-.badge-EM_SEPARACAO  { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
-.badge-CARREGADO     { background: #fdf4ff; color: #c026d3; border: 1px solid #fae8ff; }
-.badge-EM_ROTA       { background: #eef2ff; color: #6366f1; border: 1px solid #c7d2fe; }
-.badge-ENTREGUE      { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-.badge-FINALIZADO    { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
-.badge-OCORRENCIA    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.badge-PLANEJADA     { background: #fdf6e3; color: #d97706; border: 1px solid #fde68a; }
-.badge-EM_ANDAMENTO  { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-.badge-CONCLUIDA     { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-.badge-CANCELADA     { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-.badge-ADMIN         { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-.badge-FINANCEIRO    { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-.badge-OPERACIONAL   { background: #fdf6e3; color: #d97706; border: 1px solid #fde68a; }
-.badge-CLIENTE       { background: #f3e8ff; color: #9333ea; border: 1px solid #e9d5ff; }
+/* Badges dark-theme: bg com alpha do próprio color + border sutil */
+.badge-PROGRAMADO    { background: rgba(59,130,246,.12); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.badge-EM_SEPARACAO  { background: rgba(249,115,22,.12); color: #fb923c; border: 1px solid rgba(249,115,22,.25); }
+.badge-CARREGADO     { background: rgba(217,70,239,.12); color: #e879f9; border: 1px solid rgba(217,70,239,.25); }
+.badge-EM_ROTA       { background: rgba(99,102,241,.12); color: #818cf8; border: 1px solid rgba(99,102,241,.25); }
+.badge-ENTREGUE      { background: rgba(0,208,132,.12); color: #34d399; border: 1px solid rgba(0,208,132,.25); }
+.badge-FINALIZADO    { background: rgba(115,115,115,.15); color: #a3a3a3; border: 1px solid rgba(115,115,115,.30); }
+.badge-OCORRENCIA    { background: rgba(255,77,79,.12); color: #f87171; border: 1px solid rgba(255,77,79,.25); }
+.badge-PLANEJADA     { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.badge-EM_ANDAMENTO  { background: rgba(59,130,246,.12); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.badge-CONCLUIDA     { background: rgba(0,208,132,.12); color: #34d399; border: 1px solid rgba(0,208,132,.25); }
+.badge-CANCELADA     { background: rgba(255,77,79,.12); color: #f87171; border: 1px solid rgba(255,77,79,.25); }
+.badge-ADMIN         { background: rgba(59,130,246,.12); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.badge-FINANCEIRO    { background: rgba(0,208,132,.12); color: #34d399; border: 1px solid rgba(0,208,132,.25); }
+.badge-OPERACIONAL   { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.badge-CLIENTE       { background: rgba(168,85,247,.12); color: #c084fc; border: 1px solid rgba(168,85,247,.25); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DANFE Styles
