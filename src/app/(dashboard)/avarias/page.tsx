@@ -131,6 +131,7 @@ export default function AvariasPage() {
   const [declProdutosPorNf, setDeclProdutosPorNf] = useState<Record<string, any[]>>({});
   const [declLinhas, setDeclLinhas] = useState<Array<{ key: string; notaFiscalId: string; nfNumero: string; codigoProduto: string; descricao: string; ncm: string; unidade: string; quantidadeNF: number; valorUnitario: number; quantidadeAvaria: number; tipoDivergencia: string }>>([]);
   const [declDados, setDeclDados] = useState({ transportadora: "", motoristaNome: "", motoristaCpf: "", placa: "", observacoes: "" });
+  const [declProdutoSearch, setDeclProdutoSearch] = useState("");
 
   // Debounce
   useEffect(() => {
@@ -523,6 +524,7 @@ export default function AvariasPage() {
     setDeclProdutosPorNf({});
     setDeclLinhas([]);
     setDeclDados({ transportadora: "", motoristaNome: "", motoristaCpf: "", placa: "", observacoes: "" });
+    setDeclProdutoSearch("");
   }
 
   async function handleSalvarEImprimirDeclaracao() {
@@ -1681,18 +1683,53 @@ export default function AvariasPage() {
               Marque os produtos com divergência. Cada linha tem seu próprio tipo (Falta / Sobra / Avaria / Inversão / Outro) e a quantidade divergente.
             </p>
 
+            {/* Busca produto */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
+              <input
+                value={declProdutoSearch}
+                onChange={(e) => setDeclProdutoSearch(e.target.value)}
+                placeholder="Buscar produto por código ou nome..."
+                className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+              />
+              {declProdutoSearch && (
+                <button
+                  onClick={() => setDeclProdutoSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:opacity-70 transition-all"
+                  style={{ color: "var(--text3)" }}
+                  title="Limpar busca"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+
             {Object.keys(declProdutosPorNf).length === 0 ? (
               <div className="text-center py-8 text-xs" style={{ color: "var(--text3)" }}>
                 Esta entrega não tem produtos parseáveis (XML pode não estar disponível nas NFs).
               </div>
-            ) : (
-              declEntrega?.notas?.map((nf: any) => {
+            ) : (() => {
+              const q = declProdutoSearch.trim().toLowerCase();
+              const cardsRenderizados = declEntrega?.notas?.map((nf: any) => {
                 const produtos = declProdutosPorNf[nf.id] || [];
                 if (produtos.length === 0) return null;
+                const produtosFiltrados = q
+                  ? produtos
+                      .map((p: any, idx: number) => ({ p, idx }))
+                      .filter(({ p }: any) => {
+                        const alreadySel = declLinhas.some((l) => l.key === `${nf.id}_${produtos.indexOf(p)}`);
+                        return alreadySel ||
+                          String(p.codigoProduto || "").toLowerCase().includes(q) ||
+                          String(p.descricao || "").toLowerCase().includes(q);
+                      })
+                  : produtos.map((p: any, idx: number) => ({ p, idx }));
+                if (produtosFiltrados.length === 0) return null;
                 return (
                   <div key={nf.id} className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                    <div className="px-3 py-2 text-xs font-mono font-bold" style={{ background: "var(--surface2)", color: "var(--accent)" }}>
-                      NF {nf.numero} <span style={{ color: "var(--text3)" }}>· {nf.emitenteRazao}</span>
+                    <div className="px-3 py-2 text-xs font-mono font-bold flex items-center justify-between" style={{ background: "var(--surface2)", color: "var(--accent)" }}>
+                      <div>NF {nf.numero} <span style={{ color: "var(--text3)" }}>· {nf.emitenteRazao}</span></div>
+                      {q && <span className="text-[10px]" style={{ color: "var(--text3)" }}>{produtosFiltrados.length} de {produtos.length}</span>}
                     </div>
                     <table className="w-full text-xs">
                       <thead>
@@ -1705,7 +1742,7 @@ export default function AvariasPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {produtos.map((p: any, idx: number) => {
+                        {produtosFiltrados.map(({ p, idx }: any) => {
                           const key = `${nf.id}_${idx}`;
                           const sel = declLinhas.find((l) => l.key === key);
                           return (
@@ -1752,8 +1789,17 @@ export default function AvariasPage() {
                     </table>
                   </div>
                 );
-              })
-            )}
+              });
+              const algumCard = (cardsRenderizados || []).some((c: any) => c !== null);
+              if (!algumCard && q) {
+                return (
+                  <div className="text-center py-8 text-xs" style={{ color: "var(--text3)" }}>
+                    Nenhum produto encontrado para "<b>{declProdutoSearch}</b>".
+                  </div>
+                );
+              }
+              return <>{cardsRenderizados}</>;
+            })()}
 
             <div className="text-xs" style={{ color: "var(--text2)" }}>
               <b>{declLinhas.length}</b> produto(s) marcado(s) com divergência
