@@ -144,7 +144,8 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
         .btn-print:hover { background: #1d4ed8; }
 
         @media print {
-          body { padding: 10px; }
+          @page { size: A4 landscape; margin: 8mm; }
+          body { padding: 0; }
           .no-print { display: none !important; }
         }
       ` }} />
