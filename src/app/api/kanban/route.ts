@@ -50,12 +50,39 @@ export async function PATCH(req: NextRequest) {
   if (!validStatuses.includes(status)) return NextResponse.json({ error: "Status inválido" }, { status: 400 });
 
   const data: any = { status };
-  if (status === "ENTREGUE" || status === "FINALIZADO") data.dataEntrega = new Date();
   if (status === "FINALIZADO") data.statusCanhoto = "RECEBIDO";
+
+  // Ao finalizar via kanban: preserva dataEntrega existente; se não existe, exige do usuário.
+  // Para rotas (bulk) preservamos a data existente de cada entrega — se alguma não tiver, cai no fallback abaixo.
+  if (status === "ENTREGUE" || status === "FINALIZADO") {
+    if (id.startsWith("rota_")) {
+      const rotaId = id.replace("rota_", "");
+      const semData = await prisma.entrega.count({
+        where: { rotaId, dataEntrega: null },
+      });
+      if (semData > 0) {
+        return NextResponse.json(
+          { error: "DATA_ENTREGA_OBRIGATORIA", message: `${semData} entrega(s) da rota sem data de entrega — informe pelo detalhe.` },
+          { status: 400 }
+        );
+      }
+    } else {
+      const existente = await prisma.entrega.findUnique({
+        where: { id },
+        select: { dataEntrega: true },
+      });
+      if (!existente?.dataEntrega) {
+        return NextResponse.json(
+          { error: "DATA_ENTREGA_OBRIGATORIA", message: "Informe a data em que a entrega foi realizada." },
+          { status: 400 }
+        );
+      }
+    }
+  }
 
   if (id.startsWith("rota_")) {
     const rotaId = id.replace("rota_", "");
-    
+
     // Atualizar todas as entregas da rota
     await prisma.entrega.updateMany({
       where: { rotaId },

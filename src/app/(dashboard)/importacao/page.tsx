@@ -63,6 +63,7 @@ export default function ImportacaoPage() {
   const [notasSearch, setNotasSearch] = useState("");
   const [debouncedNotasSearch, setDebouncedNotasSearch] = useState("");
   const [semEntrega, setSemEntrega] = useState(false);
+  const [selectedNfIds, setSelectedNfIds] = useState<string[]>([]);
 
   // ── Consulta DANFE state ──
   const [danfeMode, setDanfeMode] = useState<InputMode>("chave");
@@ -138,6 +139,24 @@ export default function ImportacaoPage() {
   }, [notasPage, debouncedNotasSearch, semEntrega]);
 
   useEffect(() => { if (tab === "notas") fetchNotas(); }, [tab, fetchNotas]);
+
+  // Limpa seleção quando muda filtro/página/tab (evita enviar ids que não estão visíveis)
+  useEffect(() => { setSelectedNfIds([]); }, [notasPage, debouncedNotasSearch, semEntrega, tab]);
+
+  const toggleNfSelection = (id: string) => {
+    setSelectedNfIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+  const toggleSelectAllNfs = (checked: boolean) => {
+    if (checked) setSelectedNfIds(notas.map((n: any) => n.id));
+    else setSelectedNfIds([]);
+  };
+  const destinatariosSelecionados = new Set(
+    notas.filter((n: any) => selectedNfIds.includes(n.id)).map((n: any) => String(n.destinatarioCnpj || "").replace(/\D/g, ""))
+  ).size;
+  const handleImprimirFichaConferencia = () => {
+    if (selectedNfIds.length === 0) return;
+    window.open("/imprimir/conferencia?nfIds=" + selectedNfIds.join(","), "_blank");
+  };
 
   // ══════════════════════════════════════
   // CONSULTA DANFE
@@ -425,6 +444,15 @@ export default function ImportacaoPage() {
                     <Table>
                       <thead>
                         <tr>
+                          <Th>
+                            <input
+                              type="checkbox"
+                              className="accent-orange-500 w-3.5 h-3.5 cursor-pointer align-middle"
+                              checked={notas.length > 0 && selectedNfIds.length === notas.length}
+                              onChange={(e) => toggleSelectAllNfs(e.target.checked)}
+                              title="Selecionar todas visíveis"
+                            />
+                          </Th>
                           <Th>NF / Série</Th><Th>Emitente</Th><Th>Destinatário</Th><Th>Cidade / UF</Th>
                           <Th>Vol.</Th><Th>Peso</Th><Th>Valor NF</Th><Th>Emissão</Th><Th>Entrega</Th><Th>Status</Th><Th></Th>
                         </tr>
@@ -432,6 +460,14 @@ export default function ImportacaoPage() {
                       <tbody>
                         {notas.map(nf => (
                           <Tr key={nf.id} onClick={() => nf.entrega && router.push(`/entregas/${nf.entrega.id}`)} className={nf.entrega ? "" : "opacity-70"}>
+                            <Td onClick={(ev: any) => ev.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                className="accent-orange-500 w-3.5 h-3.5 cursor-pointer align-middle"
+                                checked={selectedNfIds.includes(nf.id)}
+                                onChange={() => toggleNfSelection(nf.id)}
+                              />
+                            </Td>
                             <Td>
                               <div className="font-mono text-sm font-semibold" style={{ color: "var(--accent)" }}>NF {nf.numero}</div>
                               {nf.serie && <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>Série {nf.serie}</div>}
@@ -484,6 +520,22 @@ export default function ImportacaoPage() {
                   </>
                 )}
               </Card>
+
+              {/* Barra flutuante — aparece só com NFs selecionadas */}
+              {selectedNfIds.length > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-4 z-50">
+                  <span className="text-sm font-bold font-mono">
+                    {selectedNfIds.length} NF{selectedNfIds.length !== 1 ? "s" : ""} selecionada{selectedNfIds.length !== 1 ? "s" : ""}
+                    <span className="text-slate-400 font-normal"> • {destinatariosSelecionados} destinatário{destinatariosSelecionados !== 1 ? "s" : ""} distinto{destinatariosSelecionados !== 1 ? "s" : ""}</span>
+                  </span>
+                  <Button size="sm" onClick={handleImprimirFichaConferencia} className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-4">
+                    <Printer size={13} className="mr-1.5" /> Imprimir Ficha de Conferência
+                  </Button>
+                  <button onClick={() => setSelectedNfIds([])} className="w-6 h-6 flex items-center justify-center hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors" title="Limpar seleção">
+                    ×
+                  </button>
+                </div>
+              )}
             </>
           )}
 

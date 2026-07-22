@@ -56,6 +56,12 @@ export default function EntregaDetailPage() {
   const [statusFinalEntrega, setStatusFinalEntrega] = useState("FINALIZADO");
   const [salvandoResolucao, setSalvandoResolucao] = useState(false);
 
+  // Prompt de dataEntrega ao finalizar entrega que ainda não tem data
+  const [showDataEntregaPrompt, setShowDataEntregaPrompt] = useState(false);
+  const [dataEntregaInput, setDataEntregaInput] = useState("");
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [pendingContext, setPendingContext] = useState<"status" | "resolve">("status");
+
   // Add NFs modal
   const [showAddNF, setShowAddNF] = useState(false);
   const [notasDisp, setNotasDisp] = useState<any[]>([]);
@@ -104,6 +110,19 @@ export default function EntregaDetailPage() {
   }
 
   async function handleStatusChange(newStatus: string) {
+    // Se está finalizando (ENTREGUE ou FINALIZADO) e a entrega ainda não tem dataEntrega,
+    // abre modal pedindo a data ao invés de setar a data atual automaticamente.
+    if ((newStatus === "ENTREGUE" || newStatus === "FINALIZADO") && !entrega?.dataEntrega) {
+      setPendingStatus(newStatus);
+      setPendingContext("status");
+      setDataEntregaInput(entrega?.dataAgendada ? entrega.dataAgendada.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      setShowDataEntregaPrompt(true);
+      return;
+    }
+    await applyStatusChange(newStatus);
+  }
+
+  async function applyStatusChange(newStatus: string, dataEntregaISO?: string) {
     setSaving(true);
     try {
       const res = await fetch(`/api/entregas/${id}`, {
@@ -111,10 +130,14 @@ export default function EntregaDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: newStatus,
-          ...(newStatus === "ENTREGUE" ? { dataEntrega: new Date().toISOString() } : {})
+          ...(dataEntregaISO ? { dataEntrega: dataEntregaISO } : {}),
         }),
       });
       const updated = await res.json();
+      if (!res.ok) {
+        toast.error(updated.message || updated.error || "Erro ao atualizar");
+        return;
+      }
       setEntrega(updated);
       toast.success("Status atualizado");
       if (newStatus === "FINALIZADO" && QUALIDADE_ENABLED) {
@@ -124,7 +147,27 @@ export default function EntregaDetailPage() {
     finally { setSaving(false); }
   }
 
+  async function handleConfirmDataEntrega() {
+    if (!dataEntregaInput) { toast.error("Informe a data de entrega"); return; }
+    const iso = new Date(dataEntregaInput + "T12:00:00").toISOString();
+    setShowDataEntregaPrompt(false);
+    const status = pendingStatus;
+    const ctx = pendingContext;
+    setPendingStatus(null);
+    if (ctx === "resolve") {
+      await doResolveOcorrencia(iso);
+    } else if (status) {
+      await applyStatusChange(status, iso);
+    }
+  }
+
   async function handleSaveEdit() {
+    // Validação client-side: se o form finaliza mas não tem data, avisa antes de tentar salvar
+    const finalizando = (editForm.status === "FINALIZADO" || editForm.status === "ENTREGUE");
+    if (finalizando && !editForm.dataEntrega && !entrega?.dataEntrega) {
+      toast.error("Preencha a Data de Entrega antes de finalizar");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/entregas/${id}`, {
@@ -241,6 +284,20 @@ export default function EntregaDetailPage() {
       toast.error("Insira uma observação para a resolução");
       return;
     }
+    // Se resolução vai finalizar/entregar sem data existente, pergunta a data primeiro
+    const finalizando = statusFinalEntrega === "FINALIZADO" || statusFinalEntrega === "ENTREGUE";
+    if (finalizando && !entrega?.dataEntrega) {
+      setPendingStatus(statusFinalEntrega);
+      setPendingContext("resolve");
+      setDataEntregaInput(entrega?.dataAgendada ? entrega.dataAgendada.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      setShowResolveModal(false);
+      setShowDataEntregaPrompt(true);
+      return;
+    }
+    await doResolveOcorrencia();
+  }
+
+  async function doResolveOcorrencia(dataEntregaISO?: string) {
     setSalvandoResolucao(true);
     try {
       const ultimaOcorr = entrega.ocorrencias?.find((o: any) => !o.resolvida);
@@ -249,7 +306,6 @@ export default function EntregaDetailPage() {
         return;
       }
 
-      // 1. Atualizar a ocorrência
       const resOcorr = await fetch(`/api/entregas/${id}/ocorrencia`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -261,16 +317,19 @@ export default function EntregaDetailPage() {
 
       if (!resOcorr.ok) throw new Error("Erro ao salvar resolução da ocorrência");
 
-      // 2. Atualizar o status da entrega
       const resEntrega = await fetch(`/api/entregas/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: statusFinalEntrega
+          status: statusFinalEntrega,
+          ...(dataEntregaISO ? { dataEntrega: dataEntregaISO } : {}),
         })
       });
 
-      if (!resEntrega.ok) throw new Error("Erro ao atualizar status da entrega");
+      if (!resEntrega.ok) {
+        const err = await resEntrega.json().catch(() => ({}));
+        throw new Error(err.message || err.error || "Erro ao atualizar status da entrega");
+      }
 
       toast.success("Ocorrência resolvida com sucesso!");
       setShowResolveModal(false);
@@ -1332,6 +1391,28 @@ export default function EntregaDetailPage() {
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
           <Button variant="ghost" onClick={() => setShowOcorrencia(false)}>Cancelar</Button>
           <Button variant="danger" onClick={handleOcorrencia} loading={saving}>Registrar</Button>
+        </div>
+      </Modal>
+
+      {/* DATA ENTREGA PROMPT — pergunta quando o usuário finaliza sem data preenchida */}
+      <Modal open={showDataEntregaPrompt} onClose={() => { setShowDataEntregaPrompt(false); setPendingStatus(null); }} title="Informar Data da Entrega" size="sm">
+        <div className="space-y-4">
+          <div className="p-3 rounded-xl flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 text-amber-700">
+            <Calendar size={18} className="flex-shrink-0 mt-0.5" />
+            <p className="text-sm">
+              Esta entrega ainda não tem <b>Data de Entrega</b> registrada. Informe a data em que a entrega foi realizada de fato para {pendingStatus === "FINALIZADO" ? "finalizar" : "marcar como entregue"}.
+            </p>
+          </div>
+          <Input
+            type="date"
+            label="Data da Entrega *"
+            value={dataEntregaInput}
+            onChange={(e) => setDataEntregaInput(e.target.value)}
+          />
+          <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+            <Button variant="ghost" onClick={() => { setShowDataEntregaPrompt(false); setPendingStatus(null); }}>Cancelar</Button>
+            <Button onClick={handleConfirmDataEntrega} loading={saving || salvandoResolucao}>Confirmar</Button>
+          </div>
         </div>
       </Modal>
 

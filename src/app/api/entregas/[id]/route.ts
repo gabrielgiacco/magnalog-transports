@@ -2,66 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
-import { XMLParser } from "fast-xml-parser";
 import { logFromRequest } from "@/lib/audit";
-
-function parseNFProducts(xmlContent: string | null) {
-  if (!xmlContent) return { produtos: [], infAdicionais: "", infFisco: "", emitente: null };
-  try {
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: "@_",
-      parseAttributeValue: false,
-      numberParseOptions: { hex: false, leadingZeros: false, skipLike: /.*/ },
-    });
-    const parsed = parser.parse(xmlContent);
-    const nfe = parsed?.nfeProc?.NFe || parsed?.NFe;
-    const infNFe = nfe?.infNFe;
-    if (!infNFe) return { produtos: [], infAdicionais: "", infFisco: "", emitente: null };
-
-    // Products
-    const detArray = Array.isArray(infNFe.det) ? infNFe.det : infNFe.det ? [infNFe.det] : [];
-    const produtos = detArray.map((d: any) => {
-      const p = d.prod || {};
-      return {
-        codigo: String(p.cProd || ""),
-        descricao: String(p.xProd || ""),
-        ncm: String(p.NCM || ""),
-        cfop: String(p.CFOP || ""),
-        unidade: String(p.uCom || ""),
-        quantidade: parseFloat(String(p.qCom || "0")) || 0,
-        valorUnitario: parseFloat(String(p.vUnCom || "0")) || 0,
-        valorTotal: parseFloat(String(p.vProd || "0")) || 0,
-        ean: String(p.cEAN || ""),
-      };
-    });
-
-    // Additional info
-    const infAdic = infNFe.infAdic || {};
-    const infAdicionais = String(infAdic.infCpl || "");
-    const infFisco = String(infAdic.infAdFisco || "");
-
-    // Emitter full data
-    const emit = infNFe.emit || {};
-    const enderEmit = emit.enderEmit || {};
-    const emitente = {
-      cnpj: String(emit.CNPJ || emit.CPF || ""),
-      razaoSocial: String(emit.xNome || ""),
-      fantasia: String(emit.xFant || ""),
-      ie: String(emit.IE || ""),
-      cidade: String(enderEmit.xMun || ""),
-      uf: String(enderEmit.UF || ""),
-      endereco: `${enderEmit.xLgr || ""} ${enderEmit.nro || ""}`.trim(),
-      bairro: String(enderEmit.xBairro || ""),
-      cep: String(enderEmit.CEP || ""),
-      telefone: String(enderEmit.fone || ""),
-    };
-
-    return { produtos, infAdicionais, infFisco, emitente };
-  } catch {
-    return { produtos: [], infAdicionais: "", infFisco: "", emitente: null };
-  }
-}
+import { parseNFProducts } from "@/lib/nf-produtos";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -190,22 +132,34 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const data: any = { ...body };
 
-    // Ao finalizar entrega, marcar canhoto como recebido, setar data de entrega e dar baixa nas ocorrências
-    if (data.status === "FINALIZADO") {
-      data.statusCanhoto = "RECEBIDO";
-      if (!data.dataEntrega) data.dataEntrega = new Date();
+    // Ao finalizar entrega, marcar canhoto como recebido e dar baixa nas ocorrências.
+    // NÃO sobrescrever dataEntrega: se veio no body usa; senão preserva a existente.
+    // Se não existir data em lugar nenhum, rejeita (frontend deve pedir a data ao usuário).
+    if (data.status === "FINALIZADO" || data.status === "ENTREGUE") {
+      if (!data.dataEntrega) {
+        const existente = await prisma.entrega.findUnique({
+          where: { id: params.id },
+          select: { dataEntrega: true },
+        });
+        if (!existente?.dataEntrega) {
+          return NextResponse.json(
+            { error: "DATA_ENTREGA_OBRIGATORIA", message: "Informe a data em que a entrega foi realizada." },
+            { status: 400 }
+          );
+        }
+        delete data.dataEntrega;
+      }
 
-      // Dar baixa automática em todas as ocorrências não resolvidas desta entrega
-      await prisma.ocorrencia.updateMany({
-        where: { entregaId: params.id, resolvida: false },
-        data: {
-          resolvida: true,
-          resolucao: "Baixa automática — entrega finalizada",
-        },
-      });
-    }
-    if (data.status === "ENTREGUE" && !data.dataEntrega) {
-      data.dataEntrega = new Date();
+      if (data.status === "FINALIZADO") {
+        data.statusCanhoto = "RECEBIDO";
+        await prisma.ocorrencia.updateMany({
+          where: { entregaId: params.id, resolvida: false },
+          data: {
+            resolvida: true,
+            resolucao: "Baixa automática — entrega finalizada",
+          },
+        });
+      }
     }
 
     // Preservar dataChegada: se veio como vazio/null, remover do payload para não sobrescrever

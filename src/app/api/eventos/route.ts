@@ -15,10 +15,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "entregaId e statusNovo obrigatórios" }, { status: 400 });
   }
 
-  // Update entrega status
+  // Update entrega status. Preserva dataEntrega existente; exige do chamador se estiver vazia.
   const data: any = { status: statusNovo };
-  if (statusNovo === "ENTREGUE" || statusNovo === "FINALIZADO") data.dataEntrega = new Date();
   if (statusNovo === "FINALIZADO") data.statusCanhoto = "RECEBIDO";
+
+  if (statusNovo === "ENTREGUE" || statusNovo === "FINALIZADO") {
+    if (body.dataEntrega) {
+      data.dataEntrega = new Date(body.dataEntrega);
+    } else {
+      const existente = await prisma.entrega.findUnique({
+        where: { id: entregaId },
+        select: { dataEntrega: true },
+      });
+      if (!existente?.dataEntrega) {
+        return NextResponse.json(
+          { error: "DATA_ENTREGA_OBRIGATORIA", message: "Informe a data em que a entrega foi realizada." },
+          { status: 400 }
+        );
+      }
+    }
+  }
 
   const entrega = await prisma.entrega.update({
     where: { id: entregaId },

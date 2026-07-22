@@ -21,9 +21,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Topbar } from "@/components/layout/Topbar";
-import { Button, Loading, StatusBadge, Modal } from "@/components/ui";
+import { Button, Loading, StatusBadge, Modal, Input } from "@/components/ui";
 import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
-import { RefreshCw, ExternalLink, GripVertical, User, Package, Search, ShieldCheck } from "lucide-react";
+import { RefreshCw, ExternalLink, GripVertical, User, Package, Search, ShieldCheck, Calendar } from "lucide-react";
 import { QualityScoring } from "@/components/quality/QualityScoring";
 import { QUALIDADE_ENABLED } from "@/lib/features";
 
@@ -168,6 +168,10 @@ export default function KanbanPage() {
   const [qualityEntregaId, setQualityEntregaId] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
+  // Prompt de dataEntrega quando o drop finaliza uma entrega sem data
+  const [pendingFinalizar, setPendingFinalizar] = useState<{ id: string; status: string; previousStatus: string; isRota: boolean } | null>(null);
+  const [dataEntregaInput, setDataEntregaInput] = useState("");
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     const res = await fetch("/api/kanban");
@@ -253,6 +257,7 @@ export default function KanbanPage() {
     const entrega = entregas.find((e) => e.id === active.id);
     if (!entrega || entrega.status === targetColKey) return;
 
+    const previousStatus = entrega.status;
     setEntregas((prev) => prev.map((e) => e.id === active.id ? { ...e, status: targetColKey } : e));
 
     try {
@@ -261,14 +266,60 @@ export default function KanbanPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: active.id, status: targetColKey }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        // Backend pediu data de entrega: reverte visualmente e abre modal
+        if (err?.error === "DATA_ENTREGA_OBRIGATORIA") {
+          setEntregas((prev) => prev.map((e) => e.id === active.id ? { ...e, status: previousStatus } : e));
+          setPendingFinalizar({
+            id: active.id as string,
+            status: targetColKey!,
+            previousStatus,
+            isRota: !!entrega.isRota,
+          });
+          setDataEntregaInput(entrega.dataAgendada ? entrega.dataAgendada.slice(0, 10) : new Date().toISOString().slice(0, 10));
+          return;
+        }
+        throw new Error(err?.message || "Erro");
+      }
       toast.success(`Movido para ${COLS.find((c) => c.key === targetColKey)?.label}`);
       if (targetColKey === "FINALIZADO" && QUALIDADE_ENABLED) {
         setQualityEntregaId(active.id as string);
       }
-    } catch {
-      toast.error("Erro ao atualizar status");
-      setEntregas((prev) => prev.map((e) => e.id === active.id ? { ...e, status: entrega.status } : e));
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao atualizar status");
+      setEntregas((prev) => prev.map((e) => e.id === active.id ? { ...e, status: previousStatus } : e));
+    }
+  }
+
+  async function handleConfirmDataEntrega() {
+    if (!pendingFinalizar) return;
+    if (!dataEntregaInput) { toast.error("Informe a data de entrega"); return; }
+    if (pendingFinalizar.isRota) {
+      toast.error("Rotas em lote: abra cada entrega e informe a data individualmente.");
+      setPendingFinalizar(null);
+      return;
+    }
+    const iso = new Date(dataEntregaInput + "T12:00:00").toISOString();
+    // Aplica direto via PUT em /api/entregas/[id] (aceita dataEntrega junto do status)
+    try {
+      const res = await fetch(`/api/entregas/${pendingFinalizar.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: pendingFinalizar.status, dataEntrega: iso }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || err?.error || "Erro ao finalizar");
+      }
+      setEntregas((prev) => prev.map((e) => e.id === pendingFinalizar.id ? { ...e, status: pendingFinalizar.status, dataEntrega: iso } : e));
+      toast.success(`Movido para ${COLS.find((c) => c.key === pendingFinalizar.status)?.label}`);
+      if (pendingFinalizar.status === "FINALIZADO" && QUALIDADE_ENABLED) {
+        setQualityEntregaId(pendingFinalizar.id);
+      }
+      setPendingFinalizar(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao finalizar");
     }
   }
 
@@ -358,12 +409,34 @@ export default function KanbanPage() {
           </p>
         </div>
         {qualityEntregaId && (
-          <QualityScoring 
-            entregaId={qualityEntregaId.startsWith("rota_") ? undefined : qualityEntregaId} 
-            rotaId={qualityEntregaId.startsWith("rota_") ? qualityEntregaId.replace("rota_", "") : undefined} 
-            onSave={() => { setQualityEntregaId(null); toast.success("Avaliação salva!"); }} 
+          <QualityScoring
+            entregaId={qualityEntregaId.startsWith("rota_") ? undefined : qualityEntregaId}
+            rotaId={qualityEntregaId.startsWith("rota_") ? qualityEntregaId.replace("rota_", "") : undefined}
+            onSave={() => { setQualityEntregaId(null); toast.success("Avaliação salva!"); }}
           />
         )}
+      </Modal>
+
+      {/* DATA ENTREGA PROMPT — quando o drop finaliza uma entrega ainda sem data */}
+      <Modal open={!!pendingFinalizar} onClose={() => setPendingFinalizar(null)} title="Informar Data da Entrega" size="sm">
+        <div className="space-y-4">
+          <div className="p-3 rounded-xl flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 text-amber-700">
+            <Calendar size={18} className="flex-shrink-0 mt-0.5" />
+            <p className="text-sm">
+              Esta entrega ainda não tem <b>Data de Entrega</b> registrada. Informe a data em que a entrega foi realizada de fato.
+            </p>
+          </div>
+          <Input
+            type="date"
+            label="Data da Entrega *"
+            value={dataEntregaInput}
+            onChange={(e) => setDataEntregaInput(e.target.value)}
+          />
+          <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+            <Button variant="ghost" onClick={() => setPendingFinalizar(null)}>Cancelar</Button>
+            <Button onClick={handleConfirmDataEntrega}>Confirmar</Button>
+          </div>
+        </div>
       </Modal>
     </>
   );
