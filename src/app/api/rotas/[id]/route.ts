@@ -68,11 +68,27 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   data.pesoTotal = queryEntregas.reduce((s: number, e: any) => s + e.pesoTotal, 0);
   data.volumeTotal = queryEntregas.reduce((s: number, e: any) => s + e.volumeTotal, 0);
 
-  // 2. Ao concluir rota, setar dataEntrega em todas as entregas
+  // 2. Ao concluir rota: marca entregas como ENTREGUE (não FINALIZADO).
+  //    O "Finalizar" fica separado — botão específico chama com finalizarEntregas: true.
   if (body.status === "CONCLUIDA") {
+    const dataInformada = body.dataEntrega ? new Date(body.dataEntrega) : new Date();
+    // Preserva dataEntrega existente; só preenche as que estão vazias
     await prisma.entrega.updateMany({
       where: { rotaId: params.id, dataEntrega: null },
-      data: { dataEntrega: new Date(), status: "FINALIZADO", statusCanhoto: "RECEBIDO" },
+      data: { dataEntrega: dataInformada },
+    });
+    // Marca como ENTREGUE (mas não sobrescreve entregas já FINALIZADAS ou com OCORRÊNCIA)
+    await prisma.entrega.updateMany({
+      where: { rotaId: params.id, status: { notIn: ["FINALIZADO", "OCORRENCIA"] } },
+      data: { status: "ENTREGUE", statusCanhoto: "RECEBIDO" },
+    });
+  }
+
+  // Finalizar rota: transforma todas as entregas ENTREGUE em FINALIZADO
+  if (body.finalizarEntregas) {
+    await prisma.entrega.updateMany({
+      where: { rotaId: params.id, status: { notIn: ["FINALIZADO", "OCORRENCIA"] } },
+      data: { status: "FINALIZADO", statusCanhoto: "RECEBIDO" },
     });
   }
 

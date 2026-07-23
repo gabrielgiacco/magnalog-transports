@@ -91,6 +91,17 @@ export default function RotasPage() {
     toast.success("Status atualizado");
   }
 
+  async function handleFinalizarEntregas(rotaId: string) {
+    if (!window.confirm("Finalizar todas as entregas desta rota? Elas passarão de ENTREGUE para FINALIZADO.")) return;
+    await fetch(`/api/rotas/${rotaId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ finalizarEntregas: true }),
+    });
+    fetchRotas();
+    toast.success("Entregas finalizadas");
+  }
+
   async function handleDeleteRota(id: string) {
     if (!window.confirm("Tem certeza que deseja EXCLUIR esta rota? As notas vinculadas voltarão para a lista de disponíveis.")) return;
     
@@ -206,6 +217,9 @@ export default function RotasPage() {
                     )}
                     {rota.status === "EM_ANDAMENTO" && (
                       <Button size="sm" variant="success" onClick={() => handleStatusChange(rota.id, "CONCLUIDA")}>Concluir</Button>
+                    )}
+                    {rota.status === "CONCLUIDA" && rota.entregas?.some((e: any) => e.status !== "FINALIZADO" && e.status !== "OCORRENCIA") && (
+                      <Button size="sm" onClick={() => handleFinalizarEntregas(rota.id)}>Finalizar</Button>
                     )}
                     <Button size="sm" variant="ghost" onClick={() => router.push(`/rotas/${rota.id}`)}>
                       <span className="hidden sm:inline">Detalhes</span> →

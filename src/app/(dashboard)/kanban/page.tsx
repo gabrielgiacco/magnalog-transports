@@ -258,6 +258,20 @@ export default function KanbanPage() {
     if (!entrega || entrega.status === targetColKey) return;
 
     const previousStatus = entrega.status;
+
+    // Ao mover para ENTREGUE ou FINALIZADO: SEMPRE pergunta a data de entrega antes
+    if (targetColKey === "ENTREGUE" || targetColKey === "FINALIZADO") {
+      setPendingFinalizar({
+        id: active.id as string,
+        status: targetColKey,
+        previousStatus,
+        isRota: !!entrega.isRota,
+      });
+      const dataExistente = entrega.dataEntrega || entrega.dataAgendada;
+      setDataEntregaInput(dataExistente ? String(dataExistente).slice(0, 10) : new Date().toISOString().slice(0, 10));
+      return;
+    }
+
     setEntregas((prev) => prev.map((e) => e.id === active.id ? { ...e, status: targetColKey } : e));
 
     try {
@@ -268,24 +282,9 @@ export default function KanbanPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        // Backend pediu data de entrega: reverte visualmente e abre modal
-        if (err?.error === "DATA_ENTREGA_OBRIGATORIA") {
-          setEntregas((prev) => prev.map((e) => e.id === active.id ? { ...e, status: previousStatus } : e));
-          setPendingFinalizar({
-            id: active.id as string,
-            status: targetColKey!,
-            previousStatus,
-            isRota: !!entrega.isRota,
-          });
-          setDataEntregaInput(entrega.dataAgendada ? entrega.dataAgendada.slice(0, 10) : new Date().toISOString().slice(0, 10));
-          return;
-        }
         throw new Error(err?.message || "Erro");
       }
       toast.success(`Movido para ${COLS.find((c) => c.key === targetColKey)?.label}`);
-      if (targetColKey === "FINALIZADO" && QUALIDADE_ENABLED) {
-        setQualityEntregaId(active.id as string);
-      }
     } catch (e: any) {
       toast.error(e?.message || "Erro ao atualizar status");
       setEntregas((prev) => prev.map((e) => e.id === active.id ? { ...e, status: previousStatus } : e));
@@ -295,18 +294,12 @@ export default function KanbanPage() {
   async function handleConfirmDataEntrega() {
     if (!pendingFinalizar) return;
     if (!dataEntregaInput) { toast.error("Informe a data de entrega"); return; }
-    if (pendingFinalizar.isRota) {
-      toast.error("Rotas em lote: abra cada entrega e informe a data individualmente.");
-      setPendingFinalizar(null);
-      return;
-    }
     const iso = new Date(dataEntregaInput + "T12:00:00").toISOString();
-    // Aplica direto via PUT em /api/entregas/[id] (aceita dataEntrega junto do status)
     try {
-      const res = await fetch(`/api/entregas/${pendingFinalizar.id}`, {
-        method: "PUT",
+      const res = await fetch("/api/kanban", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: pendingFinalizar.status, dataEntrega: iso }),
+        body: JSON.stringify({ id: pendingFinalizar.id, status: pendingFinalizar.status, dataEntrega: iso }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -318,6 +311,7 @@ export default function KanbanPage() {
         setQualityEntregaId(pendingFinalizar.id);
       }
       setPendingFinalizar(null);
+      fetchData();
     } catch (e: any) {
       toast.error(e?.message || "Erro ao finalizar");
     }

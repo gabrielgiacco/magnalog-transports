@@ -75,6 +75,20 @@ export default function RotaDetailPage() {
     } finally { setSaving(false); }
   }
 
+  async function handleFinalizarEntregas() {
+    if (!window.confirm("Finalizar todas as entregas desta rota? Elas passarão de ENTREGUE para FINALIZADO.")) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/rotas/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ finalizarEntregas: true }),
+      });
+      toast.success("Entregas finalizadas");
+      fetchRota();
+    } finally { setSaving(false); }
+  }
+
   function toggleEntrega(eId: string) {
     setSelectedIds(prev => prev.includes(eId) ? prev.filter(x => x !== eId) : [...prev, eId]);
   }
@@ -176,6 +190,11 @@ export default function RotaDetailPage() {
             {nextStatus && (
               <Button size="sm" onClick={() => handleStatusChange(nextStatus.key)} loading={saving}>
                 {nextStatus.icon} {nextStatus.label}
+              </Button>
+            )}
+            {rota.status === "CONCLUIDA" && rota.entregas?.some((e: any) => e.status !== "FINALIZADO" && e.status !== "OCORRENCIA") && (
+              <Button size="sm" onClick={handleFinalizarEntregas} loading={saving}>
+                🏁 Finalizar
               </Button>
             )}
             <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/rota/${id}`, '_blank')}>

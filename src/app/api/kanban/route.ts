@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Conferente não pode alterar status" }, { status: 403 });
   }
 
-  const { id, status } = await req.json();
+  const { id, status, dataEntrega } = await req.json();
   if (!id || !status) return NextResponse.json({ error: "id e status obrigatórios" }, { status: 400 });
 
   const validStatuses = ["PROGRAMADO", "EM_SEPARACAO", "CARREGADO", "EM_ROTA", "ENTREGUE", "FINALIZADO", "OCORRENCIA"];
@@ -52,26 +52,25 @@ export async function PATCH(req: NextRequest) {
   const data: any = { status };
   if (status === "FINALIZADO") data.statusCanhoto = "RECEBIDO";
 
-  // Ao finalizar via kanban: preserva dataEntrega existente; se não existe, exige do usuário.
-  // Para rotas (bulk) preservamos a data existente de cada entrega — se alguma não tiver, cai no fallback abaixo.
+  // Ao mover para ENTREGUE/FINALIZADO: o cliente sempre envia dataEntrega (modal obrigatório).
+  // Se por acaso não vier e alguma entrega ainda não tem dataEntrega, exige o input.
+  const dataEntregaISO = dataEntrega ? new Date(dataEntrega) : null;
+
   if (status === "ENTREGUE" || status === "FINALIZADO") {
     if (id.startsWith("rota_")) {
       const rotaId = id.replace("rota_", "");
-      const semData = await prisma.entrega.count({
-        where: { rotaId, dataEntrega: null },
-      });
-      if (semData > 0) {
-        return NextResponse.json(
-          { error: "DATA_ENTREGA_OBRIGATORIA", message: `${semData} entrega(s) da rota sem data de entrega — informe pelo detalhe.` },
-          { status: 400 }
-        );
+      if (!dataEntregaISO) {
+        const semData = await prisma.entrega.count({ where: { rotaId, dataEntrega: null } });
+        if (semData > 0) {
+          return NextResponse.json(
+            { error: "DATA_ENTREGA_OBRIGATORIA", message: "Informe a data em que a entrega foi realizada." },
+            { status: 400 }
+          );
+        }
       }
     } else {
-      const existente = await prisma.entrega.findUnique({
-        where: { id },
-        select: { dataEntrega: true },
-      });
-      if (!existente?.dataEntrega) {
+      const existente = await prisma.entrega.findUnique({ where: { id }, select: { dataEntrega: true } });
+      if (!dataEntregaISO && !existente?.dataEntrega) {
         return NextResponse.json(
           { error: "DATA_ENTREGA_OBRIGATORIA", message: "Informe a data em que a entrega foi realizada." },
           { status: 400 }
@@ -83,11 +82,15 @@ export async function PATCH(req: NextRequest) {
   if (id.startsWith("rota_")) {
     const rotaId = id.replace("rota_", "");
 
-    // Atualizar todas as entregas da rota
-    await prisma.entrega.updateMany({
-      where: { rotaId },
-      data,
-    });
+    // Se veio dataEntrega, aplica em todas as entregas da rota (sobrescreve).
+    if (dataEntregaISO) {
+      await prisma.entrega.updateMany({
+        where: { rotaId },
+        data: { ...data, dataEntrega: dataEntregaISO },
+      });
+    } else {
+      await prisma.entrega.updateMany({ where: { rotaId }, data });
+    }
 
     // Mapear status da entrega para status da rota se necessário
     let rotaStatus: string | undefined;
@@ -104,6 +107,8 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true, isRota: true });
   }
+
+  if (dataEntregaISO) data.dataEntrega = dataEntregaISO;
 
   const entrega = await prisma.entrega.update({
     where: { id },
