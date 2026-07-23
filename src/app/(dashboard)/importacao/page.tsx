@@ -63,7 +63,9 @@ export default function ImportacaoPage() {
   const [notasSearch, setNotasSearch] = useState("");
   const [debouncedNotasSearch, setDebouncedNotasSearch] = useState("");
   const [semEntrega, setSemEntrega] = useState(false);
-  const [selectedNfIds, setSelectedNfIds] = useState<string[]>([]);
+  // Guarda os objetos completos das NFs selecionadas — assim a seleção sobrevive
+  // a buscas/filtros/paginação e sabemos o destinatario mesmo de NFs fora da página atual.
+  const [selectedNfs, setSelectedNfs] = useState<any[]>([]);
 
   // ── Consulta DANFE state ──
   const [danfeMode, setDanfeMode] = useState<InputMode>("chave");
@@ -140,18 +142,30 @@ export default function ImportacaoPage() {
 
   useEffect(() => { if (tab === "notas") fetchNotas(); }, [tab, fetchNotas]);
 
-  // Limpa seleção quando muda filtro/página/tab (evita enviar ids que não estão visíveis)
-  useEffect(() => { setSelectedNfIds([]); }, [notasPage, debouncedNotasSearch, semEntrega, tab]);
+  // A seleção só zera quando o usuário clica no X da barra flutuante (ou sai da tab).
+  useEffect(() => { if (tab !== "notas") setSelectedNfs([]); }, [tab]);
 
-  const toggleNfSelection = (id: string) => {
-    setSelectedNfIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const selectedNfIds = selectedNfs.map((n) => n.id);
+  const selectedNfIdSet = new Set(selectedNfIds);
+
+  const toggleNfSelection = (nf: any) => {
+    setSelectedNfs((prev) => prev.some((n) => n.id === nf.id) ? prev.filter((n) => n.id !== nf.id) : [...prev, nf]);
   };
   const toggleSelectAllNfs = (checked: boolean) => {
-    if (checked) setSelectedNfIds(notas.map((n: any) => n.id));
-    else setSelectedNfIds([]);
+    const visibleIds = new Set(notas.map((n: any) => n.id));
+    if (checked) {
+      setSelectedNfs((prev) => {
+        const already = new Set(prev.map((n) => n.id));
+        return [...prev, ...notas.filter((n: any) => !already.has(n.id))];
+      });
+    } else {
+      // Desmarca só as visíveis; mantém seleção de outras páginas/buscas
+      setSelectedNfs((prev) => prev.filter((n) => !visibleIds.has(n.id)));
+    }
   };
+  const allVisibleSelected = notas.length > 0 && notas.every((n: any) => selectedNfIdSet.has(n.id));
   const destinatariosSelecionados = new Set(
-    notas.filter((n: any) => selectedNfIds.includes(n.id)).map((n: any) => String(n.destinatarioCnpj || "").replace(/\D/g, ""))
+    selectedNfs.map((n: any) => String(n.destinatarioCnpj || "").replace(/\D/g, ""))
   ).size;
   const handleImprimirFichaConferencia = () => {
     if (selectedNfIds.length === 0) return;
@@ -448,7 +462,7 @@ export default function ImportacaoPage() {
                             <input
                               type="checkbox"
                               className="accent-orange-500 w-3.5 h-3.5 cursor-pointer align-middle"
-                              checked={notas.length > 0 && selectedNfIds.length === notas.length}
+                              checked={allVisibleSelected}
                               onChange={(e) => toggleSelectAllNfs(e.target.checked)}
                               title="Selecionar todas visíveis"
                             />
@@ -464,8 +478,8 @@ export default function ImportacaoPage() {
                               <input
                                 type="checkbox"
                                 className="accent-orange-500 w-3.5 h-3.5 cursor-pointer align-middle"
-                                checked={selectedNfIds.includes(nf.id)}
-                                onChange={() => toggleNfSelection(nf.id)}
+                                checked={selectedNfIdSet.has(nf.id)}
+                                onChange={() => toggleNfSelection(nf)}
                               />
                             </Td>
                             <Td>
@@ -531,7 +545,7 @@ export default function ImportacaoPage() {
                   <Button size="sm" onClick={handleImprimirFichaConferencia} className="bg-orange-500 hover:bg-orange-600 text-white border-none rounded-full px-4">
                     <Printer size={13} className="mr-1.5" /> Imprimir Ficha de Conferência
                   </Button>
-                  <button onClick={() => setSelectedNfIds([])} className="w-6 h-6 flex items-center justify-center hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors" title="Limpar seleção">
+                  <button onClick={() => setSelectedNfs([])} className="w-6 h-6 flex items-center justify-center hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors" title="Limpar seleção">
                     ×
                   </button>
                 </div>
