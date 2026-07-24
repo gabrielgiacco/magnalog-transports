@@ -51,14 +51,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const entrega = await prisma.entrega.findUnique({ where: { id: params.id }, select: { id: true } });
   if (!entrega) return NextResponse.json({ error: "Entrega não encontrada" }, { status: 404 });
 
-  const objectKey = buildObjectKey(params.id, filename);
-  const uploadUrl = await presignPut(objectKey, mimeType, 300);
-
-  return NextResponse.json({
-    uploadUrl,
-    objectKey,
-    // Depois do upload, cliente chama PUT com objectKey pra confirmar e persistir no DB
-  });
+  try {
+    const objectKey = buildObjectKey(params.id, filename);
+    const uploadUrl = await presignPut(objectKey, mimeType, 300);
+    return NextResponse.json({ uploadUrl, objectKey });
+  } catch (e: any) {
+    console.error("R2 presign error:", e);
+    return NextResponse.json(
+      { error: e?.message || "Erro ao configurar upload no R2. Verifique as env vars R2_* na Vercel." },
+      { status: 500 }
+    );
+  }
 }
 
 // Passo 2: cliente confirma o upload — cria o registro no DB
