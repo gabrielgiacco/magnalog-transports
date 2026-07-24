@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loading, StatusBadge } from "@/components/ui";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { formatDate, formatWeight } from "@/lib/utils";
-import { Search, LogOut, FileText, ChevronLeft, ChevronRight, Package, AlertTriangle, Filter, X, Eye, Truck, MapPin, Calendar, User, Clock, Building2 } from "lucide-react";
+import { Search, LogOut, FileText, ChevronLeft, ChevronRight, Package, AlertTriangle, Filter, X, Eye, Truck, MapPin, Calendar, User, Clock, Building2, Paperclip, Download } from "lucide-react";
 
 
 const STATUS_LABELS: Record<string, string> = {
@@ -985,6 +985,8 @@ function DetalheNotaModal({ nota, onClose }: { nota: any; onClose: () => void })
                   <Info label="Entrega" value={e.dataEntrega ? formatDate(e.dataEntrega) : "—"} mono color={e.dataEntrega ? "#059669" : undefined} />
                 </div>
               </Section>
+
+              <CanhotosPortalSection entregaId={e.id} />
             </>
           ) : (
             <Section icon={Clock} title="Entrega">
@@ -1021,5 +1023,82 @@ function Info({ label, value, mono, color }: { label: string; value: any; mono?:
       <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text3)" }}>{label}</div>
       <div className={`text-sm ${mono ? "font-mono" : ""}`} style={{ color: color || "var(--text)" }}>{value}</div>
     </div>
+  );
+}
+
+function CanhotosPortalSection({ entregaId }: { entregaId: string }) {
+  const [anexos, setAnexos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [preview, setPreview] = useState<any | null>(null);
+
+  useEffect(() => {
+    let cancel = false;
+    setLoading(true);
+    fetch(`/api/portal/entregas/${entregaId}/anexos`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => { if (!cancel) setAnexos(Array.isArray(data) ? data : []); })
+      .finally(() => { if (!cancel) setLoading(false); });
+    return () => { cancel = true; };
+  }, [entregaId]);
+
+  if (loading) {
+    return (
+      <Section icon={Paperclip} title="Canhotos & Anexos">
+        <div className="text-xs" style={{ color: "var(--text3)" }}>Carregando...</div>
+      </Section>
+    );
+  }
+
+  if (anexos.length === 0) {
+    return (
+      <Section icon={Paperclip} title="Canhotos & Anexos">
+        <div className="text-xs" style={{ color: "var(--text3)" }}>Nenhum canhoto disponível ainda.</div>
+      </Section>
+    );
+  }
+
+  return (
+    <Section icon={Paperclip} title={`Canhotos & Anexos (${anexos.length})`}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {anexos.map((a) => {
+          const isImage = a.mimeType?.startsWith("image/");
+          return (
+            <div key={a.id} className="rounded-lg overflow-hidden border" style={{ borderColor: "var(--border)", background: "var(--surface2)" }}>
+              <button type="button" onClick={() => setPreview(a)} className="block w-full aspect-[4/3] overflow-hidden" style={{ background: "var(--bg)" }}>
+                {isImage ? (
+                  <img src={a.url} alt={a.filename} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1" style={{ color: "var(--text3)" }}>
+                    <FileText size={22} />
+                    <span className="text-[9px] font-mono uppercase">PDF</span>
+                  </div>
+                )}
+              </button>
+              <div className="p-1.5">
+                <div className="text-[10px] truncate" title={a.filename} style={{ color: "var(--text2)" }}>{a.filename}</div>
+                <a href={a.url} download={a.filename} className="text-[10px] flex items-center gap-1 mt-1 hover:opacity-70" style={{ color: "var(--accent)" }} onClick={(e) => e.stopPropagation()}>
+                  <Download size={10} /> Baixar
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {preview && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,.85)" }} onClick={() => setPreview(null)}>
+          <button onClick={() => setPreview(null)} className="absolute top-4 right-4 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white">
+            <X size={20} />
+          </button>
+          <div onClick={(e) => e.stopPropagation()} className="max-w-5xl w-full max-h-[90vh] flex items-center justify-center">
+            {preview.mimeType?.startsWith("image/") ? (
+              <img src={preview.url} alt={preview.filename} className="max-w-full max-h-[90vh] object-contain rounded-lg" />
+            ) : (
+              <iframe src={preview.url} title={preview.filename} className="w-full h-[90vh] rounded-lg bg-white" />
+            )}
+          </div>
+        </div>
+      )}
+    </Section>
   );
 }

@@ -12,6 +12,7 @@ import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { parseDanfeXML } from "@/lib/danfe-parser";
 import { baixarDanfePDF } from "@/lib/danfe-pdf";
 import { QUALIDADE_ENABLED } from "@/lib/features";
+import { AnexosCard } from "@/components/entrega/AnexosCard";
 
 const STATUS_FLOW = [
   { key: "PROGRAMADO", label: "Programado", icon: "📋" },
@@ -575,6 +576,7 @@ export default function EntregaDetailPage() {
           <TabButton active={tab === "info"} onClick={() => setTab("info")} icon={FileText}>Informações</TabButton>
           <TabButton active={tab === "historico"} onClick={() => setTab("historico")} icon={History}>Histórico</TabButton>
           <TabButton active={tab === "avarias"} onClick={() => setTab("avarias")} icon={AlertTriangle}>Avarias</TabButton>
+          <TabButton active={tab === "canhotos"} onClick={() => setTab("canhotos")} icon={Copy}>Canhotos & Anexos</TabButton>
           <TabButton active={tab === "paletes"} onClick={() => setTab("paletes")} icon={Layers}>Paletização</TabButton>
           {isAdmin && QUALIDADE_ENABLED && (
             <TabButton active={tab === "qualidade"} onClick={() => setTab("qualidade")} icon={ShieldCheck}>Qualidade Operacional</TabButton>
@@ -959,6 +961,10 @@ export default function EntregaDetailPage() {
 
         {tab === "avarias" && (
           <AvariasTab entregaId={id} entrega={entrega} />
+        )}
+
+        {tab === "canhotos" && (
+          <AnexosCard entregaId={id} readOnly={isReadOnly} />
         )}
 
         {tab === "qualidade" && isAdmin && QUALIDADE_ENABLED && (

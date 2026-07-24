@@ -68,6 +68,7 @@ model User {
   avariasRegistradas      Avaria[]               @relation("AvariaRegistrada")
   avariasResolvidas       Avaria[]               @relation("AvariaResolvida")
   auditLogs               AuditLog[]
+  anexosEnviados          AnexoEntrega[]
 }
 
 enum TipoEventoAuditoria {
@@ -337,12 +338,38 @@ model Entrega {
   lancamentos    LancamentoFinanceiro[]
   notasServico   NotaServico[]
   diarias        Diaria[]
+  anexos         AnexoEntrega[]
 
   @@index([cnpj])
   @@index([status])
   @@index([rotaId])
   @@index([faturaId])
   @@index([dataAgendada])
+}
+
+enum TipoAnexo {
+  CANHOTO
+  FOTO
+  DOCUMENTO
+  OUTRO
+}
+
+model AnexoEntrega {
+  id             String    @id @default(cuid())
+  entregaId      String
+  entrega        Entrega   @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+  tipo           TipoAnexo @default(CANHOTO)
+  objectKey      String    // chave no bucket R2
+  filename       String
+  mimeType       String
+  size           Int       @default(0)
+  descricao      String?
+  uploadadoPorId String?
+  uploadadoPor   User?     @relation(fields: [uploadadoPorId], references: [id])
+  createdAt      DateTime  @default(now())
+
+  @@index([entregaId])
+  @@index([tipo])
 }
 
 model NotaFiscal {
