@@ -40,6 +40,26 @@ export function getR2Client() {
       requestChecksumCalculation: "WHEN_REQUIRED",
       responseChecksumValidation: "WHEN_REQUIRED",
     });
+
+    // Belt-and-suspenders: remove qualquer header de checksum ANTES da assinatura.
+    // Necessário porque em algumas versões do SDK v3, requestChecksumCalculation
+    // sozinho não impede que os headers X-Amz-Sdk-Checksum-Algorithm e X-Amz-Checksum-*
+    // sejam adicionados na URL presignada.
+    client.middlewareStack.add(
+      (next: any) => async (args: any) => {
+        const h = args?.request?.headers;
+        if (h) {
+          for (const k of Object.keys(h)) {
+            const lower = k.toLowerCase();
+            if (lower.startsWith("x-amz-checksum-") || lower === "x-amz-sdk-checksum-algorithm") {
+              delete h[k];
+            }
+          }
+        }
+        return next(args);
+      },
+      { step: "build", name: "stripR2ChecksumHeaders", priority: "high" }
+    );
   }
   return client;
 }
