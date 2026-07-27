@@ -3,7 +3,8 @@ import { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, Modal, Input, Select } from "@/components/ui";
-import { Plus, Edit2, Phone, FileText, User as UserIcon, Truck as TruckIcon, Search, X } from "lucide-react";
+import { Plus, Edit2, Phone, FileText, User as UserIcon, Truck as TruckIcon, Search, X, Paperclip } from "lucide-react";
+import { AnexosCard } from "@/components/entrega/AnexosCard";
 
 const B_MOT = { nome: "", cpf: "", cnh: "", categoriaCnh: "E", telefone: "", pix: "", tipo: "TERCEIRO", valorDiaria: "" };
 const B_VEI = { placa: "", tipo: "TRUCK", modelo: "", ano: "", capacidadeKg: "", motoristaId: "", donoId: "" };
@@ -32,6 +33,7 @@ export default function FrotaPage() {
   const [formMot, setFormMot] = useState({ ...B_MOT });
   const [formVei, setFormVei] = useState({ ...B_VEI });
   const [saving, setSaving] = useState(false);
+  const [docsModal, setDocsModal] = useState<{ type: "motorista" | "veiculo"; id: string; label: string } | null>(null);
 
   const fetchLists = useCallback(async () => {
     setLoading(true);
@@ -199,7 +201,12 @@ export default function FrotaPage() {
                     <span style={{ color: "var(--text3)" }}>🚛 {m._count?.entregas ?? 0} fretes</span>
                     <span className={m.ativo ? "text-emerald-500" : "text-red-500"}>{m.ativo ? "Ativo" : "Inativo"}</span>
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full" onClick={() => openEditMot(m)}><Edit2 size={12}/> Editar</Button>
+                  <div className="flex gap-1.5">
+                    <Button variant="ghost" size="sm" className="flex-1" onClick={() => openEditMot(m)}><Edit2 size={12}/> Editar</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setDocsModal({ type: "motorista", id: m.id, label: m.nome })} title="Documentos">
+                      <Paperclip size={12}/>
+                    </Button>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -223,7 +230,12 @@ export default function FrotaPage() {
                     <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
                       <span className="text-[9px] sm:text-[10px] font-mono ml-auto" style={{ color: "var(--text3)" }}>{v._count?.entregas ?? 0} fretes</span>
                     </div>
-                    <div className="mt-3"><Button variant="ghost" size="sm" className="w-full" onClick={() => openEditVei(v)}><Edit2 size={12}/> Editar</Button></div>
+                    <div className="mt-3 flex gap-1.5">
+                      <Button variant="ghost" size="sm" className="flex-1" onClick={() => openEditVei(v)}><Edit2 size={12}/> Editar</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDocsModal({ type: "veiculo", id: v.id, label: v.placa })} title="Documentos">
+                        <Paperclip size={12}/>
+                      </Button>
+                    </div>
                   </Card>
                 );
               })}
@@ -279,6 +291,26 @@ export default function FrotaPage() {
           <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
           <Button onClick={formType === "motorista" ? handleSaveMot : handleSaveVei} loading={saving}>Salvar</Button>
         </div>
+      </Modal>
+
+      <Modal
+        open={!!docsModal}
+        onClose={() => setDocsModal(null)}
+        title={docsModal ? `Documentos — ${docsModal.label}` : "Documentos"}
+        size="lg"
+      >
+        {docsModal && (
+          <AnexosCard
+            apiBase={`/api/${docsModal.type === "motorista" ? "motoristas" : "veiculos"}/${docsModal.id}/anexos`}
+            tiposPermitidos={
+              docsModal.type === "motorista"
+                ? ["CNH", "DOCUMENTO", "CONTRATO", "FOTO", "OUTRO"]
+                : ["CRLV", "ANTT", "SEGURO", "DOCUMENTO", "FOTO", "OUTRO"]
+            }
+            tipoDefault={docsModal.type === "motorista" ? "CNH" : "CRLV"}
+            titulo={docsModal.type === "motorista" ? "Documentos do Motorista" : "Documentos do Veículo"}
+          />
+        )}
       </Modal>
     </>
   );

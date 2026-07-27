@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { formatWeight } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { AnexosCard } from "@/components/entrega/AnexosCard";
 
 const TIPO_LABELS: Record<string, string> = {
   AVARIA: "Avaria", FALTA: "Falta", INVERSAO: "Inversão", SOBRA: "Sobra",
@@ -398,6 +399,13 @@ export default function AvariaDetailPage() {
             </div>
           )}
         </Card>
+
+        <AnexosCard
+          apiBase={`/api/avarias/${id}/anexos`}
+          tiposPermitidos={["FOTO", "DOCUMENTO", "OUTRO"]}
+          tipoDefault="FOTO"
+          titulo="Fotos & Documentos da Avaria"
+        />
       </div>
 
       {/* Saída Modal */}

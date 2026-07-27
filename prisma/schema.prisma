@@ -69,6 +69,7 @@ model User {
   avariasResolvidas       Avaria[]               @relation("AvariaResolvida")
   auditLogs               AuditLog[]
   anexosEnviados          AnexoEntrega[]
+  anexosGenericos         Anexo[]                @relation("AnexoUploader")
 }
 
 enum TipoEventoAuditoria {
@@ -340,6 +341,10 @@ model Entrega {
   diarias        Diaria[]
   anexos         AnexoEntrega[]
 
+  // Token para upload público via link (motorista sobe canhoto pelo celular)
+  uploadToken       String?   @unique
+  uploadTokenExpira DateTime?
+
   @@index([cnpj])
   @@index([status])
   @@index([rotaId])
@@ -351,7 +356,32 @@ enum TipoAnexo {
   CANHOTO
   FOTO
   DOCUMENTO
+  CNH
+  CRLV
+  ANTT
+  SEGURO
+  CONTRATO
   OUTRO
+}
+
+// Modelo genérico polimórfico para anexos de Motorista/Veículo/Avaria.
+// A relação com Entrega continua no AnexoEntrega (mantido por compat + statusCanhoto).
+model Anexo {
+  id             String    @id @default(cuid())
+  ownerType      String    // "MOTORISTA" | "VEICULO" | "AVARIA"
+  ownerId        String
+  tipo           TipoAnexo @default(OUTRO)
+  objectKey      String
+  filename       String
+  mimeType       String
+  size           Int       @default(0)
+  descricao      String?
+  uploadadoPorId String?
+  uploadadoPor   User?     @relation("AnexoUploader", fields: [uploadadoPorId], references: [id])
+  createdAt      DateTime  @default(now())
+
+  @@index([ownerType, ownerId])
+  @@index([tipo])
 }
 
 model AnexoEntrega {

@@ -19,6 +19,11 @@ const TIPO_LABEL: Record<string, string> = {
   CANHOTO: "Canhoto",
   FOTO: "Foto",
   DOCUMENTO: "Documento",
+  CNH: "CNH",
+  CRLV: "CRLV",
+  ANTT: "ANTT",
+  SEGURO: "Seguro",
+  CONTRATO: "Contrato",
   OUTRO: "Outro",
 };
 
@@ -28,22 +33,49 @@ function fmtSize(n: number) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function AnexosCard({ entregaId, readOnly = false }: { entregaId: string; readOnly?: boolean }) {
+interface AnexosCardProps {
+  /** Prefixo do endpoint. Deve responder GET (lista), POST (presign), PUT (confirm), DELETE /[id] */
+  apiBase?: string;
+  /** Legado — se passar entregaId, monta apiBase automaticamente */
+  entregaId?: string;
+  /** Tipos permitidos no dropdown (default: todos) */
+  tiposPermitidos?: string[];
+  /** Tipo default selecionado no dropdown */
+  tipoDefault?: string;
+  /** Título do card */
+  titulo?: string;
+  readOnly?: boolean;
+}
+
+export function AnexosCard({
+  apiBase: apiBaseProp,
+  entregaId,
+  tiposPermitidos,
+  tipoDefault,
+  titulo = "Canhotos & Anexos",
+  readOnly = false,
+}: AnexosCardProps) {
+  const apiBase = apiBaseProp || (entregaId ? `/api/entregas/${entregaId}/anexos` : "");
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [tipoUpload, setTipoUpload] = useState("CANHOTO");
+  const [tipoUpload, setTipoUpload] = useState(tipoDefault || "CANHOTO");
   const [preview, setPreview] = useState<Anexo | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const tiposDisponiveis = tiposPermitidos && tiposPermitidos.length
+    ? tiposPermitidos
+    : Object.keys(TIPO_LABEL);
+
   const fetchAnexos = useCallback(async () => {
+    if (!apiBase) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/entregas/${entregaId}/anexos`);
+      const res = await fetch(apiBase);
       if (res.ok) setAnexos(await res.json());
     } finally { setLoading(false); }
-  }, [entregaId]);
+  }, [apiBase]);
 
   useEffect(() => { fetchAnexos(); }, [fetchAnexos]);
 
@@ -55,7 +87,7 @@ export function AnexosCard({ entregaId, readOnly = false }: { entregaId: string;
     const t = toast.loading(`Enviando ${file.name}...`);
     try {
       // 1) Pede URL presignada
-      const presignRes = await fetch(`/api/entregas/${entregaId}/anexos`, {
+      const presignRes = await fetch(apiBase, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: file.name, mimeType: file.type || "application/octet-stream", size: file.size }),
@@ -75,7 +107,7 @@ export function AnexosCard({ entregaId, readOnly = false }: { entregaId: string;
       if (!putRes.ok) throw new Error("Falha no upload ao R2");
 
       // 3) Confirma no DB
-      const confirmRes = await fetch(`/api/entregas/${entregaId}/anexos`, {
+      const confirmRes = await fetch(apiBase, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -94,7 +126,7 @@ export function AnexosCard({ entregaId, readOnly = false }: { entregaId: string;
     } catch (e: any) {
       toast.error(e.message || "Erro no upload", { id: t });
     }
-  }, [entregaId, tipoUpload]);
+  }, [apiBase, tipoUpload]);
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -107,7 +139,7 @@ export function AnexosCard({ entregaId, readOnly = false }: { entregaId: string;
   async function handleDelete(id: string) {
     if (!window.confirm("Excluir este anexo?")) return;
     try {
-      const res = await fetch(`/api/entregas/${entregaId}/anexos/${id}`, { method: "DELETE" });
+      const res = await fetch(`${apiBase}/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       setAnexos((prev) => prev.filter((a) => a.id !== id));
       toast.success("Anexo excluído");
@@ -120,7 +152,7 @@ export function AnexosCard({ entregaId, readOnly = false }: { entregaId: string;
         <div className="flex items-center gap-2">
           <Paperclip size={14} className="text-[var(--accent)]" />
           <h3 className="text-xs uppercase tracking-widest font-mono" style={{ color: "var(--text3)" }}>
-            Canhotos & Anexos
+            {titulo}
           </h3>
           <span className="text-[10px] px-2 py-0.5 rounded-full font-mono" style={{ background: "var(--surface2)", color: "var(--text3)" }}>
             {anexos.length}
@@ -135,7 +167,7 @@ export function AnexosCard({ entregaId, readOnly = false }: { entregaId: string;
               className="text-xs px-2 py-1.5 rounded-lg outline-none"
               style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
             >
-              {Object.entries(TIPO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              {tiposDisponiveis.map((k) => <option key={k} value={k}>{TIPO_LABEL[k] || k}</option>)}
             </select>
             <button
               onClick={() => inputRef.current?.click()}
