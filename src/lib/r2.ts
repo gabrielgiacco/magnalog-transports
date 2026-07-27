@@ -1,22 +1,39 @@
 import { S3Client, DeleteObjectCommand, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const R2_ENDPOINT = process.env.R2_ENDPOINT!;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID!;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
-export const R2_BUCKET = process.env.R2_BUCKET_NAME || "magnalog-canhotos";
+// Trim protege contra espaços/quebras invisíveis coladas ao definir env var
+const R2_ENDPOINT = (process.env.R2_ENDPOINT || "").trim();
+const R2_ACCESS_KEY_ID = (process.env.R2_ACCESS_KEY_ID || "").trim();
+const R2_SECRET_ACCESS_KEY = (process.env.R2_SECRET_ACCESS_KEY || "").trim();
+export const R2_BUCKET = (process.env.R2_BUCKET_NAME || "magnalog-canhotos").trim();
 
 let client: S3Client | null = null;
+
+function validateEndpoint(ep: string) {
+  if (!ep) throw new Error("R2_ENDPOINT vazio");
+  let parsed: URL;
+  try { parsed = new URL(ep); }
+  catch { throw new Error(`R2_ENDPOINT inválido (não é URL): "${ep.slice(0, 40)}..." (len=${ep.length})`); }
+  if (parsed.protocol !== "https:") throw new Error(`R2_ENDPOINT precisa começar com https:// (recebido: ${parsed.protocol})`);
+  if (!parsed.hostname.endsWith(".r2.cloudflarestorage.com")) {
+    throw new Error(`R2_ENDPOINT hostname inesperado: "${parsed.hostname}" — deveria terminar em .r2.cloudflarestorage.com`);
+  }
+  if (parsed.pathname && parsed.pathname !== "/") {
+    throw new Error(`R2_ENDPOINT não deve ter path (encontrado: "${parsed.pathname}") — remova qualquer coisa após o domínio`);
+  }
+}
 
 export function getR2Client() {
   if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
     throw new Error("R2 não configurado: defina R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY");
   }
+  validateEndpoint(R2_ENDPOINT);
   if (!client) {
     client = new S3Client({
       region: "auto",
       endpoint: R2_ENDPOINT,
       credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
+      forcePathStyle: true, // R2 recomenda path-style
     });
   }
   return client;
