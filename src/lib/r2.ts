@@ -34,6 +34,11 @@ export function getR2Client() {
       endpoint: R2_ENDPOINT,
       credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
       forcePathStyle: true, // R2 recomenda path-style
+      // R2 não suporta bem os headers de checksum novos do SDK v3 em URLs presignadas —
+      // sem isso, o R2 responde 403 no PUT ("checksum inválido") e o browser reporta
+      // como "CORS blocked" (porque erro 403 não vem com Access-Control-Allow-Origin).
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
     });
   }
   return client;
