@@ -24,6 +24,7 @@ const TIPO_LABEL: Record<string, string> = {
   ANTT: "ANTT",
   SEGURO: "Seguro",
   CONTRATO: "Contrato",
+  DESCARGA: "Descarga",
   OUTRO: "Outro",
 };
 

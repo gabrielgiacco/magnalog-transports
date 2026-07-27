@@ -361,6 +361,7 @@ enum TipoAnexo {
   ANTT
   SEGURO
   CONTRATO
+  DESCARGA
   OUTRO
 }
 
