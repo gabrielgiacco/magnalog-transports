@@ -13,6 +13,8 @@ import { parseDanfeXML } from "@/lib/danfe-parser";
 import { baixarDanfePDF } from "@/lib/danfe-pdf";
 import { QUALIDADE_ENABLED } from "@/lib/features";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
+import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
+import { Smartphone } from "lucide-react";
 
 const STATUS_FLOW = [
   { key: "PROGRAMADO", label: "Programado", icon: "📋" },
@@ -46,6 +48,7 @@ export default function EntregaDetailPage() {
   const [editForm, setEditForm] = useState<any>({});
   const [ocorrForm, setOcorrForm] = useState({ tipo: "ATRASO", descricao: "" });
   const [tab, setTab] = useState("info");
+  const [showLinkMotorista, setShowLinkMotorista] = useState(false);
   const [selectedNotas, setSelectedNotas] = useState<string[]>([]);
   const [separando, setSeparando] = useState(false);
   const [danfeModal, setDanfeModal] = useState<{ open: boolean; xml: string | null; loading: boolean; fullscreen: boolean }>({ open: false, xml: null, loading: false, fullscreen: false });
@@ -476,6 +479,11 @@ export default function EntregaDetailPage() {
             <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}`, '_blank')}>
               <Printer size={14} /> Carta Frete
             </Button>
+            {!isReadOnly && (
+              <Button variant="ghost" size="sm" onClick={() => setShowLinkMotorista(true)}>
+                <Smartphone size={14} /> Link Motorista
+              </Button>
+            )}
             {entrega.motoristaComplId && (
               <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}?motorista=complementar`, '_blank')}>
                 <Printer size={14} /> Carta Frete Compl.
@@ -1447,6 +1455,15 @@ export default function EntregaDetailPage() {
           </div>
         </div>
       </Modal>
+
+      <LinkMotoristaModal
+        open={showLinkMotorista}
+        onClose={() => setShowLinkMotorista(false)}
+        entregaId={id}
+        entregaCodigo={entrega.codigo}
+        motoristaTelefone={entrega.motorista?.telefone}
+        motoristaNome={entrega.motorista?.nome}
+      />
     </>
   );
 }
