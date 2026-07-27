@@ -70,6 +70,17 @@ export function buildObjectKey(entregaId: string, filename: string) {
   return `entregas/${entregaId}/${ts}_${safe}`;
 }
 
+// Headers de checksum que o SDK v3 tenta injetar mas o R2 não aceita em URLs presignadas.
+// Marcamos como unsignable + unhoistable pra eles saírem tanto da assinatura quanto da querystring.
+const R2_CHECKSUM_HEADERS = new Set([
+  "x-amz-sdk-checksum-algorithm",
+  "x-amz-checksum-crc32",
+  "x-amz-checksum-crc32c",
+  "x-amz-checksum-sha1",
+  "x-amz-checksum-sha256",
+  "x-amz-checksum-crc64nvme",
+]);
+
 // URL presignada para upload direto do browser → R2 (evita limite de 4.5MB da Vercel)
 export async function presignPut(objectKey: string, mimeType: string, expiresIn = 300) {
   const cmd = new PutObjectCommand({
@@ -77,13 +88,21 @@ export async function presignPut(objectKey: string, mimeType: string, expiresIn 
     Key: objectKey,
     ContentType: mimeType,
   });
-  return getSignedUrl(getR2Client(), cmd, { expiresIn });
+  return getSignedUrl(getR2Client(), cmd, {
+    expiresIn,
+    unhoistableHeaders: R2_CHECKSUM_HEADERS,
+    unsignableHeaders: R2_CHECKSUM_HEADERS,
+  });
 }
 
 // URL presignada para leitura (portal cliente, dashboard etc)
 export async function presignGet(objectKey: string, expiresIn = 3600) {
   const cmd = new GetObjectCommand({ Bucket: R2_BUCKET, Key: objectKey });
-  return getSignedUrl(getR2Client(), cmd, { expiresIn });
+  return getSignedUrl(getR2Client(), cmd, {
+    expiresIn,
+    unhoistableHeaders: R2_CHECKSUM_HEADERS,
+    unsignableHeaders: R2_CHECKSUM_HEADERS,
+  });
 }
 
 export async function deleteObject(objectKey: string) {
