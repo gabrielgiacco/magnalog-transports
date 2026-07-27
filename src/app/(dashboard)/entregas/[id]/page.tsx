@@ -1804,25 +1804,44 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
   });
 
   let totalComNorma = 0;
+  let totalInteirosCarga = 0;
+  let totalPontasCarga = 0;
   const todosProdutos = Array.from(produtosMap.values()).map((p) => {
     const temNorma = !!p.norma;
     if (temNorma) totalComNorma++;
 
-    let paletesEstimados = 0;
+    let paletesInteiros = 0;
+    let sobras = 0;
+    let paletesPontas = 0;
+    let paletesFisicos = 0;
+    let paletesEstimadosDecimal = 0;
+
     if (temNorma) {
-      paletesEstimados = p.quantidade / (p.norma.quantidadeCaixasPalete || 1);
+      const caixasPorPalete = p.norma.quantidadeCaixasPalete || 1;
+      paletesInteiros = Math.floor(p.quantidade / caixasPorPalete);
+      sobras = p.quantidade % caixasPorPalete;
+      paletesPontas = sobras > 0 ? 1 : 0;
+      paletesFisicos = paletesInteiros + paletesPontas;
+      paletesEstimadosDecimal = p.quantidade / caixasPorPalete;
+
+      totalInteirosCarga += paletesInteiros;
+      totalPontasCarga += paletesPontas;
     }
 
     return {
       ...p,
-      paletesEstimados,
+      paletesInteiros,
+      sobras,
+      paletesPontas,
+      paletesFisicos,
+      paletesEstimados: paletesEstimadosDecimal, // mantido pra compat externa (armazenagem)
       nfNumero: p.nfNumeros.join(", ")
     };
   });
 
   const totalProdutos = todosProdutos.length;
   const pctNormas = totalProdutos > 0 ? Math.round((totalComNorma / totalProdutos) * 100) : 0;
-  const totalPaletesEstimadosCarga = todosProdutos.reduce((acc, p) => acc + (p.paletesEstimados || 0), 0);
+  const totalPaletesFisicosCarga = totalInteirosCarga + totalPontasCarga;
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
@@ -1831,21 +1850,20 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
     const dataEntregaFormatada = entrega.dataAgendada ? formatDate(entrega.dataAgendada) : "Não agendada";
 
     const rowsHtml = todosProdutos.map((p) => {
-      const normaText = p.norma 
-        ? `${p.norma.lastro} x ${p.norma.altura} = ${p.norma.quantidadeCaixasPalete}` 
+      const normaText = p.norma
+        ? `${p.norma.lastro} x ${p.norma.altura} = ${p.norma.quantidadeCaixasPalete}`
         : "SEM NORMA";
-      
+
       let paletesText = "—";
+      let detalheText = "";
       if (p.norma) {
-        const totalPalete = p.norma.quantidadeCaixasPalete || 1;
-        const inteiros = Math.floor(p.quantidade / totalPalete);
-        const sobras = p.quantidade % totalPalete;
-        if (inteiros > 0 && sobras > 0) {
-          paletesText = `${inteiros} int. + ${sobras} cx`;
-        } else if (inteiros > 0) {
-          paletesText = `${inteiros} int.`;
-        } else {
-          paletesText = `${sobras} cx`;
+        paletesText = `${p.paletesFisicos} palete${p.paletesFisicos !== 1 ? "s" : ""}`;
+        if (p.paletesInteiros > 0 && p.paletesPontas > 0) {
+          detalheText = `${p.paletesInteiros} int. + 1 ponta (${p.sobras} cx)`;
+        } else if (p.paletesInteiros > 0) {
+          detalheText = `${p.paletesInteiros} int.`;
+        } else if (p.paletesPontas > 0) {
+          detalheText = `1 ponta (${p.sobras} cx)`;
         }
       }
 
@@ -1856,7 +1874,7 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
           <td>${p.descricao || "—"}</td>
           <td class="text-center font-mono">${p.quantidade}</td>
           <td class="text-center font-mono">${normaText}</td>
-          <td class="text-center font-mono font-bold">${paletesText}</td>
+          <td class="text-center font-mono font-bold">${paletesText}<br/><span style="font-size: 9px; color: #64748b; font-weight: normal;">${detalheText}</span></td>
           <td style="width: 120px;"></td> <!-- Campo para conferência manual -->
           <td style="width: 120px;"></td> <!-- Campo para observação -->
         </tr>
@@ -1930,8 +1948,9 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
 
           <div class="kpis-print">
             <div class="kpi-print-box">
-              <div class="kpi-print-val">${totalPaletesEstimadosCarga.toFixed(2)}</div>
-              <div class="kpi-print-lbl">Paletes Estimados Totais</div>
+              <div class="kpi-print-val">${totalPaletesFisicosCarga}</div>
+              <div class="kpi-print-lbl">Paletes Físicos Totais</div>
+              <div style="font-size: 9px; color: #64748b; margin-top: 2px;">${totalInteirosCarga} inteiros + ${totalPontasCarga} pontas</div>
             </div>
             <div class="kpi-print-box">
               <div class="kpi-print-val">${totalCaixas}</div>
@@ -1981,11 +2000,13 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="flex items-center justify-between p-5 relative overflow-hidden">
           <div>
-            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 dark:text-neutral-400 mb-1">Paletes Estimados</div>
+            <div className="text-[10px] uppercase tracking-widest font-mono text-slate-500 dark:text-neutral-400 mb-1">Paletes Físicos</div>
             <div className="font-head text-3xl font-black text-orange-400">
-              {totalPaletesEstimadosCarga.toFixed(2)}
+              {totalPaletesFisicosCarga}
             </div>
-            <div className="text-xs text-slate-400 dark:text-neutral-500 mt-1">Cálculo de volume ocupado</div>
+            <div className="text-xs text-slate-400 dark:text-neutral-500 mt-1">
+              {totalInteirosCarga} inteiros + {totalPontasCarga} ponta{totalPontasCarga !== 1 ? "s" : ""}
+            </div>
           </div>
           <div className="text-4xl opacity-10">
             <Layers size={40} className="text-slate-400 dark:text-neutral-500" />
@@ -2059,18 +2080,15 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
               ) : (
                 todosProdutos.map((p, idx) => {
                   const hasNorma = !!p.norma;
-                  
-                  let paletesText = "—";
+
+                  let detalhe = "";
                   if (hasNorma) {
-                    const totalPalete = p.norma.quantidadeCaixasPalete || 1;
-                    const inteiros = Math.floor(p.quantidade / totalPalete);
-                    const sobras = p.quantidade % totalPalete;
-                    if (inteiros > 0 && sobras > 0) {
-                      paletesText = `${inteiros} int. + ${sobras} cx`;
-                    } else if (inteiros > 0) {
-                      paletesText = `${inteiros} int.`;
-                    } else {
-                      paletesText = `${sobras} cx`;
+                    if (p.paletesInteiros > 0 && p.paletesPontas > 0) {
+                      detalhe = `${p.paletesInteiros} int. + 1 ponta (${p.sobras} cx)`;
+                    } else if (p.paletesInteiros > 0) {
+                      detalhe = `${p.paletesInteiros} int.`;
+                    } else if (p.paletesPontas > 0) {
+                      detalhe = `1 ponta (${p.sobras} cx)`;
                     }
                   }
 
@@ -2092,8 +2110,8 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
                       <Td className="text-center font-mono font-bold text-orange-400">
                         {hasNorma ? (
                           <div className="flex flex-col items-center">
-                            <span>{p.paletesEstimados.toFixed(2)} paletes</span>
-                            <span className="text-[10px] text-slate-400 dark:text-neutral-500 font-normal">{paletesText}</span>
+                            <span>{p.paletesFisicos} palete{p.paletesFisicos !== 1 ? "s" : ""}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-neutral-500 font-normal">{detalhe}</span>
                           </div>
                         ) : (
                           <span className="text-red-400 font-normal italic text-xs">Sem norma</span>
