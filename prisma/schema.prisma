@@ -362,6 +362,7 @@ enum TipoAnexo {
   SEGURO
   CONTRATO
   DESCARGA
+  CANHOTO_DESCARGA
   OUTRO
 }
 
