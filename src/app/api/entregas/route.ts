@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     const fornecedores = searchParams.getAll("fornecedor").filter(Boolean);
     const nfs = searchParams.getAll("nf").filter(Boolean);
     const anotacoesNfs = searchParams.getAll("anotacoesNf").filter(Boolean);
+    const codigosProduto = searchParams.getAll("codigoProduto").filter(Boolean);
     const volumes = searchParams.getAll("volume").filter(Boolean);
     const ufs = searchParams.getAll("uf").filter(Boolean);
     const motoristas = searchParams.getAll("motorista").filter(Boolean);
@@ -136,6 +137,17 @@ export async function GET(req: NextRequest) {
       andConditions.push({
         OR: anotacoesNfs.map((anotacao) => ({ notas: { some: { xmlOriginal: { contains: anotacao, mode: "insensitive" } } } })),
       });
+    }
+
+    // Código do Produto filter: busca no XML da NF (tag <cProd>) — permite parcial.
+    // Ex: "890" bate em <cProd>8900005</cProd>, <cProd>8900009</cProd>.
+    const codigoProdutoQuery = (cod: string) => ({
+      notas: { some: { xmlOriginal: { contains: `<cProd>${cod}`, mode: "insensitive" as const } } },
+    });
+    if (codigosProduto.length === 1) {
+      andConditions.push(codigoProdutoQuery(codigosProduto[0]));
+    } else if (codigosProduto.length > 1) {
+      andConditions.push({ OR: codigosProduto.map(codigoProdutoQuery) });
     }
 
     // Volume filter: multiple values → OR

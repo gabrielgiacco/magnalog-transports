@@ -31,6 +31,7 @@ const FILTER_OPTIONS = [
   { value: "endereco", label: "Endereço", placeholder: "Rua, Av, etc.", type: "text" },
   { value: "nf", label: "NF (Nota Fiscal)", placeholder: "Número da NF", type: "text" },
   { value: "anotacoesNf", label: "Dados Adicionais da NF", placeholder: "Buscar nos dados adicionais", type: "text" },
+  { value: "codigoProduto", label: "Código do Produto", placeholder: "Ex: 8900005", type: "text" },
   { value: "uf", label: "UF", placeholder: "Ex: SP", type: "text" },
   { value: "motorista", label: "Motorista", placeholder: "Nome do motorista", type: "text" },
   { value: "volume", label: "Volume Específico", placeholder: "Ex: 5", type: "number" },
