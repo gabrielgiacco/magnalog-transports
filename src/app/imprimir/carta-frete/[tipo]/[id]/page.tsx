@@ -287,32 +287,36 @@ export default async function CartaFretePage({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
-        @page { size: A4 portrait; margin: 6mm; }
+        @page { size: A4 landscape; margin: 5mm; }
         @media print {
           body { padding: 0 !important; margin: 0 !important; }
+          html, body { width: 100%; height: 100%; }
           .no-print { display: none !important; }
+          .print-page { width: 100% !important; max-width: none !important; padding: 0 !important; margin: 0 !important; }
           .via-wrapper { break-inside: avoid; }
+          .cut-column {
+            border-left: 1px dashed #666 !important;
+          }
         }
-        .cut-line {
-          border-top: 1px dashed #666;
-          margin: 4px 0 6px;
-          text-align: center;
-          font-size: 8px;
-          color: #666;
+        .cut-column {
+          border-left: 1px dashed #666;
           position: relative;
-          height: 8px;
         }
-        .cut-line::before {
-          content: "✂ CORTE AQUI";
+        .cut-column::before {
+          content: "✂";
+          position: absolute;
+          left: -6px;
+          top: 50%;
+          transform: translateY(-50%);
           background: white;
-          padding: 0 8px;
-          position: relative;
-          top: -6px;
+          font-size: 10px;
+          color: #666;
+          padding: 2px 0;
         }
       ` }} />
 
       <div className="bg-white text-black w-full p-2 print:p-0" style={{ fontFamily: "Arial, sans-serif" }}>
-        <div className="max-w-[1000px] mx-auto text-[9.5px] font-sans relative">
+        <div className="print-page max-w-[1400px] mx-auto text-[9px] font-sans relative">
           <div className="absolute -top-10 right-0 no-print">
             <button
               id="btn-print-carta-frete"
@@ -322,14 +326,13 @@ export default async function CartaFretePage({
             </button>
           </div>
 
-          <div className="via-wrapper">
-            <Via label="1ª VIA - MOTORISTA" />
-          </div>
-
-          <div className="cut-line" />
-
-          <div className="via-wrapper">
-            <Via label="2ª VIA - EMPRESA" />
+          <div className="flex gap-2 print:gap-0">
+            <div className="w-1/2 via-wrapper pr-1">
+              <Via label="1ª VIA - MOTORISTA" />
+            </div>
+            <div className="w-1/2 via-wrapper pl-1 cut-column">
+              <Via label="2ª VIA - EMPRESA" />
+            </div>
           </div>
         </div>
 
