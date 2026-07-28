@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
-// Formatter helpers
-const formatCurrency = (val: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
+const formatCurrency = (val: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 const formatCNPJ = (cnpj: string) => {
   if (!cnpj) return "";
   const s = cnpj.replace(/\D/g, "");
@@ -49,7 +49,7 @@ export default async function CartaFretePage({
   let destinatarioMun = "";
   let destinatarioUf = "";
   let destinatarioCnpj = "";
-  let destinoOrigem = "APARECIDA DE GOIANIA - GO";
+  const destinoOrigem = "APARECIDA DE GOIANIA - GO";
   let destinoDestino = "";
 
   if (tipo === "entrega") {
@@ -69,250 +69,279 @@ export default async function CartaFretePage({
   const sumPesos = notas.reduce((acc: number, n: any) => acc + (n.pesoBruto || 0), 0);
   const notasStr = notas.map((n: any) => n.numero).join(", ");
 
-  const m = isCompl ? (data.motoristaCompl || {}) : (data.motorista || {});
-  const v = isCompl ? (data.veiculoCompl || {}) : (data.veiculo || {});
+  const m = isCompl ? data.motoristaCompl || {} : data.motorista || {};
+  const v = isCompl ? data.veiculoCompl || {} : data.veiculo || {};
 
-  const freteCombinado = isCompl ? (data.valorMotoristaCompl || 0) : (data.valorMotorista || 0);
-  const adiantamento = isCompl ? (data.adiantamentoMotoristaCompl || 0) : (data.adiantamentoMotorista || 0);
-  const pedagios = isCompl ? (data.valorSaidaCompl || 0) : (data.valorSaida || 0);
-  const descontos = isCompl ? (data.descontosMotoristaCompl || 0) : (data.descontosMotorista || 0);
-  const saldo = isCompl ? (data.saldoMotoristaCompl || 0) : (data.saldoMotorista || 0);
+  const freteCombinado = isCompl ? data.valorMotoristaCompl || 0 : data.valorMotorista || 0;
+  const adiantamento = isCompl ? data.adiantamentoMotoristaCompl || 0 : data.adiantamentoMotorista || 0;
+  const pedagios = isCompl ? data.valorSaidaCompl || 0 : data.valorSaida || 0;
+  const descontos = isCompl ? data.descontosMotoristaCompl || 0 : data.descontosMotorista || 0;
+  const saldo = isCompl ? data.saldoMotoristaCompl || 0 : data.saldoMotorista || 0;
 
-  return (
-    <div className="bg-white min-h-screen text-black w-full p-4 print:p-0">
-      <div className="max-w-[1000px] mx-auto bg-white print:max-w-none text-[11px] leading-tight font-sans relative" style={{ fontFamily: "Arial, sans-serif" }}>
-        
-        {/* Helper print button visible only on screen */}
-        <div className="absolute -top-12 right-0 print:hidden">
-          <button id="btn-print-carta-frete" className="bg-blue-600 text-white px-4 py-2 rounded font-bold shadow hover:bg-blue-700">Imprimir Carta Frete</button>
+  const numeroDoc = `${data.codigo || data.id.slice(-6).toUpperCase()}${isCompl ? " (COMPL)" : ""}`;
+  const dataEmissao = new Date().toLocaleDateString("pt-BR");
+
+  const Via = ({ label }: { label: string }) => (
+    <div className="border-[1.5px] border-black">
+      {/* Row 1: Header */}
+      <div className="flex border-b-[1.5px] border-black">
+        <div className="w-[15%] border-r border-black flex items-center justify-center p-1">
+          <img src="/logo.png" alt="Magna Log" className="max-w-full h-auto" style={{ maxHeight: "36px" }} />
         </div>
-
-        {/* Global border */}
-        <div className="border-[2px] border-black">
-          
-          {/* Row 1: Header */}
-          <div className="flex border-b-[2px] border-black">
-            {/* Logo */}
-            <div className="w-[15%] border-r border-black flex items-center justify-center p-2">
-              <img src="/logo.png" alt="Magna Log" className="max-w-full h-auto" style={{ maxHeight: "60px" }} />
-            </div>
-            {/* Emitente Info */}
-            <div className="w-[50%] p-1 border-r border-black">
-              <div className="flex"><div className="font-bold w-20">EMITENTE:</div><div>MAGNA LOG TRANSPORTES LTDA</div></div>
-              <div className="flex"><div className="font-bold w-20">ENDEREÇO:</div><div>AV. Euripedes Menezes Qd 08 Lt 02 Lot. Parque</div></div>
-              <div className="flex"><div className="w-20"></div><div>APARECIDA DE GOIANIA - GO - 74993-540</div></div>
-              <div className="flex justify-between pr-4 mt-1">
-                <div><span className="font-bold">CNPJ:</span> 40784237000125</div>
-                <div><span className="font-bold">IE:</span> 10.825.333-3</div>
-              </div>
-            </div>
-            {/* Document Info */}
-            <div className="w-[35%] flex flex-col">
-              <div className="font-bold text-xl p-1 border-b border-black">N° {data.codigo || data.id.slice(-6).toUpperCase()}{isCompl ? " (COMPLEMENTAR)" : ""}</div>
-              <div className="font-bold p-1 border-b border-black">1. VIA - MOTORISTA</div>
-              <div className="flex p-1">
-                <div className="w-1/2"><span className="font-bold">DATA EMISSÃO:</span></div>
-                <div className="w-1/2 text-center">{new Date().toLocaleDateString("pt-BR")}</div>
-              </div>
-            </div>
+        <div className="w-[50%] p-0.5 border-r border-black leading-[1.15]">
+          <div className="flex"><div className="font-bold w-[68px]">EMITENTE:</div><div>MAGNA LOG TRANSPORTES LTDA</div></div>
+          <div className="flex"><div className="font-bold w-[68px]">ENDEREÇO:</div><div>AV. Euripedes Menezes Qd 08 Lt 02 Lot. Parque</div></div>
+          <div className="flex"><div className="w-[68px]"></div><div>APARECIDA DE GOIANIA - GO - 74993-540</div></div>
+          <div className="flex justify-between pr-2">
+            <div><span className="font-bold">CNPJ:</span> 40784237000125</div>
+            <div><span className="font-bold">IE:</span> 10.825.333-3</div>
           </div>
-
-          {/* Row 2: Contact Info & NF */}
-          <div className="flex border-b-[2px] border-black">
-            <div className="w-[65%] flex justify-between p-1 border-r border-black bg-gray-100">
-              <div><span className="font-bold">SITE/E-MAIL:</span> magnalog.com.br cotato@magnalog.com.br</div>
-              <div><span className="font-bold">FONE:</span> 62 9 9140.6563</div>
-            </div>
-            <div className="w-[35%] p-1 flex">
-              <div className="w-1/2 font-bold">NF/DACTE N°:</div>
-              <div className="w-1/2 font-bold">SÉRIE:</div>
-            </div>
-          </div>
-
-          {/* Row 3: Remetente & Recibo Header */}
-          <div className="flex border-b-[2px] border-black h-24">
-            <div className="w-[65%] border-r border-black flex flex-col justify-between p-1">
-              <div className="flex"><div className="font-bold w-24">REMETENTE:</div><div>MAGNA LOG TRANSPORTES LTDA</div></div>
-              <div className="flex"><div className="font-bold w-24">ENDEREÇO:</div><div>AV DAS LARANJEIRAS</div></div>
-              <div className="flex justify-between">
-                <div className="flex w-1/2"><div className="font-bold w-24">MUNICÍPIO:</div><div>APARECIDA DE GOIANIA</div></div>
-                <div className="w-1/4"><span className="font-bold">UF:</span> GO</div>
-              </div>
-              <div className="flex justify-between">
-                <div className="w-1/2"><span className="font-bold">CNPJ:</span> 40784237000125</div>
-                <div className="w-1/2"><span className="font-bold">INSCR EST:</span> 108253333</div>
-              </div>
-            </div>
-            <div className="w-[35%] flex flex-col">
-              <div className="p-1 border-b border-black flex">
-                <span className="font-bold w-32">Unidade Embarque:</span> MGL
-              </div>
-              <div className="font-bold text-center border-b border-black bg-gray-200">RECIBO DE ADIANTAMENTO {isCompl ? "COMPLEMENTAR" : ""}</div>
-              <div className="p-2 text-[10px]">
-                Declaro que recebi da empresa emitente deste documento o valor de <strong>{formatCurrency(adiantamento)}</strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 4: Destinatário & Assinatura Motorista */}
-          <div className="flex border-b-[2px] border-black h-24">
-            <div className="w-[65%] border-r border-black flex flex-col justify-between p-1">
-              <div className="flex"><div className="font-bold w-24">DESTINATÁRIO:</div><div>{destinatarioRazao}</div></div>
-              <div className="flex"><div className="font-bold w-24">ENDEREÇO:</div><div>{destinatarioEnd}</div></div>
-              <div className="flex justify-between">
-                <div className="flex w-1/2"><div className="font-bold w-24">MUNICÍPIO:</div><div>{destinatarioMun}</div></div>
-                <div className="w-1/4"><span className="font-bold">UF:</span> {destinatarioUf}</div>
-              </div>
-              <div className="flex justify-between">
-                <div className="w-1/2"><span className="font-bold">CNPJ:</span> {formatCNPJ(destinatarioCnpj)}</div>
-                <div className="w-1/2"><span className="font-bold">INSCR EST:</span> </div>
-              </div>
-            </div>
-            <div className="w-[35%] flex flex-col justify-end p-2 pb-1">
-              <div className="border-t border-black text-center mt-12 pt-1 font-bold text-[10px]">ASSINATURA DO MOTORISTA</div>
-            </div>
-          </div>
-
-          {/* Row 5: Coleta / Entrega */}
-          <div className="flex border-b-[2px] border-black p-1">
-            <div className="w-1/2 flex"><div className="font-bold w-24">COLETA:</div><div>{destinoOrigem}</div></div>
-            <div className="w-1/2 flex"><div className="font-bold w-24">ENTREGA:</div><div>{destinoDestino}</div></div>
-          </div>
-
-          {/* Mercadoria Transportada */}
-          <div className="border-b-[2px] border-black">
-            <div className="text-center font-bold border-b border-black bg-gray-200">MERCADORIA TRANSPORTADA</div>
-            <div className="flex text-center font-bold border-b border-black text-[10px]">
-              <div className="w-[20%] border-r border-black py-0.5">NATUREZA DA CARGA</div>
-              <div className="w-[35%] border-r border-black py-0.5">NOTA FISCAL</div>
-              <div className="w-[15%] border-r border-black py-0.5">VALOR MERCADORIA</div>
-              <div className="w-[15%] border-r border-black py-0.5">QUANT. M3 / KG / TON</div>
-              <div className="w-[15%] py-0.5">ESPÉCIE</div>
-            </div>
-            <div className="flex text-center min-h-[24px] text-[10px]">
-              <div className="w-[20%] border-r border-black flex items-center justify-center">DIVERSOS</div>
-              <div className="w-[35%] border-r border-black flex items-center justify-center px-1 py-1 break-words">{notasStr}</div>
-              <div className="w-[15%] border-r border-black flex items-center justify-center">{formatCurrency(sumValores)}</div>
-              <div className="w-[15%] border-r border-black flex items-center justify-center">{sumPesos.toLocaleString("pt-BR")} KG</div>
-              <div className="w-[15%] flex items-center justify-center">VOLUMES</div>
-            </div>
-          </div>
-
-          {/* Dados Motorista e Veículo Headers */}
-          <div className="flex border-b border-black text-center font-bold bg-gray-200">
-            <div className="w-[45%] border-r border-black">DADOS DO MOTORISTA</div>
-            <div className="w-[55%]">DADOS DO VEÍCULO</div>
-          </div>
-
-          {/* Dados Motorista e Veículo Body */}
-          <div className="flex border-b-[2px] border-black">
-            {/* Motorista */}
-            <div className="w-[45%] border-r border-black p-1 space-y-1">
-              <div className="flex"><div className="font-bold w-20">MOTORISTA:</div><div>{m.nome?.toUpperCase() || ""}</div></div>
-              <div className="flex"><div className="font-bold w-20">CPF:</div><div>{m.cpf || ""}</div></div>
-              <div className="flex"><div className="font-bold w-20">RG:</div><div></div></div>
-              <div className="flex"><div className="font-bold w-20">CIDADE:</div><div></div></div>
-              <div className="flex"><div className="font-bold w-20">CNH:</div><div className="w-1/2">{m.cnh || ""}</div><div className="font-bold w-12">VCTO:</div></div>
-              <div className="flex"><div className="font-bold w-20">FONE:</div><div>{m.telefone || ""}</div></div>
-            </div>
-            {/* Veiculo */}
-            <div className="w-[55%] p-1 space-y-1">
-              <div className="flex"><div className="font-bold w-28">PROPRIETÁRIO:</div><div>MAGNA LOG TRANSPORTES LTDA</div></div>
-              <div className="flex"><div className="font-bold w-28">ENDEREÇO:</div><div>AV. Euripedes Menezes Qd 08 Lt 02 Lot. Parque Industrial Vice</div></div>
-              <div className="flex justify-between">
-                <div className="flex"><div className="font-bold w-28">FONE:</div><div>62 9 9140.6563</div></div>
-                <div className="flex"><div className="font-bold mr-2">CIDADE:</div><div className="mr-4">APARECIDA DE GOIANIA</div><div className="font-bold mr-2">UF:</div><div>GO</div></div>
-              </div>
-              <div className="flex justify-between">
-                <div className="flex"><div className="font-bold w-28">CNPJ/CPF:</div><div>40784237000125</div></div>
-                <div className="flex"><div className="font-bold mr-2">INSCR EST/RG:</div><div>10.825.333-3</div></div>
-              </div>
-              <div className="flex justify-between">
-                <div className="flex"><div className="font-bold w-28">PLACA 1:</div><div>{v.placa?.toUpperCase() || ""}</div></div>
-                <div className="flex"><div className="font-bold mr-2">CIDADE:</div><div className="w-24"></div><div className="font-bold mr-2">UF:</div><div className="w-6"></div></div>
-              </div>
-              <div className="flex justify-between">
-                <div className="flex"><div className="font-bold w-28">PLACA 2:</div><div></div></div>
-                <div className="flex"><div className="font-bold mr-2">CIDADE:</div><div className="w-24"></div><div className="font-bold mr-2">UF:</div><div className="w-6"></div></div>
-              </div>
-              <div className="flex justify-between">
-                <div className="flex"><div className="font-bold w-28">PLACA 3:</div><div></div></div>
-                <div className="flex"><div className="font-bold mr-2">CIDADE:</div><div className="w-24"></div><div className="font-bold mr-2">UF:</div><div className="w-6"></div></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Observações */}
-          <div className="border-b-[2px] border-black p-1 text-justify">
-            <span className="font-bold">OBSERVAÇÕES: </span> Motorista responsável pela guarda, integridade e correta entrega da carga fracionada desde o recebimento até a comprovação de entrega, nos termos do Código Civil (Art. 730-756) e Lei 11.442/2007.
-            {data.observacoes && (
-              <span className="block mt-1 uppercase">
-                <strong>NOTA/EXTRA:</strong> {data.observacoes}
-              </span>
-            )}
-          </div>
-
-          {/* Composição Financeira & Assinaturas */}
-          <div className="flex">
-            {/* Left Financial Box */}
-            <div className="w-[45%] flex flex-col border-r-[2px] border-black">
-              {/* Composição Header */}
-              <div className="text-center font-bold border-b-[2px] border-black bg-gray-200">COMPOSIÇÃO FRETE MOTORISTA {isCompl ? "COMPLEMENTAR" : ""}</div>
-              {/* Combinado / Peso / Tolerancia */}
-              <div className="flex text-center font-bold border-b-[2px] border-black">
-                <div className="w-[40%] border-r border-black">FRETE COMBINADO R$</div>
-                <div className="w-[30%] border-r border-black">PESO CHEGADA</div>
-                <div className="w-[30%]">TOLERÂNCIA %</div>
-              </div>
-              <div className="flex text-center border-b border-black pb-1">
-                <div className="w-[40%] border-r border-black">{formatCurrency(freteCombinado)}</div>
-                <div className="w-[30%] border-r border-black">0,00</div>
-                <div className="w-[30%]">0,00</div>
-              </div>
-              {/* Cálculos */}
-              <div className="p-1 pr-6 flex flex-col gap-0.5">
-                <div className="flex justify-between font-bold"><span>FRETE BRUTO (SUJEITO A</span><span>{formatCurrency(freteCombinado)}</span></div>
-                <div className="flex justify-between"><span>(-) SEGURO</span><span>R$ 0,00</span></div>
-                <div className="flex justify-between"><span>(-) ADIANTAMENTO</span><span>{formatCurrency(adiantamento)}</span></div>
-                <div className="flex justify-between"><span>(-) FALTA DE MERCADORIA</span><span>{formatCurrency(descontos)}</span></div>
-                <div className="flex justify-between"><span>(-) IMPOSTO RETIDO NA FONTE</span><span>R$ 0,00</span></div>
-                <div className="flex justify-between"><span>(-) INSS</span><span>R$ 0,00</span></div>
-                <div className="flex justify-between"><span>(-) SEST/SENAT</span><span>R$ 0,00</span></div>
-                <div className="flex justify-between"><span>(+) ESTADIAS</span><span>R$ 0,00</span></div>
-                <div className="flex justify-between"><span>(+) PEDÁGIOS</span><span>{formatCurrency(pedagios)}</span></div>
-                <div className="flex justify-between font-bold mt-1"><span>SALDO A RECEBER</span><span>{formatCurrency(saldo)}</span></div>
-              </div>
-            </div>
-
-            {/* Right Assinaturas Box */}
-            <div className="w-[55%] flex flex-col justify-between">
-              {/* Funcionário Assinatura */}
-              <div className="flex flex-col items-center justify-center pt-8 pb-4">
-                <div className="w-[80%] border-b border-black"></div>
-                <div className="text-[10px] mt-1">NOME DO FUNCIONÁRIO</div>
-                <div className="w-[80%] border-b border-black mt-8"></div>
-                <div className="text-[10px] mt-1">ASSINATURA</div>
-              </div>
-              {/* Atenção */}
-              <div className="border-t-[2px] border-black text-center py-2 flex flex-col items-center justify-center">
-                <div className="font-bold text-lg tracking-widest">ATENÇÃO!</div>
-                <div>NO PAGAMENTO DE ADIANTAMENTO VERIFICAR</div>
-                <div>NOTA FISCAL, DACTE, PLACA E OS DADOS DO MOTORISTA</div>
-              </div>
-            </div>
-          </div>
-
         </div>
-
+        <div className="w-[35%] flex flex-col">
+          <div className="font-bold text-base leading-tight px-1 py-0.5 border-b border-black">N° {numeroDoc}</div>
+          <div className="font-bold px-1 py-0.5 border-b border-black text-[10px]">{label}</div>
+          <div className="flex px-1 py-0.5">
+            <div className="w-1/2"><span className="font-bold">DATA EMISSÃO:</span></div>
+            <div className="w-1/2 text-center">{dataEmissao}</div>
+          </div>
+        </div>
       </div>
 
-      {/* Script client side to auto trigger print and fix the button */}
-      <script dangerouslySetInnerHTML={{ __html: `
-        const btn = document.getElementById("btn-print-carta-frete");
-        if (btn) {
-          btn.onclick = function() { window.print(); }
-        }
-      `}} />
+      {/* Row 2: Contact + NF */}
+      <div className="flex border-b-[1.5px] border-black">
+        <div className="w-[65%] flex justify-between px-1 py-0.5 border-r border-black bg-gray-100">
+          <div><span className="font-bold">SITE/E-MAIL:</span> magnalog.com.br contato@magnalog.com.br</div>
+          <div><span className="font-bold">FONE:</span> 62 9 9140.6563</div>
+        </div>
+        <div className="w-[35%] px-1 py-0.5 flex">
+          <div className="w-1/2 font-bold">NF/DACTE N°:</div>
+          <div className="w-1/2 font-bold">SÉRIE:</div>
+        </div>
+      </div>
+
+      {/* Row 3: Remetente + Recibo */}
+      <div className="flex border-b-[1.5px] border-black">
+        <div className="w-[65%] border-r border-black flex flex-col justify-between px-1 py-0.5 leading-[1.15]">
+          <div className="flex"><div className="font-bold w-[76px]">REMETENTE:</div><div>MAGNA LOG TRANSPORTES LTDA</div></div>
+          <div className="flex"><div className="font-bold w-[76px]">ENDEREÇO:</div><div>AV DAS LARANJEIRAS</div></div>
+          <div className="flex justify-between">
+            <div className="flex w-1/2"><div className="font-bold w-[76px]">MUNICÍPIO:</div><div>APARECIDA DE GOIANIA</div></div>
+            <div className="w-1/4"><span className="font-bold">UF:</span> GO</div>
+          </div>
+          <div className="flex justify-between">
+            <div className="w-1/2"><span className="font-bold">CNPJ:</span> 40784237000125</div>
+            <div className="w-1/2"><span className="font-bold">INSCR EST:</span> 108253333</div>
+          </div>
+        </div>
+        <div className="w-[35%] flex flex-col">
+          <div className="px-1 py-0.5 border-b border-black flex">
+            <span className="font-bold w-24">Unidade Embarque:</span> MGL
+          </div>
+          <div className="font-bold text-center border-b border-black bg-gray-200 text-[9px] py-0.5">
+            RECIBO DE ADIANTAMENTO {isCompl ? "COMPL" : ""}
+          </div>
+          <div className="px-1 py-0.5 text-[8.5px] leading-tight">
+            Declaro que recebi da empresa emitente deste documento o valor de <strong>{formatCurrency(adiantamento)}</strong>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 4: Destinatário + Assinatura */}
+      <div className="flex border-b-[1.5px] border-black">
+        <div className="w-[65%] border-r border-black flex flex-col justify-between px-1 py-0.5 leading-[1.15]">
+          <div className="flex"><div className="font-bold w-[76px]">DESTINATÁRIO:</div><div className="truncate">{destinatarioRazao}</div></div>
+          <div className="flex"><div className="font-bold w-[76px]">ENDEREÇO:</div><div className="truncate">{destinatarioEnd}</div></div>
+          <div className="flex justify-between">
+            <div className="flex w-1/2"><div className="font-bold w-[76px]">MUNICÍPIO:</div><div>{destinatarioMun}</div></div>
+            <div className="w-1/4"><span className="font-bold">UF:</span> {destinatarioUf}</div>
+          </div>
+          <div className="flex justify-between">
+            <div className="w-1/2"><span className="font-bold">CNPJ:</span> {formatCNPJ(destinatarioCnpj)}</div>
+            <div className="w-1/2"><span className="font-bold">INSCR EST:</span> </div>
+          </div>
+        </div>
+        <div className="w-[35%] flex flex-col justify-end px-2 py-1">
+          <div className="border-t border-black text-center mt-6 pt-0.5 font-bold text-[9px]">ASSINATURA DO MOTORISTA</div>
+        </div>
+      </div>
+
+      {/* Coleta / Entrega */}
+      <div className="flex border-b-[1.5px] border-black px-1 py-0.5">
+        <div className="w-1/2 flex"><div className="font-bold w-[76px]">COLETA:</div><div>{destinoOrigem}</div></div>
+        <div className="w-1/2 flex"><div className="font-bold w-[76px]">ENTREGA:</div><div className="truncate">{destinoDestino}</div></div>
+      </div>
+
+      {/* Mercadoria */}
+      <div className="border-b-[1.5px] border-black">
+        <div className="text-center font-bold border-b border-black bg-gray-200 text-[9px] py-0.5">MERCADORIA TRANSPORTADA</div>
+        <div className="flex text-center font-bold border-b border-black text-[9px]">
+          <div className="w-[20%] border-r border-black py-0.5">NATUREZA DA CARGA</div>
+          <div className="w-[35%] border-r border-black py-0.5">NOTA FISCAL</div>
+          <div className="w-[15%] border-r border-black py-0.5">VALOR MERCADORIA</div>
+          <div className="w-[15%] border-r border-black py-0.5">QUANT. M3/KG/TON</div>
+          <div className="w-[15%] py-0.5">ESPÉCIE</div>
+        </div>
+        <div className="flex text-center text-[9px]">
+          <div className="w-[20%] border-r border-black flex items-center justify-center px-0.5 py-0.5">DIVERSOS</div>
+          <div className="w-[35%] border-r border-black flex items-center justify-center px-1 py-0.5 break-words">{notasStr}</div>
+          <div className="w-[15%] border-r border-black flex items-center justify-center">{formatCurrency(sumValores)}</div>
+          <div className="w-[15%] border-r border-black flex items-center justify-center">{sumPesos.toLocaleString("pt-BR")} KG</div>
+          <div className="w-[15%] flex items-center justify-center">VOLUMES</div>
+        </div>
+      </div>
+
+      {/* Dados Motorista/Veículo — header */}
+      <div className="flex border-b border-black text-center font-bold bg-gray-200 text-[9px]">
+        <div className="w-[45%] border-r border-black py-0.5">DADOS DO MOTORISTA</div>
+        <div className="w-[55%] py-0.5">DADOS DO VEÍCULO</div>
+      </div>
+
+      {/* Dados Motorista/Veículo — body */}
+      <div className="flex border-b-[1.5px] border-black">
+        <div className="w-[45%] border-r border-black px-1 py-0.5 leading-[1.15]">
+          <div className="flex"><div className="font-bold w-[72px]">MOTORISTA:</div><div className="truncate">{m.nome?.toUpperCase() || ""}</div></div>
+          <div className="flex"><div className="font-bold w-[72px]">CPF:</div><div>{m.cpf || ""}</div></div>
+          <div className="flex"><div className="font-bold w-[72px]">RG:</div><div></div></div>
+          <div className="flex"><div className="font-bold w-[72px]">CIDADE:</div><div></div></div>
+          <div className="flex"><div className="font-bold w-[72px]">CNH:</div><div className="w-1/2">{m.cnh || ""}</div><div className="font-bold w-10">VCTO:</div></div>
+          <div className="flex"><div className="font-bold w-[72px]">FONE:</div><div>{m.telefone || ""}</div></div>
+        </div>
+        <div className="w-[55%] px-1 py-0.5 leading-[1.15]">
+          <div className="flex"><div className="font-bold w-[92px]">PROPRIETÁRIO:</div><div className="truncate">MAGNA LOG TRANSPORTES LTDA</div></div>
+          <div className="flex"><div className="font-bold w-[92px]">ENDEREÇO:</div><div className="truncate">AV. Euripedes Menezes Qd 08 Lt 02</div></div>
+          <div className="flex justify-between">
+            <div className="flex"><div className="font-bold w-[92px]">FONE:</div><div>62 9 9140.6563</div></div>
+            <div className="flex gap-1"><span className="font-bold">CIDADE:</span><span>APARECIDA</span><span className="font-bold">UF:</span><span>GO</span></div>
+          </div>
+          <div className="flex justify-between">
+            <div className="flex"><div className="font-bold w-[92px]">CNPJ/CPF:</div><div>40784237000125</div></div>
+            <div className="flex gap-1"><span className="font-bold">INSCR EST:</span><span>10.825.333-3</span></div>
+          </div>
+          <div className="flex justify-between">
+            <div className="flex"><div className="font-bold w-[92px]">PLACA 1:</div><div>{v.placa?.toUpperCase() || ""}</div></div>
+            <div className="flex gap-1"><span className="font-bold">PLACA 2:</span><span className="w-14"></span><span className="font-bold">PLACA 3:</span></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Observações */}
+      <div className="border-b-[1.5px] border-black px-1 py-0.5 text-justify text-[8.5px] leading-[1.2]">
+        <span className="font-bold">OBSERVAÇÕES: </span>
+        Motorista responsável pela guarda, integridade e correta entrega da carga fracionada desde o recebimento até a comprovação de entrega, nos termos do Código Civil (Art. 730-756) e Lei 11.442/2007.
+        {data.observacoes && (
+          <span className="block mt-0.5 uppercase">
+            <strong>NOTA/EXTRA:</strong> {data.observacoes}
+          </span>
+        )}
+      </div>
+
+      {/* Composição + Assinaturas */}
+      <div className="flex">
+        <div className="w-[45%] flex flex-col border-r-[1.5px] border-black">
+          <div className="text-center font-bold border-b border-black bg-gray-200 text-[9px] py-0.5">
+            COMPOSIÇÃO FRETE MOTORISTA {isCompl ? "COMPL" : ""}
+          </div>
+          <div className="flex text-center font-bold border-b border-black text-[9px]">
+            <div className="w-[40%] border-r border-black py-0.5">FRETE COMBINADO R$</div>
+            <div className="w-[30%] border-r border-black py-0.5">PESO CHEGADA</div>
+            <div className="w-[30%] py-0.5">TOLERÂNCIA %</div>
+          </div>
+          <div className="flex text-center border-b border-black text-[9px]">
+            <div className="w-[40%] border-r border-black py-0.5">{formatCurrency(freteCombinado)}</div>
+            <div className="w-[30%] border-r border-black py-0.5">0,00</div>
+            <div className="w-[30%] py-0.5">0,00</div>
+          </div>
+          <div className="px-1 pr-3 py-0.5 flex flex-col leading-[1.15]">
+            <div className="flex justify-between font-bold"><span>FRETE BRUTO</span><span>{formatCurrency(freteCombinado)}</span></div>
+            <div className="flex justify-between"><span>(-) SEGURO</span><span>R$ 0,00</span></div>
+            <div className="flex justify-between"><span>(-) ADIANTAMENTO</span><span>{formatCurrency(adiantamento)}</span></div>
+            <div className="flex justify-between"><span>(-) FALTA MERCADORIA</span><span>{formatCurrency(descontos)}</span></div>
+            <div className="flex justify-between"><span>(-) IRRF</span><span>R$ 0,00</span></div>
+            <div className="flex justify-between"><span>(-) INSS</span><span>R$ 0,00</span></div>
+            <div className="flex justify-between"><span>(-) SEST/SENAT</span><span>R$ 0,00</span></div>
+            <div className="flex justify-between"><span>(+) ESTADIAS</span><span>R$ 0,00</span></div>
+            <div className="flex justify-between"><span>(+) PEDÁGIOS</span><span>{formatCurrency(pedagios)}</span></div>
+            <div className="flex justify-between font-bold border-t border-black mt-0.5 pt-0.5">
+              <span>SALDO A RECEBER</span><span>{formatCurrency(saldo)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-[55%] flex flex-col justify-between">
+          <div className="flex flex-col items-center justify-center pt-3 pb-1">
+            <div className="w-[80%] border-b border-black"></div>
+            <div className="text-[8.5px] mt-0.5">NOME DO FUNCIONÁRIO</div>
+            <div className="w-[80%] border-b border-black mt-4"></div>
+            <div className="text-[8.5px] mt-0.5">ASSINATURA</div>
+          </div>
+          <div className="border-t-[1.5px] border-black text-center py-1 flex flex-col items-center justify-center leading-[1.15]">
+            <div className="font-bold text-sm tracking-widest">ATENÇÃO!</div>
+            <div className="text-[8.5px]">NO PAGAMENTO DE ADIANTAMENTO VERIFICAR</div>
+            <div className="text-[8.5px]">NOTA FISCAL, DACTE, PLACA E DADOS DO MOTORISTA</div>
+          </div>
+        </div>
+      </div>
     </div>
+  );
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @page { size: A4 portrait; margin: 6mm; }
+        @media print {
+          body { padding: 0 !important; margin: 0 !important; }
+          .no-print { display: none !important; }
+          .via-wrapper { break-inside: avoid; }
+        }
+        .cut-line {
+          border-top: 1px dashed #666;
+          margin: 4px 0 6px;
+          text-align: center;
+          font-size: 8px;
+          color: #666;
+          position: relative;
+          height: 8px;
+        }
+        .cut-line::before {
+          content: "✂ CORTE AQUI";
+          background: white;
+          padding: 0 8px;
+          position: relative;
+          top: -6px;
+        }
+      ` }} />
+
+      <div className="bg-white text-black w-full p-2 print:p-0" style={{ fontFamily: "Arial, sans-serif" }}>
+        <div className="max-w-[1000px] mx-auto text-[9.5px] font-sans relative">
+          <div className="absolute -top-10 right-0 no-print">
+            <button
+              id="btn-print-carta-frete"
+              className="bg-blue-600 text-white px-4 py-2 rounded font-bold shadow hover:bg-blue-700"
+            >
+              Imprimir Carta Frete (2 vias)
+            </button>
+          </div>
+
+          <div className="via-wrapper">
+            <Via label="1ª VIA - MOTORISTA" />
+          </div>
+
+          <div className="cut-line" />
+
+          <div className="via-wrapper">
+            <Via label="2ª VIA - EMPRESA" />
+          </div>
+        </div>
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              const btn = document.getElementById("btn-print-carta-frete");
+              if (btn) { btn.onclick = function() { window.print(); } }
+            `,
+          }}
+        />
+      </div>
+    </>
   );
 }
