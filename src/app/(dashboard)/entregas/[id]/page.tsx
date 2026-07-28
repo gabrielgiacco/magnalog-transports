@@ -1772,7 +1772,8 @@ function AvariasTab({ entregaId, entrega }: { entregaId: string; entrega: any })
 
 function PaletizacaoTab({ entrega }: { entrega: any }) {
   const router = useRouter();
-  
+  const [buscaProduto, setBuscaProduto] = useState("");
+
   // Extrair e agrupar todos os produtos de todas as notas fiscais pelo código do produto e CNPJ do fornecedor
   const produtosMap = new Map<string, any>();
   let totalCaixas = 0;
@@ -1842,6 +1843,14 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
   const totalProdutos = todosProdutos.length;
   const pctNormas = totalProdutos > 0 ? Math.round((totalComNorma / totalProdutos) * 100) : 0;
   const totalPaletesFisicosCarga = totalInteirosCarga + totalPontasCarga;
+
+  const buscaQ = buscaProduto.trim().toLowerCase();
+  const produtosFiltrados = buscaQ
+    ? todosProdutos.filter((p) =>
+        String(p.codigo).toLowerCase().includes(buscaQ) ||
+        String(p.descricao || "").toLowerCase().includes(buscaQ)
+      )
+    : todosProdutos;
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
@@ -2053,8 +2062,36 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
 
       {/* Tabela de Produtos e Normas */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border)", background: "var(--surface2)" }}>
-          <span className="text-xs font-mono uppercase tracking-widest text-slate-400 dark:text-neutral-500 font-bold">Listagem de Itens e Normas de Paletização</span>
+        <div className="px-5 py-4 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: "var(--border)", background: "var(--surface2)" }}>
+          <span className="text-xs font-mono uppercase tracking-widest text-slate-400 dark:text-neutral-500 font-bold">
+            Listagem de Itens e Normas de Paletização
+            {buscaQ && (
+              <span className="ml-2 normal-case font-normal text-[10px]" style={{ color: "var(--text3)" }}>
+                — {produtosFiltrados.length} de {todosProdutos.length}
+              </span>
+            )}
+          </span>
+          <div className="relative flex-1 min-w-[220px] max-w-md">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
+            <input
+              type="text"
+              placeholder="Buscar por código ou nome do produto..."
+              value={buscaProduto}
+              onChange={(e) => setBuscaProduto(e.target.value)}
+              className="w-full pl-9 pr-8 py-1.5 rounded-lg text-xs outline-none"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+            />
+            {buscaProduto && (
+              <button
+                onClick={() => setBuscaProduto("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded hover:opacity-70"
+                style={{ color: "var(--text3)" }}
+                title="Limpar"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
         <div className="overflow-x-auto">
           <Table>
@@ -2077,8 +2114,14 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
                     Nenhum produto extraído do XML desta entrega.
                   </td>
                 </tr>
+              ) : produtosFiltrados.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-10 text-xs text-slate-500 dark:text-neutral-400">
+                    Nenhum produto encontrado para «{buscaProduto}».
+                  </td>
+                </tr>
               ) : (
-                todosProdutos.map((p, idx) => {
+                produtosFiltrados.map((p, idx) => {
                   const hasNorma = !!p.norma;
 
                   let detalhe = "";
