@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, AlertTriangle, Clock, CheckCircle2, X } from "lucide-react";
+import { Bell, AlertTriangle, Clock, CheckCircle2, X, HardDrive } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface Alerta {
   id: string;
-  tipo: "atrasada" | "ocorrencia" | "entregue";
+  tipo: "atrasada" | "ocorrencia" | "entregue" | "storage";
   titulo: string;
   subtitulo: string;
   href: string;
@@ -33,11 +33,30 @@ export function NotificationBell() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/api/dashboard");
+        const [res, resStorage] = await Promise.all([
+          fetch("/api/dashboard"),
+          fetch("/api/storage/status").catch(() => null),
+        ]);
         if (!res.ok) return;
         const data = await res.json();
         const now = Date.now();
         const newAlerts: Alerta[] = [];
+
+        // Alerta de storage — só se veio resposta OK e precisaAlerta
+        if (resStorage?.ok) {
+          const s = await resStorage.json();
+          if (s?.precisaAlerta) {
+            newAlerts.push({
+              id: "storage_low",
+              tipo: "storage",
+              titulo: "Armazenamento quase cheio",
+              subtitulo: `Restam ${Number(s.disponivelGB).toFixed(2)} GB de ${s.limiteGB} GB — libere espaço`,
+              href: "/canhotos",
+              ts: now,
+              lida: false,
+            });
+          }
+        }
 
         if (data.kpis?.atrasadas > 0) {
           newAlerts.push({
@@ -86,12 +105,14 @@ export function NotificationBell() {
     atrasada: <Clock size={14} style={{ color: "#ef4444" }} />,
     ocorrencia: <AlertTriangle size={14} style={{ color: "#f59e0b" }} />,
     entregue: <CheckCircle2 size={14} style={{ color: "#10b981" }} />,
+    storage: <HardDrive size={14} style={{ color: "#ef4444" }} />,
   };
 
   const bgMap = {
     atrasada: "rgba(239,68,68,.08)",
     ocorrencia: "rgba(245,158,11,.08)",
     entregue: "rgba(16,185,129,.08)",
+    storage: "rgba(239,68,68,.1)",
   };
 
   function markRead(id: string) {

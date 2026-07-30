@@ -45,7 +45,7 @@ export default async function DeclaracaoRecebimentoPage({ params }: { params: { 
 
   // Dados agregados
   const motoristaNome = avaria.motoristaChegada || avaria.motorista?.nome || avaria.entrega?.motorista?.nome || "";
-  const motoristaCpf = avaria.motorista?.cpf || avaria.entrega?.motorista?.cpf || "";
+  const motoristaCpf = avaria.motoristaCpfChegada || avaria.motorista?.cpf || avaria.entrega?.motorista?.cpf || "";
   const placa = avaria.placaChegada || avaria.entrega?.veiculo?.placa || "";
   const transportadora = avaria.transportadoraChegada || "";
   const conferente = avaria.registradoPor?.name || "";

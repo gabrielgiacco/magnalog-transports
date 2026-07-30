@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
         dataChegada: body.dataChegada ? new Date(body.dataChegada) : null,
         transportadoraChegada: body.transportadoraChegada || null,
         motoristaChegada: body.motoristaChegada || null,
+        motoristaCpfChegada: body.motoristaCpfChegada || null,
         placaChegada: body.placaChegada || null,
         produtos: {
           create: produtos.map((p: any) => ({

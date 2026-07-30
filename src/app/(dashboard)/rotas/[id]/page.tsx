@@ -211,7 +211,7 @@ export default function RotaDetailPage() {
             <div className="flex items-center gap-3">
               <div className="text-3xl">{statusInfo?.icon}</div>
               <div>
-                <div className="text-[10px] font-mono uppercase tracking-widest mb-0.5 text-slate-500">Status</div>
+                <div className="text-[10px] font-mono uppercase tracking-widest mb-0.5" style={{ color: "var(--text3)" }}>Status</div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={rota.status} />
                   {QUALIDADE_ENABLED && rota.qualidade?.id && (
@@ -224,21 +224,21 @@ export default function RotaDetailPage() {
                 </div>
               </div>
             </div>
-            <div className="h-10 w-px bg-slate-100" />
+            <div className="h-10 w-px" style={{ background: "var(--border)" }} />
             <div className="flex-1">
               <div className="flex justify-between items-center mb-1.5">
-                <span className="text-xs text-slate-500">Progresso Operacional</span>
-                <span className="text-xs font-bold text-accent">{entreguesCount}/{totalEntregas} concluídas</span>
+                <span className="text-xs" style={{ color: "var(--text3)" }}>Progresso Operacional</span>
+                <span className="text-xs font-bold" style={{ color: "var(--accent)" }}>{entreguesCount}/{totalEntregas} concluídas</span>
               </div>
-              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full rounded-full bg-accent transition-all duration-700" style={{ width: `${progresso}%` }} />
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progresso}%`, background: "var(--accent)" }} />
               </div>
             </div>
           </div>
         </Card>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-slate-100">
+        <div className="flex gap-2 border-b" style={{ borderColor: "var(--border)" }}>
           <TabButton active={tab === "info"} onClick={() => setTab("info")} icon={FileText}>Visão Geral</TabButton>
           {isAdmin && QUALIDADE_ENABLED && (
             <TabButton active={tab === "qualidade"} onClick={() => setTab("qualidade")} icon={ShieldCheck}>Qualidade Operacional</TabButton>
@@ -249,37 +249,40 @@ export default function RotaDetailPage() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
-                <div className="text-[10px] font-mono uppercase tracking-widest mb-4 text-slate-500">Detalhes da Rota</div>
+                <div className="text-[10px] font-mono uppercase tracking-widest mb-4" style={{ color: "var(--text3)" }}>Detalhes da Rota</div>
                 <div className="space-y-4">
                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] uppercase font-bold text-slate-400">Motorista Responsável</span>
+                      <span className="text-[10px] uppercase font-bold" style={{ color: "var(--text3)" }}>Motorista Responsável</span>
                       <select value={rota.motoristaId || ""} onChange={e => handleUpdateField("motoristaId", e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-accent">
+                        className="w-full px-3 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-accent"
+                        style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}>
                         <option value="">— Selecionar —</option>
                         {motoristas.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
                       </select>
                    </div>
                    <div className="flex flex-col gap-1">
-                      <span className="text-[10px] uppercase font-bold text-slate-400">Veículo Utilizado</span>
+                      <span className="text-[10px] uppercase font-bold" style={{ color: "var(--text3)" }}>Veículo Utilizado</span>
                       <select value={rota.veiculoId || ""} onChange={e => handleUpdateField("veiculoId", e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl text-sm bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-accent">
+                        className="w-full px-3 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-accent"
+                        style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}>
                         <option value="">— Selecionar —</option>
                         {veiculos.map(v => <option key={v.id} value={v.id}>{v.placa} — {v.tipo}</option>)}
                       </select>
                    </div>
-                   <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                      <span className="text-[10px] uppercase font-bold text-emerald-600">Valor Acertado (Motorista)</span>
+                   <div className="p-3 rounded-xl" style={{ background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.25)" }}>
+                      <span className="text-[10px] uppercase font-bold" style={{ color: "#10b981" }}>Valor Acertado (Motorista)</span>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xl font-bold text-emerald-700">R$</span>
+                        <span className="text-xl font-bold" style={{ color: "#10b981" }}>R$</span>
                         <input type="number" step="0.01" value={rota.valorMotorista || 0} onChange={e => handleUpdateField("valorMotorista", e.target.value)} onBlur={fetchRota}
-                          className="w-full bg-transparent text-xl font-bold text-emerald-700 outline-none border-b border-dashed border-emerald-200 focus:border-emerald-500" />
+                          className="w-full bg-transparent text-xl font-bold outline-none border-b border-dashed focus:border-emerald-500"
+                          style={{ color: "#10b981", borderColor: "rgba(16,185,129,.3)" }} />
                       </div>
                    </div>
                 </div>
               </Card>
 
               <Card className="col-span-2">
-                <div className="text-[10px] font-mono uppercase tracking-widest mb-4 text-slate-500">Indicadores da Rota</div>
+                <div className="text-[10px] font-mono uppercase tracking-widest mb-4" style={{ color: "var(--text3)" }}>Indicadores da Rota</div>
                 <div className="grid grid-cols-4 gap-3">
                   {[
                     { label: "Entregas", value: new Set((rota.entregas || []).map((e: any) => e.razaoSocial)).size, color: "#f97316", icon: "📦" },
@@ -287,10 +290,10 @@ export default function RotaDetailPage() {
                     { label: "Peso", value: formatWeight(rota.pesoTotal), color: "#8b5cf6", icon: "⚖️" },
                     { label: "Receita", value: formatCurrency(totalFrete), color: "#10b981", icon: "💰" },
                   ].map(k => (
-                    <div key={k.label} className="rounded-xl p-3 text-center bg-slate-50 border border-slate-100">
+                    <div key={k.label} className="rounded-xl p-3 text-center" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
                       <div className="text-xl mb-1">{k.icon}</div>
                       <div className="font-head text-xl font-black" style={{ color: k.color }}>{k.value}</div>
-                      <div className="text-[9px] font-mono uppercase text-slate-500">{k.label}</div>
+                      <div className="text-[9px] font-mono uppercase" style={{ color: "var(--text3)" }}>{k.label}</div>
                     </div>
                   ))}
                 </div>
@@ -298,10 +301,10 @@ export default function RotaDetailPage() {
             </div>
 
             <Card className="p-0 overflow-hidden">
-               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+               <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
                   <h3 className="font-bold text-sm flex items-center gap-2">
-                     Lista de Entregas 
-                     <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">{totalEntregas}</span>
+                     Lista de Entregas
+                     <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--text3)" }}>{totalEntregas}</span>
                   </h3>
                   {rota.status !== "CANCELADA" && rota.status !== "CONCLUIDA" && (
                     <Button size="sm" onClick={() => setShowAddEntrega(true)}>
@@ -310,7 +313,7 @@ export default function RotaDetailPage() {
                   )}
                </div>
                {totalEntregas === 0 ? (
-                 <div className="py-20 text-center text-slate-400">
+                 <div className="py-20 text-center" style={{ color: "var(--text3)" }}>
                     <Package size={40} className="mx-auto mb-4 opacity-20" />
                     <p className="text-sm">Nenhuma entrega vinculada a esta rota.</p>
                  </div>
@@ -324,9 +327,9 @@ export default function RotaDetailPage() {
                     <tbody>
                       {rota.entregas.map((e: any) => (
                         <Tr key={e.id} onClick={() => router.push(`/entregas/${e.id}`)}>
-                          <Td><span className="font-mono text-xs text-accent">{e.notas?.[0]?.numero || e.codigo}</span></Td>
+                          <Td><span className="font-mono text-xs" style={{ color: "var(--accent)" }}>{e.notas?.[0]?.numero || e.codigo}</span></Td>
                           <Td><span className="font-bold text-sm">{e.razaoSocial}</span></Td>
-                          <Td><span className="text-xs text-slate-500">{e.cidade}/{e.uf}</span></Td>
+                          <Td><span className="text-xs" style={{ color: "var(--text3)" }}>{e.cidade}/{e.uf}</span></Td>
                           <Td><span className="text-xs font-mono">{formatWeight(e.pesoTotal)}</span></Td>
                           <Td><StatusBadge status={e.status} /></Td>
                           <Td>
@@ -368,33 +371,36 @@ export default function RotaDetailPage() {
       {/* Modal Add Entregas remains largely the same but simplified UI */}
       <Modal open={showAddEntrega} onClose={() => setShowAddEntrega(false)} title="Adicionar Entregas" size="xl">
           <div className="flex flex-col gap-4">
-             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                <Search size={16} className="ml-2 text-slate-400" />
-                <input type="text" placeholder="Filtrar por nome, NF ou cidade..." value={searchEntrega} onChange={e => setSearchEntrega(e.target.value)} 
-                  className="bg-transparent flex-1 outline-none text-sm" />
+             <div className="flex items-center gap-2 p-2 rounded-xl" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                <Search size={16} className="ml-2" style={{ color: "var(--text3)" }} />
+                <input type="text" placeholder="Filtrar por nome, NF ou cidade..." value={searchEntrega} onChange={e => setSearchEntrega(e.target.value)}
+                  className="bg-transparent flex-1 outline-none text-sm" style={{ color: "var(--text)" }} />
              </div>
-             <div className="max-h-[400px] overflow-y-auto rounded-xl border border-slate-100">
+             <div className="max-h-[400px] overflow-y-auto rounded-xl" style={{ border: "1px solid var(--border)" }}>
                 {filteredEntregas.map(e => {
                   const sel = selectedIds.includes(e.id);
                   return (
-                    <div key={e.id} onClick={() => toggleEntrega(e.id)} className={`flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-50 border-b border-slate-50 ${sel ? "bg-accent/5" : ""}`}>
-                       <div className={`w-5 h-5 rounded-md border flex items-center justify-center ${sel ? "bg-accent border-accent" : "bg-white border-slate-300"}`}>
+                    <div key={e.id} onClick={() => toggleEntrega(e.id)}
+                      className="flex items-center gap-4 p-4 cursor-pointer transition-all hover:opacity-90"
+                      style={{ borderBottom: "1px solid var(--border)", background: sel ? "rgba(249,115,22,.06)" : "transparent" }}>
+                       <div className="w-5 h-5 rounded-md border flex items-center justify-center"
+                         style={{ background: sel ? "var(--accent)" : "transparent", borderColor: sel ? "var(--accent)" : "var(--border)" }}>
                           {sel && <CheckCircle2 size={12} className="text-white" />}
                        </div>
                        <div className="flex-1">
-                          <div className="text-[10px] font-mono text-accent">NF {e.notas?.[0]?.numero || e.codigo}</div>
+                          <div className="text-[10px] font-mono" style={{ color: "var(--accent)" }}>NF {e.notas?.[0]?.numero || e.codigo}</div>
                           <div className="text-sm font-bold">{e.razaoSocial}</div>
                        </div>
                        <div className="text-right">
-                          <div className="text-xs text-slate-500">{e.cidade}</div>
-                          <div className="text-[10px] font-mono uppercase text-slate-400">{formatWeight(e.pesoTotal)}</div>
+                          <div className="text-xs" style={{ color: "var(--text3)" }}>{e.cidade}</div>
+                          <div className="text-[10px] font-mono uppercase" style={{ color: "var(--text3)" }}>{formatWeight(e.pesoTotal)}</div>
                        </div>
                     </div>
                   );
                 })}
              </div>
-             <div className="flex justify-between items-center bg-slate-50 -mx-6 -mb-6 p-6 border-t border-slate-100">
-                <span className="text-xs font-bold text-slate-500">{selectedIds.length} selecionadas</span>
+             <div className="flex justify-between items-center -mx-6 -mb-6 p-6 border-t" style={{ background: "var(--surface2)", borderColor: "var(--border)" }}>
+                <span className="text-xs font-bold" style={{ color: "var(--text3)" }}>{selectedIds.length} selecionadas</span>
                 <div className="flex gap-2">
                    <Button variant="ghost" onClick={() => setShowAddEntrega(false)}>Cancelar</Button>
                    <Button onClick={handleAddEntregas} loading={saving} disabled={selectedIds.length === 0}>Vincular Entregas</Button>
@@ -410,8 +416,11 @@ function TabButton({ children, active, onClick, icon: Icon }: any) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2 
-        ${active ? "border-accent text-accent" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+      className="flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2"
+      style={{
+        borderColor: active ? "var(--accent)" : "transparent",
+        color: active ? "var(--accent)" : "var(--text3)",
+      }}
     >
       <Icon size={16} />
       {children}

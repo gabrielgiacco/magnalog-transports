@@ -37,6 +37,14 @@ const TIPO_COLORS: Record<string, string> = {
   DEVOLUCAO: "#eab308", SEM_PEDIDO: "#6b7280",
 };
 
+function maskCPF(v: string) {
+  const d = (v || "").replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
 type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias" | "diarias" | "declaracao";
 
 export default function AvariasPage() {
@@ -129,6 +137,8 @@ export default function AvariasPage() {
   const [declEntregaResults, setDeclEntregaResults] = useState<any[]>([]);
   const [declEntrega, setDeclEntrega] = useState<any>(null);
   const [declProdutosPorNf, setDeclProdutosPorNf] = useState<Record<string, any[]>>({});
+  const [declXmlNfs, setDeclXmlNfs] = useState<any[]>([]);
+  const [declUploadingXml, setDeclUploadingXml] = useState(false);
   const [declLinhas, setDeclLinhas] = useState<Array<{ key: string; notaFiscalId: string; nfNumero: string; codigoProduto: string; descricao: string; ncm: string; unidade: string; quantidadeNF: number; valorUnitario: number; quantidadeAvaria: number; tipoDivergencia: string }>>([]);
   const [declDados, setDeclDados] = useState({ transportadora: "", motoristaNome: "", motoristaCpf: "", placa: "", observacoes: "" });
   const [declProdutoSearch, setDeclProdutoSearch] = useState("");
@@ -466,7 +476,7 @@ export default function AvariasPage() {
     setDeclDados((d) => ({
       ...d,
       motoristaNome: d.motoristaNome || e.motorista?.nome || "",
-      motoristaCpf: d.motoristaCpf || e.motorista?.cpf || "",
+      motoristaCpf: d.motoristaCpf || maskCPF(e.motorista?.cpf || ""),
       placa: d.placa || e.veiculo?.placa || "",
     }));
 
@@ -523,8 +533,49 @@ export default function AvariasPage() {
     setDeclEntregaResults([]);
     setDeclProdutosPorNf({});
     setDeclLinhas([]);
+    setDeclXmlNfs([]);
     setDeclDados({ transportadora: "", motoristaNome: "", motoristaCpf: "", placa: "", observacoes: "" });
     setDeclProdutoSearch("");
+  }
+
+  async function handleUploadDeclXml(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setDeclUploadingXml(true);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append("files", f));
+      const res = await fetch("/api/declaracao/parse-xml", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao importar XML");
+
+      const novasNfs = (data.notas || []).filter((n: any) => !declXmlNfs.some((x) => x.id === n.id));
+      setDeclXmlNfs((prev) => [...prev, ...novasNfs]);
+      setDeclProdutosPorNf((prev) => {
+        const next = { ...prev };
+        for (const nf of novasNfs) next[nf.id] = nf.produtos || [];
+        return next;
+      });
+      // Auto-preenche transportadora com emitente da primeira NF, se vazia
+      if (novasNfs[0]?.emitenteRazao) {
+        setDeclDados((d) => ({ ...d, transportadora: d.transportadora || novasNfs[0].emitenteRazao }));
+      }
+      if (data.erros?.length) toast.error(`${data.erros.length} arquivo(s) com erro`);
+      if (novasNfs.length > 0) toast.success(`${novasNfs.length} NF(s) importada(s) do XML`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setDeclUploadingXml(false);
+    }
+  }
+
+  function removeDeclXmlNf(nfId: string) {
+    setDeclXmlNfs((prev) => prev.filter((n) => n.id !== nfId));
+    setDeclProdutosPorNf((prev) => {
+      const { [nfId]: _, ...rest } = prev;
+      return rest;
+    });
+    // Remove linhas selecionadas dessa NF
+    setDeclLinhas((prev) => prev.filter((l) => !l.key.startsWith(`${nfId}_`)));
   }
 
   async function handleSalvarEImprimirDeclaracao() {
@@ -543,12 +594,13 @@ export default function AvariasPage() {
         fase: "CONFERENCIA",
         dataOcorrencia: new Date().toISOString().slice(0, 10),
         localOcorrencia: "Aparecida de Goiânia",
-        descricao: `Declaração de Recebimento — ${declEntrega?.razaoSocial || "Sem entrega vinculada"}`,
+        descricao: `Declaração de Recebimento — ${declEntrega?.razaoSocial || declXmlNfs[0]?.emitenteRazao || "Devolução avulsa"}`,
         observacoes: declDados.observacoes || null,
         entregaId: declEntrega?.id || null,
         motoristaId: declEntrega?.motorista?.id || null,
         transportadoraChegada: declDados.transportadora || null,
         motoristaChegada: declDados.motoristaNome || null,
+        motoristaCpfChegada: declDados.motoristaCpf || null,
         placaChegada: declDados.placa || null,
         dataChegada: new Date().toISOString(),
         produtos: declLinhas.map((l) => ({
@@ -1669,9 +1721,43 @@ export default function AvariasPage() {
               </div>
             )}
 
+            {/* OU importar XML de devolução (sem entrega vinculada) */}
+            <div className="pt-3" style={{ borderTop: "1px dashed var(--border)" }}>
+              <div className="text-[11px] font-mono uppercase mb-2" style={{ color: "var(--text3)" }}>
+                Ou importar XML — caso seja devolução (sem entrega no sistema)
+              </div>
+              <label className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer text-sm"
+                style={{ background: "var(--surface2)", border: "1px dashed var(--border)", color: "var(--text2)" }}>
+                <Upload size={14} />
+                <span>{declUploadingXml ? "Importando…" : "Selecionar XML(s) de NF-e"}</span>
+                <input type="file" accept=".xml" multiple hidden
+                  disabled={declUploadingXml}
+                  onChange={(e) => { handleUploadDeclXml(e.target.files); e.target.value = ""; }} />
+              </label>
+
+              {declXmlNfs.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {declXmlNfs.map((nf) => (
+                    <div key={nf.id} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+                      style={{ background: "rgba(249,115,22,.06)", border: "1px solid rgba(249,115,22,.25)" }}>
+                      <FileText size={13} style={{ color: "var(--accent)" }} />
+                      <div className="flex-1">
+                        <div className="font-mono font-bold">NF {nf.numero}</div>
+                        <div className="text-[10px]" style={{ color: "var(--text3)" }}>
+                          {nf.emitenteRazao} · {declProdutosPorNf[nf.id]?.length || 0} produto(s)
+                        </div>
+                      </div>
+                      <button onClick={() => removeDeclXmlNf(nf.id)} title="Remover NF"
+                        style={{ color: "var(--text3)" }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
               <Button variant="ghost" onClick={() => { setShowDeclModal(false); resetDeclForm(); }}>Cancelar</Button>
-              <Button onClick={() => setDeclStep(2)} disabled={!declEntrega}>Próximo</Button>
+              <Button onClick={() => setDeclStep(2)} disabled={!declEntrega && declXmlNfs.length === 0}>Próximo</Button>
             </div>
           </div>
         )}
@@ -1707,11 +1793,15 @@ export default function AvariasPage() {
 
             {Object.keys(declProdutosPorNf).length === 0 ? (
               <div className="text-center py-8 text-xs" style={{ color: "var(--text3)" }}>
-                Esta entrega não tem produtos parseáveis (XML pode não estar disponível nas NFs).
+                Nenhum produto disponível (XML pode não estar armazenado nas NFs).
               </div>
             ) : (() => {
               const q = declProdutoSearch.trim().toLowerCase();
-              const cardsRenderizados = declEntrega?.notas?.map((nf: any) => {
+              const notasDoModal: any[] = [
+                ...(declEntrega?.notas || []),
+                ...declXmlNfs,
+              ];
+              const cardsRenderizados = notasDoModal.map((nf: any) => {
                 const produtos = declProdutosPorNf[nf.id] || [];
                 if (produtos.length === 0) return null;
                 const produtosFiltrados = q
@@ -1826,8 +1916,8 @@ export default function AvariasPage() {
               <Input label="Motorista" value={declDados.motoristaNome}
                 onChange={(e) => setDeclDados((d) => ({ ...d, motoristaNome: e.target.value }))}
                 placeholder="Nome completo" />
-              <Input label="CPF" value={declDados.motoristaCpf}
-                onChange={(e) => setDeclDados((d) => ({ ...d, motoristaCpf: e.target.value }))}
+              <Input label="CPF" value={declDados.motoristaCpf} maxLength={14} inputMode="numeric"
+                onChange={(e) => setDeclDados((d) => ({ ...d, motoristaCpf: maskCPF(e.target.value) }))}
                 placeholder="000.000.000-00" />
               <Input label="Placa(s)" value={declDados.placa}
                 onChange={(e) => setDeclDados((d) => ({ ...d, placa: e.target.value.toUpperCase() }))}

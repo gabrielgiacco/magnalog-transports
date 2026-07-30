@@ -10,13 +10,19 @@ const formatCNPJ = (cnpj: string | null | undefined) => {
   return cnpj;
 };
 
-const paletesTexto = (quantidade: number, qtdCaixasPalete: number | undefined) => {
-  if (!qtdCaixasPalete || qtdCaixasPalete <= 0) return "—";
+const paletesInfo = (quantidade: number, qtdCaixasPalete: number | undefined) => {
+  if (!qtdCaixasPalete || qtdCaixasPalete <= 0) {
+    return { fisicos: 0, inteiros: 0, sobras: 0, ponta: 0, detalhe: "—" };
+  }
   const inteiros = Math.floor(quantidade / qtdCaixasPalete);
   const sobras = quantidade % qtdCaixasPalete;
-  if (inteiros > 0 && sobras > 0) return `${inteiros} int. + ${sobras} cx`;
-  if (inteiros > 0) return `${inteiros} int.`;
-  return `${sobras} cx`;
+  const ponta = sobras > 0 ? 1 : 0;
+  const fisicos = inteiros + ponta;
+  let detalhe = "";
+  if (inteiros > 0 && ponta > 0) detalhe = `${inteiros} int. + 1 ponta (${sobras} cx)`;
+  else if (inteiros > 0) detalhe = `${inteiros} int.`;
+  else if (ponta > 0) detalhe = `1 ponta (${sobras} cx)`;
+  return { fisicos, inteiros, sobras, ponta, detalhe };
 };
 
 type NotaLite = {
@@ -97,7 +103,10 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
     const normasMap = await carregarNormasPorDestinatario(grupo.destinatarioCnpj, fornecedoresCnpjs);
     grupo.linhas = agregarProdutosParaConferencia(grupo.notas, normasMap);
     grupo.totalCaixas = grupo.linhas.reduce((s: number, l: LinhaConferencia) => s + l.quantidade, 0);
-    grupo.totalPaletes = grupo.linhas.reduce((s: number, l: LinhaConferencia) => s + (l.paletesEstimados || 0), 0);
+    grupo.totalPaletes = grupo.linhas.reduce(
+      (s: number, l: LinhaConferencia) => s + paletesInfo(l.quantidade, l.norma?.quantidadeCaixasPalete).fisicos,
+      0,
+    );
     totalCaixasGeral += grupo.totalCaixas;
     totalPaletesGeral += grupo.totalPaletes;
   }
@@ -179,8 +188,8 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
           <div className="kpi-print-lbl">Total Caixas</div>
         </div>
         <div className="kpi-print-box">
-          <div className="kpi-print-val">{totalPaletesGeral.toFixed(2)}</div>
-          <div className="kpi-print-lbl">Paletes Estimados</div>
+          <div className="kpi-print-val">{totalPaletesGeral}</div>
+          <div className="kpi-print-lbl">Paletes (Físicos)</div>
         </div>
       </div>
 
@@ -193,7 +202,7 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
               <span><b>Cidade/UF:</b> {g.cidade}{g.uf ? ` — ${g.uf}` : ""}</span>
               <span><b>NFs:</b> {g.notas.map((n) => n.numero).join(", ")}</span>
               <span><b>Caixas:</b> {g.totalCaixas}</span>
-              <span><b>Paletes:</b> {g.totalPaletes.toFixed(2)}</span>
+              <span><b>Paletes:</b> {g.totalPaletes}</span>
             </div>
           </div>
 
@@ -221,7 +230,9 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
                     const normaText = linha.norma
                       ? `${linha.norma.lastro} x ${linha.norma.altura} = ${linha.norma.quantidadeCaixasPalete}`
                       : "SEM NORMA";
-                    const pText = linha.norma ? paletesTexto(linha.quantidade, linha.norma.quantidadeCaixasPalete) : "—";
+                    const info = linha.norma
+                      ? paletesInfo(linha.quantidade, linha.norma.quantidadeCaixasPalete)
+                      : null;
                     return (
                       <tr key={i}>
                         <td className="font-mono text-center">{linha.nfNumeros.join(", ")}</td>
@@ -229,7 +240,14 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
                         <td>{linha.descricao || "—"}</td>
                         <td className="text-center font-mono">{linha.quantidade}</td>
                         <td className="text-center font-mono">{normaText}</td>
-                        <td className="text-center font-mono" style={{ fontWeight: "bold" }}>{pText}</td>
+                        <td className="text-center font-mono">
+                          {info ? (
+                            <>
+                              <div style={{ fontWeight: "bold" }}>{info.fisicos} palete{info.fisicos !== 1 ? "s" : ""}</div>
+                              <div style={{ fontSize: 9, color: "#64748b" }}>{info.detalhe}</div>
+                            </>
+                          ) : "—"}
+                        </td>
                         <td></td>
                         <td></td>
                       </tr>

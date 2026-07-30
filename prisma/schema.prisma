@@ -675,6 +675,7 @@ model Avaria {
   dataChegada           DateTime?
   transportadoraChegada String?
   motoristaChegada      String?
+  motoristaCpfChegada   String?
   placaChegada          String?
 
   resolucao      String?   @db.Text
