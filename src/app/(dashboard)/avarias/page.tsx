@@ -1379,13 +1379,17 @@ export default function AvariasPage() {
                         <Td><span className="font-mono text-xs font-semibold" style={{ color: "var(--accent)" }}>{d.codigo}</span></Td>
                         <Td><span className="text-xs font-mono" style={{ color: "var(--text2)" }}>{formatDate(d.dataOcorrencia)}</span></Td>
                         <Td>
-                          <div className="text-sm">{d.entrega?.razaoSocial || "—"}</div>
+                          <div className="text-sm">
+                            {d.entrega?.razaoSocial
+                              || (d.descricao || "").replace(/^Declaração de Recebimento — /, "")
+                              || "—"}
+                          </div>
                           <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
                             {d.entrega?.codigo || ""} {d.entrega?.cidade ? `· ${d.entrega.cidade}` : ""}
                           </div>
                         </Td>
-                        <Td><span className="text-xs">{d.motorista?.nome || "—"}</span></Td>
-                        <Td><span className="text-xs">{d.transportadoraChegada || d.registradoPor?.name || "—"}</span></Td>
+                        <Td><span className="text-xs">{d.motoristaChegada || d.motorista?.nome || "—"}</span></Td>
+                        <Td><span className="text-xs">{d.transportadoraChegada || "—"}</span></Td>
                         <Td><span className="text-xs font-mono">{d._count?.produtos || 0}</span></Td>
                         <Td>
                           <button
