@@ -499,14 +499,14 @@ export default function AvariasPage() {
   }
 
   function toggleDeclLinha(nfId: string, nfNumero: string, idx: number, prod: any) {
-    const key = `${nfId}_${idx}`;
+    const prefix = `${nfId}_${idx}_`;
     setDeclLinhas((prev) => {
-      const exists = prev.find((l) => l.key === key);
-      if (exists) return prev.filter((l) => l.key !== key);
+      const exists = prev.some((l) => l.key.startsWith(prefix));
+      if (exists) return prev.filter((l) => !l.key.startsWith(prefix));
       return [
         ...prev,
         {
-          key,
+          key: `${prefix}0`,
           notaFiscalId: nfId,
           nfNumero,
           codigoProduto: prod.codigoProduto,
@@ -524,6 +524,39 @@ export default function AvariasPage() {
 
   function updateDeclLinha(key: string, patch: Partial<{ quantidadeAvaria: number; tipoDivergencia: string }>) {
     setDeclLinhas((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  }
+
+  function splitDeclLinha(nfId: string, nfNumero: string, idx: number, prod: any) {
+    const prefix = `${nfId}_${idx}_`;
+    setDeclLinhas((prev) => {
+      const existentes = prev.filter((l) => l.key.startsWith(prefix));
+      if (existentes.length === 0) return prev;
+      const proxSub = Math.max(...existentes.map((l) => parseInt(l.key.split("_").pop() || "0"))) + 1;
+      const somaAtual = existentes.reduce((s, l) => s + (l.quantidadeAvaria || 0), 0);
+      const restante = Math.max(0, (prod.quantidade || 0) - somaAtual);
+      const tiposUsados = new Set(existentes.map((l) => l.tipoDivergencia));
+      const proxTipo = ["AVARIA", "SOBRA", "INVERSAO", "DEVOLUCAO", "SEM_PEDIDO", "FALTA"].find((t) => !tiposUsados.has(t)) || "AVARIA";
+      return [
+        ...prev,
+        {
+          key: `${prefix}${proxSub}`,
+          notaFiscalId: nfId,
+          nfNumero,
+          codigoProduto: prod.codigoProduto,
+          descricao: prod.descricao,
+          ncm: prod.ncm || "",
+          unidade: prod.unidade || "FARDOS",
+          quantidadeNF: prod.quantidade,
+          valorUnitario: prod.valorUnitario || 0,
+          quantidadeAvaria: restante,
+          tipoDivergencia: proxTipo,
+        },
+      ];
+    });
+  }
+
+  function removeDeclLinhaSub(key: string) {
+    setDeclLinhas((prev) => prev.filter((l) => l.key !== key));
   }
 
   function resetDeclForm() {
@@ -1807,8 +1840,8 @@ export default function AvariasPage() {
                 const produtosFiltrados = q
                   ? produtos
                       .map((p: any, idx: number) => ({ p, idx }))
-                      .filter(({ p }: any) => {
-                        const alreadySel = declLinhas.some((l) => l.key === `${nf.id}_${produtos.indexOf(p)}`);
+                      .filter(({ p, idx }: any) => {
+                        const alreadySel = declLinhas.some((l) => l.key.startsWith(`${nf.id}_${idx}_`));
                         return alreadySel ||
                           String(p.codigoProduto || "").toLowerCase().includes(q) ||
                           String(p.descricao || "").toLowerCase().includes(q);
@@ -1832,48 +1865,99 @@ export default function AvariasPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {produtosFiltrados.map(({ p, idx }: any) => {
-                          const key = `${nf.id}_${idx}`;
-                          const sel = declLinhas.find((l) => l.key === key);
-                          return (
-                            <tr key={idx}
-                              className={`transition-colors ${sel ? "bg-orange-500/10" : ""}`}
-                              style={{ borderTop: "1px solid var(--border)" }}>
-                              <td className="px-2 py-1.5">
-                                <input type="checkbox" checked={!!sel}
-                                  onChange={() => toggleDeclLinha(nf.id, nf.numero, idx, p)}
-                                  className="accent-orange-500 w-4 h-4" />
-                              </td>
-                              <td className="px-2 py-1.5">
-                                <div className="font-medium">{p.descricao}</div>
-                                <div className="text-[9px] font-mono" style={{ color: "var(--text3)" }}>Cód: {p.codigoProduto}</div>
-                              </td>
-                              <td className="px-2 py-1.5 text-right font-mono">{p.quantidade}</td>
-                              <td className="px-2 py-1.5 text-right">
-                                {sel ? (
+                        {produtosFiltrados.flatMap(({ p, idx }: any) => {
+                          const prefix = `${nf.id}_${idx}_`;
+                          const sublinhas = declLinhas.filter((l) => l.key.startsWith(prefix));
+                          const sel = sublinhas.length > 0;
+                          const somaSublinhas = sublinhas.reduce((s, l) => s + (l.quantidadeAvaria || 0), 0);
+                          const excedeu = somaSublinhas > (p.quantidade || 0);
+
+                          if (!sel) {
+                            return [(
+                              <tr key={`${idx}_head`} style={{ borderTop: "1px solid var(--border)" }}>
+                                <td className="px-2 py-1.5">
+                                  <input type="checkbox" checked={false}
+                                    onChange={() => toggleDeclLinha(nf.id, nf.numero, idx, p)}
+                                    className="accent-orange-500 w-4 h-4" />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <div className="font-medium">{p.descricao}</div>
+                                  <div className="text-[9px] font-mono" style={{ color: "var(--text3)" }}>Cód: {p.codigoProduto}</div>
+                                </td>
+                                <td className="px-2 py-1.5 text-right font-mono">{p.quantidade}</td>
+                                <td className="px-2 py-1.5 text-right"><span style={{ color: "var(--text3)" }}>—</span></td>
+                                <td className="px-2 py-1.5"><span className="text-[10px]" style={{ color: "var(--text3)" }}>—</span></td>
+                              </tr>
+                            )];
+                          }
+
+                          return sublinhas.map((linha, subIdx) => {
+                            const isFirst = subIdx === 0;
+                            const isLast = subIdx === sublinhas.length - 1;
+                            return (
+                              <tr key={linha.key}
+                                className="bg-orange-500/10 transition-colors"
+                                style={{ borderTop: "1px solid var(--border)" }}>
+                                <td className="px-2 py-1.5">
+                                  {isFirst ? (
+                                    <input type="checkbox" checked={true}
+                                      onChange={() => toggleDeclLinha(nf.id, nf.numero, idx, p)}
+                                      className="accent-orange-500 w-4 h-4" title="Desmarcar produto (remove todas as divergências)" />
+                                  ) : (
+                                    <button onClick={() => removeDeclLinhaSub(linha.key)}
+                                      title="Remover esta linha de divergência"
+                                      className="w-4 h-4 flex items-center justify-center rounded hover:opacity-70"
+                                      style={{ color: "var(--text3)" }}>×</button>
+                                  )}
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  {isFirst ? (
+                                    <>
+                                      <div className="font-medium">{p.descricao}</div>
+                                      <div className="text-[9px] font-mono" style={{ color: "var(--text3)" }}>
+                                        Cód: {p.codigoProduto}
+                                        {sublinhas.length > 1 && (
+                                          <span style={{ color: excedeu ? "#ef4444" : "var(--accent)", marginLeft: 8 }}>
+                                            · {sublinhas.length} tipos ({somaSublinhas}/{p.quantidade}{excedeu ? " ⚠ excede" : ""})
+                                          </span>
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="text-[10px] font-mono pl-4" style={{ color: "var(--text3)" }}>
+                                      ↳ divisão
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-2 py-1.5 text-right font-mono">{isFirst ? p.quantidade : ""}</td>
+                                <td className="px-2 py-1.5 text-right">
                                   <input type="number" min={0} step="any"
-                                    value={sel.quantidadeAvaria}
-                                    onChange={(e) => updateDeclLinha(key, { quantidadeAvaria: parseFloat(e.target.value) || 0 })}
+                                    value={linha.quantidadeAvaria}
+                                    onChange={(e) => updateDeclLinha(linha.key, { quantidadeAvaria: parseFloat(e.target.value) || 0 })}
                                     className="w-20 px-2 py-1 rounded text-right font-mono text-xs outline-none"
-                                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }} />
-                                ) : (
-                                  <span style={{ color: "var(--text3)" }}>—</span>
-                                )}
-                              </td>
-                              <td className="px-2 py-1.5">
-                                {sel ? (
-                                  <select value={sel.tipoDivergencia}
-                                    onChange={(e) => updateDeclLinha(key, { tipoDivergencia: e.target.value })}
-                                    className="px-2 py-1 rounded text-xs outline-none"
-                                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}>
-                                    {Object.entries(TIPO_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                                  </select>
-                                ) : (
-                                  <span className="text-[10px]" style={{ color: "var(--text3)" }}>—</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
+                                    style={{ background: "var(--surface)", border: `1px solid ${excedeu ? "#ef4444" : "var(--border)"}`, color: "var(--text)" }} />
+                                </td>
+                                <td className="px-2 py-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <select value={linha.tipoDivergencia}
+                                      onChange={(e) => updateDeclLinha(linha.key, { tipoDivergencia: e.target.value })}
+                                      className="px-2 py-1 rounded text-xs outline-none"
+                                      style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}>
+                                      {Object.entries(TIPO_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                    </select>
+                                    {isLast && (
+                                      <button onClick={() => splitDeclLinha(nf.id, nf.numero, idx, p)}
+                                        title="Dividir em outro tipo (ex: 1 avaria + resto devolução)"
+                                        className="px-2 py-1 rounded text-[10px] font-bold hover:opacity-80"
+                                        style={{ background: "var(--surface2)", border: "1px dashed var(--accent)", color: "var(--accent)" }}>
+                                        + dividir
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          });
                         })}
                       </tbody>
                     </table>
@@ -1892,7 +1976,7 @@ export default function AvariasPage() {
             })()}
 
             <div className="text-xs" style={{ color: "var(--text2)" }}>
-              <b>{declLinhas.length}</b> produto(s) marcado(s) com divergência
+              <b>{new Set(declLinhas.map((l) => l.key.split("_").slice(0, 2).join("_"))).size}</b> produto(s) marcado(s) — <b>{declLinhas.length}</b> linha(s) de divergência
             </div>
 
             <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
