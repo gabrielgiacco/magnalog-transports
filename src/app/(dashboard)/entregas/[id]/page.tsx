@@ -58,6 +58,12 @@ export default function EntregaDetailPage() {
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolucaoTexto, setResolucaoTexto] = useState("");
   const [statusFinalEntrega, setStatusFinalEntrega] = useState("FINALIZADO");
+  const [devolucaoData, setDevolucaoData] = useState({
+    transportadora: "",
+    motorista: "",
+    placa: "",
+    dataCarregamento: "",
+  });
   const [salvandoResolucao, setSalvandoResolucao] = useState(false);
 
   // Prompt de dataEntrega ao finalizar entrega que ainda não tem data
@@ -284,6 +290,17 @@ export default function EntregaDetailPage() {
   }
 
   async function handleResolveOcorrencia() {
+    // Fluxo especial: Devolvido à Fábrica
+    if (statusFinalEntrega === "DEVOLVIDO_FABRICA") {
+      const { transportadora, motorista, placa, dataCarregamento } = devolucaoData;
+      if (!transportadora.trim() || !motorista.trim() || !placa.trim() || !dataCarregamento) {
+        toast.error("Preencha transportadora, motorista, placa e data do carregamento");
+        return;
+      }
+      await doResolveOcorrencia(dataCarregamento);
+      return;
+    }
+
     if (!resolucaoTexto.trim()) {
       toast.error("Insira uma observação para a resolução");
       return;
@@ -310,24 +327,42 @@ export default function EntregaDetailPage() {
         return;
       }
 
+      // Devolvido à Fábrica: monta resolução automática + payload especial
+      const isDevolucaoFabrica = statusFinalEntrega === "DEVOLVIDO_FABRICA";
+      let resolucaoFinal = resolucaoTexto;
+      if (isDevolucaoFabrica) {
+        const dataFmt = new Date(devolucaoData.dataCarregamento + "T12:00:00").toLocaleDateString("pt-BR");
+        const autoTxt = `Devolvido à Fábrica em ${dataFmt} — Transp: ${devolucaoData.transportadora} · Mot: ${devolucaoData.motorista} · Placa: ${devolucaoData.placa}`;
+        resolucaoFinal = resolucaoTexto.trim() ? `${autoTxt}\n${resolucaoTexto}` : autoTxt;
+      }
+
       const resOcorr = await fetch(`/api/entregas/${id}/ocorrencia`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ocorrenciaId: ultimaOcorr.id,
-          resolucao: resolucaoTexto
+          resolucao: resolucaoFinal
         })
       });
 
       if (!resOcorr.ok) throw new Error("Erro ao salvar resolução da ocorrência");
 
+      const entregaBody: any = {
+        status: isDevolucaoFabrica ? "FINALIZADO" : statusFinalEntrega,
+        ...(dataEntregaISO ? { dataEntrega: dataEntregaISO } : {}),
+      };
+      if (isDevolucaoFabrica) {
+        entregaBody.dataDevolucaoFabrica = new Date(devolucaoData.dataCarregamento + "T12:00:00").toISOString();
+        entregaBody.transportadoraDevolucao = devolucaoData.transportadora;
+        entregaBody.motoristaDevolucao = devolucaoData.motorista;
+        entregaBody.placaDevolucao = devolucaoData.placa;
+        if (!entregaBody.dataEntrega) entregaBody.dataEntrega = entregaBody.dataDevolucaoFabrica;
+      }
+
       const resEntrega = await fetch(`/api/entregas/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: statusFinalEntrega,
-          ...(dataEntregaISO ? { dataEntrega: dataEntregaISO } : {}),
-        })
+        body: JSON.stringify(entregaBody)
       });
 
       if (!resEntrega.ok) {
@@ -1440,13 +1475,46 @@ export default function EntregaDetailPage() {
             </p>
           </div>
 
-          <Select label="Status Final da Entrega" value={statusFinalEntrega} onChange={e => setStatusFinalEntrega(e.target.value)}>
+          <Select label="Status Final da Entrega" value={statusFinalEntrega} onChange={e => {
+            const val = e.target.value;
+            setStatusFinalEntrega(val);
+            if (val === "DEVOLVIDO_FABRICA") {
+              setDevolucaoData((d) => ({
+                transportadora: d.transportadora,
+                motorista: d.motorista || entrega?.motorista?.nome || "",
+                placa: d.placa || entrega?.veiculo?.placa || "",
+                dataCarregamento: d.dataCarregamento || new Date().toISOString().slice(0, 10),
+              }));
+            }
+          }}>
             <option value="FINALIZADO">Finalizado (Cobrança normal / Reentrega faturada)</option>
             <option value="ENTREGUE">Entregue (Resolvido com o cliente no local)</option>
             <option value="EM_ROTA">Em Rota (Retomar viagem)</option>
+            <option value="DEVOLVIDO_FABRICA">Devolvido à Fábrica (Retorno)</option>
           </Select>
 
-          <Textarea label="Observação da Resolução / Ocorrência Solucionada *" rows={3} value={resolucaoTexto} onChange={e => setResolucaoTexto(e.target.value)}
+          {statusFinalEntrega === "DEVOLVIDO_FABRICA" && (
+            <div className="p-3 rounded-xl space-y-3" style={{ background: "rgba(249,115,22,.06)", border: "1px solid rgba(249,115,22,.25)" }}>
+              <div className="text-xs font-mono uppercase" style={{ color: "var(--accent)" }}>
+                🏭 Dados do carregamento de retorno à fábrica
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input label="Transportadora *" value={devolucaoData.transportadora}
+                  onChange={(e) => setDevolucaoData((d) => ({ ...d, transportadora: e.target.value }))}
+                  placeholder="Ex: PORTO LOG" />
+                <Input label="Motorista *" value={devolucaoData.motorista}
+                  onChange={(e) => setDevolucaoData((d) => ({ ...d, motorista: e.target.value }))}
+                  placeholder="Nome completo" />
+                <Input label="Placa *" value={devolucaoData.placa}
+                  onChange={(e) => setDevolucaoData((d) => ({ ...d, placa: e.target.value.toUpperCase() }))}
+                  placeholder="ABC1D23" />
+                <Input label="Data do carregamento *" type="date" value={devolucaoData.dataCarregamento}
+                  onChange={(e) => setDevolucaoData((d) => ({ ...d, dataCarregamento: e.target.value }))} />
+              </div>
+            </div>
+          )}
+
+          <Textarea label={statusFinalEntrega === "DEVOLVIDO_FABRICA" ? "Observação adicional (opcional)" : "Observação da Resolução / Ocorrência Solucionada *"} rows={3} value={resolucaoTexto} onChange={e => setResolucaoTexto(e.target.value)}
             placeholder="Ex: Gerou reentrega sob NF 12345 / Devolvido ao cliente por recusa / Aguardando redespacho..." />
 
           <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: "var(--border)" }}>

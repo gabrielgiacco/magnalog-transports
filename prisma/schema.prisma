@@ -317,6 +317,12 @@ model Entrega {
   dataPagamentoSaldoCompl    DateTime?
   statusCanhotoCompl         String    @default("PENDENTE")
 
+  // Devolução para a fábrica (retorno de mercadoria após ocorrência)
+  dataDevolucaoFabrica     DateTime?
+  transportadoraDevolucao  String?
+  motoristaDevolucao       String?
+  placaDevolucao           String?
+
   // Legado (se ainda em uso)
   adiantamento   Float                  @default(0)
   dataPagamento  DateTime?
