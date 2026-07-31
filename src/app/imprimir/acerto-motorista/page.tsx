@@ -32,7 +32,7 @@ export default async function AcertoMotoristaPage({ searchParams }: { searchPara
   };
   const dateFilter = { gte: parseDate(inicio), lte: parseDate(fim, true) };
 
-  // 1. Buscar entregas diretas (sem rota)
+  // 1. Buscar entregas diretas (sem rota) como motorista principal
   const entregasDiretas = await prisma.entrega.findMany({
     where: {
       motoristaId,
@@ -42,6 +42,19 @@ export default async function AcertoMotoristaPage({ searchParams }: { searchPara
     include: {
       notas: true,
       veiculo: true,
+    },
+    orderBy: { dataAgendada: "asc" },
+  });
+
+  // 1b. Buscar entregas onde ele é motorista COMPLEMENTAR (frete adicional)
+  const entregasComplementar = await prisma.entrega.findMany({
+    where: {
+      motoristaComplId: motoristaId,
+      dataAgendada: dateFilter,
+    },
+    include: {
+      notas: true,
+      veiculoCompl: true,
     },
     orderBy: { dataAgendada: "asc" },
   });
@@ -89,6 +102,42 @@ export default async function AcertoMotoristaPage({ searchParams }: { searchPara
       data: e.dataAgendada,
       destino: `${e.cidade} - ${e.uf || ""}`,
       placa: e.veiculo?.placa || "—",
+      peso: pesoNfs || e.pesoTotal || 0,
+      volumes: volumeNfs || e.volumeTotal || 0,
+      freteCombinado,
+      adiantamento,
+      pedagio,
+      descontos,
+      saldo,
+    });
+
+    freteCombinadoTotal += freteCombinado;
+    adiantamentoTotal += adiantamento;
+    pedagiosTotal += pedagio;
+    descontosTotal += descontos;
+    saldoTotal += saldo;
+    pesoTotalAcumulado += (pesoNfs || e.pesoTotal || 0);
+    volumeTotalAcumulado += (volumeNfs || e.volumeTotal || 0);
+  }
+
+  // Processar entregas complementares (motorista atua como frete adicional)
+  for (const e of entregasComplementar) {
+    const freteCombinado = e.valorMotoristaCompl || 0;
+    const adiantamento = e.adiantamentoMotoristaCompl || 0;
+    const pedagio = e.valorSaidaCompl || 0;
+    const descontos = e.descontosMotoristaCompl || 0;
+    const saldo = e.saldoMotoristaCompl || 0;
+    const notasStr = e.notas.map((n: any) => n.numero).join(", ");
+    const pesoNfs = e.notas.reduce((acc: number, n: any) => acc + (n.pesoBruto || 0), 0);
+    const volumeNfs = e.notas.reduce((acc: number, n: any) => acc + (n.volumes || 0), 0);
+
+    viagens.push({
+      tipo: "COMPLEMENTAR",
+      codigo: e.codigo,
+      notas: notasStr || "Sem NF",
+      data: e.dataAgendada,
+      destino: `${e.cidade} - ${e.uf || ""} (compl.)`,
+      placa: e.veiculoCompl?.placa || "—",
       peso: pesoNfs || e.pesoTotal || 0,
       volumes: volumeNfs || e.volumeTotal || 0,
       freteCombinado,

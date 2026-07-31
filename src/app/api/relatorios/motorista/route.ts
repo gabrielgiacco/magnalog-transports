@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   };
   const dateFilter = { gte: parseDate(inicio), lte: parseDate(fim, true) };
 
-  // Entregas diretas (sem rota)
+  // Entregas diretas (sem rota) onde ele é motorista principal
   const entregasDiretas = await prisma.entrega.findMany({
     where: {
       motoristaId,
@@ -34,6 +34,21 @@ export async function GET(req: NextRequest) {
       id: true, codigo: true, razaoSocial: true, cidade: true, uf: true,
       status: true, dataAgendada: true, pesoTotal: true, volumeTotal: true,
       valorFrete: true, valorMotorista: true, adiantamentoMotorista: true, saldoMotorista: true,
+    },
+    orderBy: { dataAgendada: "asc" },
+  });
+
+  // Entregas onde ele é motorista COMPLEMENTAR (frete adicional)
+  const entregasComplementar = await prisma.entrega.findMany({
+    where: {
+      motoristaComplId: motoristaId,
+      dataAgendada: dateFilter,
+    },
+    select: {
+      id: true, codigo: true, razaoSocial: true, cidade: true, uf: true,
+      status: true, dataAgendada: true, pesoTotal: true, volumeTotal: true,
+      valorFrete: true,
+      valorMotoristaCompl: true, adiantamentoMotoristaCompl: true, saldoMotoristaCompl: true,
     },
     orderBy: { dataAgendada: "asc" },
   });
@@ -62,6 +77,17 @@ export async function GET(req: NextRequest) {
 
   for (const e of entregasDiretas) {
     items.push({ ...e, tipo: "DIRETA" });
+  }
+
+  for (const e of entregasComplementar) {
+    items.push({
+      ...e,
+      tipo: "COMPLEMENTAR",
+      // mapeia campos compl → nomes padrão pra UI reutilizar
+      valorMotorista: e.valorMotoristaCompl,
+      adiantamentoMotorista: e.adiantamentoMotoristaCompl,
+      saldoMotorista: e.saldoMotoristaCompl,
+    });
   }
 
   for (const r of rotas) {
