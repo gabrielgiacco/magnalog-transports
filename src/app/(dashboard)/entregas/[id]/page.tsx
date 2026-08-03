@@ -1162,8 +1162,9 @@ export default function EntregaDetailPage() {
             
             <Input label="Qtd Paletes" type="number" value={editForm.quantidadePaletes} onChange={(e) => set("quantidadePaletes", e.target.value)} />
             <div className="col-span-2 py-2 border-b text-[10px] font-bold text-slate-400 dark:text-neutral-500 uppercase">Valores e Financeiro (Motorista Principal)</div>
-            <Input label="Valor Frete Cliente" type="number" value={editForm.valorFrete} onChange={(e) => set("valorFrete", e.target.value)} className="col-span-2" />
-            
+            <Input label="Valor Frete Cliente" type="number" value={editForm.valorFrete} onChange={(e) => set("valorFrete", e.target.value)} />
+            <Input label="Valor Descarga (reembolso)" type="number" step="0.01" value={editForm.valorDescarga} onChange={(e) => set("valorDescarga", e.target.value)} placeholder="0,00" />
+
             <Input label="Valor Combinado Motorista" type="number" value={editForm.valorMotorista} onChange={(e) => set("valorMotorista", e.target.value)} />
             <Input label="Pedágio/Saída Motorista" type="number" value={editForm.valorSaida} onChange={(e) => set("valorSaida", e.target.value)} />
             <Input label="Adiantamento Motorista" type="number" value={editForm.adiantamentoMotorista} onChange={(e) => set("adiantamentoMotorista", e.target.value)} />

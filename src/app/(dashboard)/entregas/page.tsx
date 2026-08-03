@@ -321,6 +321,25 @@ export default function EntregasPage() {
     }
   }
 
+  async function editarDescarga(id: string, atual: number) {
+    const raw = window.prompt("Valor da descarga (reembolso):", String(atual || 0));
+    if (raw === null) return;
+    const novo = parseFloat(raw.replace(",", "."));
+    if (isNaN(novo) || novo < 0) { toast.error("Valor inválido"); return; }
+    try {
+      const res = await fetch(`/api/entregas/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ valorDescarga: novo }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast.success("Descarga atualizada");
+      fetchEntregas();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao salvar");
+    }
+  }
+
   async function deleteEntrega(id: string) {
     if (!window.confirm("Tem certeza que deseja excluir esta entrega? Esta ação não pode ser desfeita e apenas Admins têm permissão.")) return;
     try {
@@ -683,7 +702,20 @@ export default function EntregasPage() {
                           </div>
                         </Td>
                         <Td><span className="text-xs font-mono" style={{ color: "#10b981" }}>{formatCurrency(e.valorFrete)}</span></Td>
-                        <Td><span className="text-xs font-mono" style={{ color: e.valorDescarga > 0 ? "#f97316" : "var(--text3)" }}>{formatCurrency(e.valorDescarga || 0)}</span></Td>
+                        <Td>
+                          {!isReadOnly ? (
+                            <button
+                              onClick={(ev) => { ev.stopPropagation(); editarDescarga(e.id, e.valorDescarga || 0); }}
+                              className="text-xs font-mono px-2 py-1 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors cursor-pointer"
+                              style={{ color: e.valorDescarga > 0 ? "#f97316" : "var(--text3)" }}
+                              title="Clique para editar descarga"
+                            >
+                              {formatCurrency(e.valorDescarga || 0)}
+                            </button>
+                          ) : (
+                            <span className="text-xs font-mono" style={{ color: e.valorDescarga > 0 ? "#f97316" : "var(--text3)" }}>{formatCurrency(e.valorDescarga || 0)}</span>
+                          )}
+                        </Td>
                         <Td>
                           <div className="flex items-center gap-1">
                             {!isReadOnly && (
