@@ -593,6 +593,7 @@ export default function EntregasPage() {
                     <SortTh col="dataEntrega" label="Entregue" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
                     <SortTh col="status" label="Status" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
                     <SortTh col="valorFrete" label="Frete" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
+                    <SortTh col="valorDescarga" label="Descarga" sortBy={sortBy} sortOrder={sortOrder} onSort={toggleSort} />
                     <Th></Th>
                   </tr>
                 </thead>
@@ -682,6 +683,7 @@ export default function EntregasPage() {
                           </div>
                         </Td>
                         <Td><span className="text-xs font-mono" style={{ color: "#10b981" }}>{formatCurrency(e.valorFrete)}</span></Td>
+                        <Td><span className="text-xs font-mono" style={{ color: e.valorDescarga > 0 ? "#f97316" : "var(--text3)" }}>{formatCurrency(e.valorDescarga || 0)}</span></Td>
                         <Td>
                           <div className="flex items-center gap-1">
                             {!isReadOnly && (
