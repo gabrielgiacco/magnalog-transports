@@ -6,7 +6,7 @@ import { Button, Card, Loading, Empty, Modal, Input, Table, Th, Td, Tr } from "@
 import { formatCurrency, formatDate, formatCNPJ } from "@/lib/utils";
 import { RefreshCw, FilePlus, CheckCircle2, Eye, ChevronDown, ChevronUp, Search, Warehouse, Truck, Receipt, Trash2, DollarSign, Edit2, AlertTriangle } from "lucide-react";
 
-type TabKey = "fretes" | "armazenagem" | "faturas" | "diarias";
+type TabKey = "fretes" | "armazenagem" | "faturas" | "diarias" | "transportadoras";
 
 export default function FaturamentoPage() {
   const [tab, setTab] = useState<TabKey>("fretes");
@@ -440,6 +440,7 @@ export default function FaturamentoPage() {
           {tabBtn("armazenagem", "Armazenagem", Warehouse, armazenagemPendente.reduce((s: number, g: any) => s + g.entregas.length, 0))}
           {tabBtn("diarias", "Diárias", DollarSign, diariasPendentes.length)}
           {tabBtn("faturas", "Faturas", Receipt, faturas.length + faturasArm.length)}
+          {tabBtn("transportadoras", "Transportadoras", Truck)}
         </div>
 
         {/* ─── TAB: FRETES ─────────────────────────────────────── */}
@@ -1154,6 +1155,282 @@ export default function FaturamentoPage() {
           </Button>
         </div>
       </Modal>
+
+      <TransportadorasTab active={tab === "transportadoras"} />
     </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ABA TRANSPORTADORAS — Faturamento por acordo (ex: Porto Transp)
+// ═══════════════════════════════════════════════════════════════
+
+function TransportadorasTab({ active }: { active: boolean }) {
+  const [acordos, setAcordos] = useState<any[]>([]);
+  const [emitentes, setEmitentes] = useState<any[]>([]);
+  const [selCnpj, setSelCnpj] = useState("");
+  const hoje = new Date();
+  const primDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
+  const hojeStr = hoje.toISOString().slice(0, 10);
+  const [inicio, setInicio] = useState(primDiaMes);
+  const [fim, setFim] = useState(hojeStr);
+
+  const [preview, setPreview] = useState<any>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [gerandoFatura, setGerandoFatura] = useState(false);
+  const [faturasGeradas, setFaturasGeradas] = useState<any[]>([]);
+
+  const [showAcordoModal, setShowAcordoModal] = useState(false);
+  const [acordoEdit, setAcordoEdit] = useState<any>({ id: null, transportadoraCnpj: "", transportadoraNome: "", percentualCTE: 20, taxaEntrega: 0, valorPaleteFixo: 0 });
+  const [savingAcordo, setSavingAcordo] = useState(false);
+
+  const loadAcordos = useCallback(async () => {
+    const r = await fetch("/api/acordos-transportadora");
+    if (r.ok) { const d = await r.json(); setAcordos(d.acordos || []); }
+  }, []);
+  const loadEmitentes = useCallback(async () => {
+    const r = await fetch("/api/ctes/emitentes");
+    if (r.ok) { const d = await r.json(); setEmitentes(d.emitentes || []); }
+  }, []);
+  const loadFaturas = useCallback(async (cnpj: string) => {
+    if (!cnpj) { setFaturasGeradas([]); return; }
+    const r = await fetch(`/api/faturamento/transportadora/list?transportadoraCnpj=${cnpj}`);
+    if (r.ok) { const d = await r.json(); setFaturasGeradas(d.faturas || []); }
+  }, []);
+
+  useEffect(() => { if (active) { loadAcordos(); loadEmitentes(); } }, [active, loadAcordos, loadEmitentes]);
+  useEffect(() => { loadFaturas(selCnpj); }, [selCnpj, loadFaturas]);
+
+  async function handlePreview() {
+    if (!selCnpj) { toast.error("Selecione uma transportadora"); return; }
+    setLoadingPreview(true); setPreview(null);
+    try {
+      const r = await fetch(`/api/faturamento/transportadora?transportadoraCnpj=${selCnpj}&inicio=${inicio}&fim=${fim}`);
+      const d = await r.json();
+      if (!r.ok) { toast.error(d.error || "Erro"); return; }
+      setPreview(d);
+    } finally { setLoadingPreview(false); }
+  }
+
+  async function handleGerar() {
+    if (!preview || preview.items.length === 0) return;
+    setGerandoFatura(true);
+    try {
+      const r = await fetch("/api/faturamento/transportadora", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transportadoraCnpj: selCnpj, inicio, fim }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Erro ao gerar");
+      toast.success(`Fatura ${d.numero} gerada`);
+      loadFaturas(selCnpj);
+    } catch (e: any) { toast.error(e.message); } finally { setGerandoFatura(false); }
+  }
+
+  function openAcordoNovo() {
+    const em = emitentes.find((e) => e.cnpj === selCnpj);
+    setAcordoEdit({ id: null, transportadoraCnpj: selCnpj || "", transportadoraNome: em?.nome || "", percentualCTE: 20, taxaEntrega: 0, valorPaleteFixo: 0 });
+    setShowAcordoModal(true);
+  }
+  function openAcordoEdit(a: any) {
+    setAcordoEdit({ ...a });
+    setShowAcordoModal(true);
+  }
+  async function saveAcordo() {
+    setSavingAcordo(true);
+    try {
+      const url = acordoEdit.id ? `/api/acordos-transportadora/${acordoEdit.id}` : "/api/acordos-transportadora";
+      const method = acordoEdit.id ? "PUT" : "POST";
+      const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(acordoEdit) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Erro");
+      toast.success("Acordo salvo");
+      setShowAcordoModal(false);
+      loadAcordos();
+    } catch (e: any) { toast.error(e.message); } finally { setSavingAcordo(false); }
+  }
+  async function deleteAcordo(id: string) {
+    if (!confirm("Excluir acordo?")) return;
+    const r = await fetch(`/api/acordos-transportadora/${id}`, { method: "DELETE" });
+    if (r.ok) { toast.success("Removido"); loadAcordos(); } else toast.error("Erro");
+  }
+
+  if (!active) return null;
+
+  const acordoAtual = acordos.find((a) => a.transportadoraCnpj === selCnpj);
+  const opts = acordos.map((a) => ({ cnpj: a.transportadoraCnpj, nome: a.transportadoraNome }));
+  emitentes.forEach((e) => { if (!opts.find((o) => o.cnpj === e.cnpj)) opts.push({ cnpj: e.cnpj, nome: `${e.nome} (sem acordo)` }); });
+
+  return (
+    <div className="mt-4 space-y-4">
+      {/* Cabeçalho + acordos */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm font-semibold">Acordos de Transportadora</div>
+          <Button size="sm" onClick={openAcordoNovo}><FilePlus size={13} /> Novo Acordo</Button>
+        </div>
+        {acordos.length === 0 ? (
+          <div className="text-xs" style={{ color: "var(--text3)" }}>Nenhum acordo cadastrado. Clique em "Novo Acordo" pra começar.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {acordos.map((a) => (
+              <div key={a.id} className="p-3 rounded-lg text-xs" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold truncate">{a.transportadoraNome}</div>
+                    <div className="font-mono text-[10px]" style={{ color: "var(--text3)" }}>{formatCNPJ(a.transportadoraCnpj)}</div>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => openAcordoEdit(a)} title="Editar" style={{ color: "var(--text2)" }}><Edit2 size={12} /></button>
+                    <button onClick={() => deleteAcordo(a.id)} title="Excluir" style={{ color: "#ef4444" }}><Trash2 size={12} /></button>
+                  </div>
+                </div>
+                <div className="mt-2 space-y-0.5 font-mono text-[10px]" style={{ color: "var(--text2)" }}>
+                  <div>% CT-e: <b>{a.percentualCTE}%</b></div>
+                  <div>Taxa entrega: <b>{formatCurrency(a.taxaEntrega)}</b></div>
+                  <div>Palete fixo: <b>{formatCurrency(a.valorPaleteFixo)}</b></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Filtros */}
+      <Card className="p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+          <div>
+            <label className="text-[10px] font-mono uppercase mb-1 block" style={{ color: "var(--text3)" }}>Transportadora</label>
+            <select value={selCnpj} onChange={(e) => { setSelCnpj(e.target.value); setPreview(null); }}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}>
+              <option value="">Selecione…</option>
+              {opts.map((o) => <option key={o.cnpj} value={o.cnpj}>{o.nome}</option>)}
+            </select>
+          </div>
+          <Input type="date" label="Início" value={inicio} onChange={(e) => setInicio(e.target.value)} />
+          <Input type="date" label="Fim" value={fim} onChange={(e) => setFim(e.target.value)} />
+          <Button onClick={handlePreview} loading={loadingPreview} disabled={!selCnpj}>
+            <RefreshCw size={13} /> Prévia
+          </Button>
+        </div>
+        {selCnpj && !acordoAtual && (
+          <div className="mt-3 p-2 rounded text-xs flex items-center gap-2" style={{ background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.25)", color: "#ef4444" }}>
+            <AlertTriangle size={12} /> Cadastre o acordo desta transportadora acima antes de gerar.
+          </div>
+        )}
+      </Card>
+
+      {/* Prévia */}
+      {preview && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            <MiniKpi label="% CT-e" val={preview.totais.valorPercentualCTE} />
+            <MiniKpi label="Taxa Entrega" val={preview.totais.valorTaxaEntrega} />
+            <MiniKpi label="Paletização" val={preview.totais.valorPaletizacao} />
+            <MiniKpi label="Armazenagem" val={preview.totais.valorArmazenagem} />
+            <MiniKpi label="Diárias" val={preview.totais.valorDiarias} />
+            <MiniKpi label="Descarga" val={preview.totais.valorDescarga} />
+            <MiniKpi label="TOTAL" val={preview.totais.valorTotal} highlight />
+          </div>
+
+          <Card className="overflow-hidden">
+            <div className="p-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
+              <div className="text-xs" style={{ color: "var(--text2)" }}>
+                <b>{preview.totais.totalCTes}</b> CT-e(s) · <b>{preview.totais.totalEntregas}</b> entrega(s)
+              </div>
+              <Button size="sm" onClick={handleGerar} loading={gerandoFatura} disabled={preview.items.length === 0}>
+                <Receipt size={13} /> Gerar Fatura
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>CT-e</Th><Th>Entrega</Th><Th>Cliente</Th><Th>NFs</Th><Th>Pal.</Th>
+                    <Th>% CT-e</Th><Th>Tx.Ent</Th><Th>Palet</Th><Th>Armaz</Th><Th>Diária</Th><Th>Desc</Th><Th>Subtotal</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.items.map((it: any, i: number) => (
+                    <Tr key={i}>
+                      <Td><span className="font-mono text-xs">{it.cteNumero || "—"}</span></Td>
+                      <Td><span className="font-mono text-xs">{it.codigoEntrega}</span></Td>
+                      <Td><span className="text-xs">{it.destinatarioRazao}</span></Td>
+                      <Td><span className="font-mono text-[10px]">{it.nfs}</span></Td>
+                      <Td><span className="font-mono text-xs">{it.quantidadePaletes}</span></Td>
+                      <Td><span className="font-mono text-xs">{formatCurrency(it.valorPercentualCTE)}</span></Td>
+                      <Td><span className="font-mono text-xs">{formatCurrency(it.valorTaxaEntrega)}</span></Td>
+                      <Td><span className="font-mono text-xs">{formatCurrency(it.valorPaletizacao)}</span></Td>
+                      <Td><span className="font-mono text-xs">{formatCurrency(it.valorArmazenagem)}</span></Td>
+                      <Td><span className="font-mono text-xs">{formatCurrency(it.valorDiaria)}</span></Td>
+                      <Td><span className="font-mono text-xs">{formatCurrency(it.valorDescarga)}</span></Td>
+                      <Td><span className="font-mono text-xs font-bold" style={{ color: "var(--accent)" }}>{formatCurrency(it.subtotal)}</span></Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* Faturas persistidas */}
+      {faturasGeradas.length > 0 && (
+        <Card className="p-4">
+          <div className="text-sm font-semibold mb-3">Faturas geradas</div>
+          <div className="space-y-2">
+            {faturasGeradas.map((f) => (
+              <div key={f.id} className="flex items-center gap-3 p-2 rounded text-xs"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono font-bold">{f.numero}</div>
+                  <div className="text-[10px]" style={{ color: "var(--text3)" }}>
+                    {formatDate(f.dataInicio)} → {formatDate(f.dataFim)} · {f.status}
+                  </div>
+                </div>
+                <div className="font-mono font-bold" style={{ color: "var(--accent)" }}>{formatCurrency(f.valorTotal)}</div>
+                <Button size="sm" variant="ghost" onClick={() => window.open(`/api/faturamento/transportadora/${f.id}/export`, "_blank")}>
+                  <Eye size={12} /> XLSX
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Modal Acordo */}
+      <Modal open={showAcordoModal} onClose={() => setShowAcordoModal(false)} title={acordoEdit.id ? "Editar Acordo" : "Novo Acordo"}>
+        <div className="space-y-3">
+          <Input label="CNPJ" value={acordoEdit.transportadoraCnpj} disabled={!!acordoEdit.id}
+            onChange={(e) => setAcordoEdit((a: any) => ({ ...a, transportadoraCnpj: e.target.value.replace(/\D/g, "") }))} />
+          <Input label="Nome" value={acordoEdit.transportadoraNome}
+            onChange={(e) => setAcordoEdit((a: any) => ({ ...a, transportadoraNome: e.target.value }))} />
+          <div className="grid grid-cols-3 gap-3">
+            <Input type="number" step="0.01" label="% CT-e" value={acordoEdit.percentualCTE}
+              onChange={(e) => setAcordoEdit((a: any) => ({ ...a, percentualCTE: Number(e.target.value) }))} />
+            <Input type="number" step="0.01" label="Taxa Entrega (R$)" value={acordoEdit.taxaEntrega}
+              onChange={(e) => setAcordoEdit((a: any) => ({ ...a, taxaEntrega: Number(e.target.value) }))} />
+            <Input type="number" step="0.01" label="Palete Fixo (R$)" value={acordoEdit.valorPaleteFixo}
+              onChange={(e) => setAcordoEdit((a: any) => ({ ...a, valorPaleteFixo: Number(e.target.value) }))} />
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+            <Button variant="ghost" onClick={() => setShowAcordoModal(false)}>Cancelar</Button>
+            <Button onClick={saveAcordo} loading={savingAcordo}>Salvar</Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function MiniKpi({ label, val, highlight }: { label: string; val: number; highlight?: boolean }) {
+  return (
+    <Card className="p-2">
+      <div className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "var(--text3)" }}>{label}</div>
+      <div className="text-sm font-bold font-mono" style={{ color: highlight ? "var(--accent)" : "var(--text)" }}>
+        {formatCurrency(val || 0)}
+      </div>
+    </Card>
   );
 }

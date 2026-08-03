@@ -602,6 +602,70 @@ model ItemFaturaArmazenagem {
   @@index([fornecedorCnpj])
 }
 
+// ─── Faturamento Transportadora (acordo por transportadora, ex: Porto Transportes) ───
+
+model AcordoTransportadora {
+  id                 String   @id @default(cuid())
+  transportadoraCnpj String   @unique
+  transportadoraNome String
+  percentualCTE      Float    @default(20)
+  taxaEntrega        Float    @default(0)
+  valorPaleteFixo    Float    @default(0)
+  observacoes        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model FaturaTransportadora {
+  id                 String                     @id @default(cuid())
+  numero             String                     @unique
+  transportadoraCnpj String
+  transportadoraNome String
+  dataInicio         DateTime
+  dataFim            DateTime
+  valorPercentualCTE Float                      @default(0)
+  valorTaxaEntrega   Float                      @default(0)
+  valorPaletizacao   Float                      @default(0)
+  valorArmazenagem   Float                      @default(0)
+  valorDiarias       Float                      @default(0)
+  valorDescarga      Float                      @default(0)
+  valorTotal         Float                      @default(0)
+  status             StatusFatura               @default(ABERTA)
+  observacoes        String?                    @db.Text
+  itens              ItemFaturaTransportadora[]
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  @@index([transportadoraCnpj])
+  @@index([dataInicio, dataFim])
+}
+
+model ItemFaturaTransportadora {
+  id                 String               @id @default(cuid())
+  faturaId           String
+  fatura             FaturaTransportadora @relation(fields: [faturaId], references: [id], onDelete: Cascade)
+  entregaId          String
+  cteId              String?
+  cteNumero          String?
+  cteValorTotal      Float                @default(0)
+  codigoEntrega      String
+  destinatarioRazao  String?
+  cidade             String?
+  nfs                String?
+  quantidadePaletes  Int                  @default(0)
+  valorPercentualCTE Float                @default(0)
+  valorTaxaEntrega   Float                @default(0)
+  valorPaletizacao   Float                @default(0)
+  valorArmazenagem   Float                @default(0)
+  valorDiaria        Float                @default(0)
+  valorDescarga      Float                @default(0)
+  subtotal           Float                @default(0)
+  createdAt          DateTime             @default(now())
+
+  @@index([faturaId])
+  @@index([entregaId])
+}
+
 model QualidadeOperacional {
   id                  String   @id @default(cuid())
   entregaId           String?  @unique
