@@ -81,7 +81,8 @@ async function calcular(transportadoraCnpj: string, inicio: Date, fim: Date) {
       const valorPaletizacao = (entrega.quantidadePaletes || 0) * acordo.valorPaleteFixo;
       const valorArmazenagem = entrega.valorArmazenagem || 0;
       const valorDescarga = entrega.valorDescarga || 0;
-      const valorTaxaEntrega = acordo.taxaEntrega;
+      // Taxa de entrega vem do valorFrete de cada entrega (varia por caminhão/rota)
+      const valorTaxaEntrega = entrega.valorFrete || 0;
       const subtotal =
         valorPercentualPorEntrega + valorTaxaEntrega + valorPaletizacao + valorArmazenagem + valorDiaria + valorDescarga;
 

@@ -1287,7 +1287,7 @@ function TransportadorasTab({ active }: { active: boolean }) {
                 </div>
                 <div className="mt-2 space-y-0.5 font-mono text-[10px]" style={{ color: "var(--text2)" }}>
                   <div>% CT-e: <b>{a.percentualCTE}%</b></div>
-                  <div>Taxa entrega: <b>{formatCurrency(a.taxaEntrega)}</b></div>
+                  <div>Taxa entrega: <b>por entrega</b> (valor do frete)</div>
                   <div>Palete fixo: <b>{formatCurrency(a.valorPaleteFixo)}</b></div>
                 </div>
               </div>
@@ -1406,13 +1406,14 @@ function TransportadorasTab({ active }: { active: boolean }) {
             onChange={(e) => setAcordoEdit((a: any) => ({ ...a, transportadoraCnpj: e.target.value.replace(/\D/g, "") }))} />
           <Input label="Nome" value={acordoEdit.transportadoraNome}
             onChange={(e) => setAcordoEdit((a: any) => ({ ...a, transportadoraNome: e.target.value }))} />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Input type="number" step="0.01" label="% CT-e" value={acordoEdit.percentualCTE}
               onChange={(e) => setAcordoEdit((a: any) => ({ ...a, percentualCTE: Number(e.target.value) }))} />
-            <Input type="number" step="0.01" label="Taxa Entrega (R$)" value={acordoEdit.taxaEntrega}
-              onChange={(e) => setAcordoEdit((a: any) => ({ ...a, taxaEntrega: Number(e.target.value) }))} />
             <Input type="number" step="0.01" label="Palete Fixo (R$)" value={acordoEdit.valorPaleteFixo}
               onChange={(e) => setAcordoEdit((a: any) => ({ ...a, valorPaleteFixo: Number(e.target.value) }))} />
+          </div>
+          <div className="p-2 rounded text-[10px]" style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text3)" }}>
+            💡 A taxa de entrega vem do <b>valor do frete</b> digitado em cada entrega direta ou rota — não é fixa aqui.
           </div>
           <div className="flex justify-end gap-2 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
             <Button variant="ghost" onClick={() => setShowAcordoModal(false)}>Cancelar</Button>
