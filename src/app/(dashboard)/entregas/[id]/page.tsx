@@ -733,6 +733,9 @@ export default function EntregaDetailPage() {
                     {entrega.motoristaCompl ? "Custo Motorista Principal" : "Custo Motorista (Terceiro)"}
                   </div>
                   <Field label="Valor Combinado" value={formatCurrency(entrega.valorMotorista)} color="#f97316" />
+                  {entrega.valorDescarga > 0 && (
+                    <Field label="Descarga (reembolso)" value={formatCurrency(entrega.valorDescarga)} color="#f97316" />
+                  )}
                   <Field label="Saldo a Pagar" value={formatCurrency(entrega.saldoMotorista)} color={entrega.saldoMotorista > 0 ? "#f97316" : "#10b981"} />
                   <div className="mt-1">
                     <StatusBadge status={entrega.statusCanhoto} />
