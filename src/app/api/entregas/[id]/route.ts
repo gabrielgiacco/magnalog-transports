@@ -227,17 +227,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (
       valorMotorista !== undefined ||
       valorSaida !== undefined ||
-      valorDescarga !== undefined ||
       adiantamentoMotorista !== undefined ||
       descontosMotorista !== undefined
     ) {
       const current = await prisma.entrega.findUnique({ where: { id: params.id } });
       const vMotorista = valorMotorista ?? current?.valorMotorista ?? 0;
       const vSaida = valorSaida ?? current?.valorSaida ?? 0;
-      const vDescarga = valorDescarga ?? current?.valorDescarga ?? 0;
       const vAdiantamento = adiantamentoMotorista ?? current?.adiantamentoMotorista ?? 0;
       const vDescontos = descontosMotorista ?? current?.descontosMotorista ?? 0;
-      data.saldoMotorista = vMotorista + vDescarga - vAdiantamento - vSaida - vDescontos;
+      // Descarga NAO entra no saldo do motorista - eh reembolso da MAGNA LOG (empresa paga
+      // e a transportadora reembolsa via faturamento).
+      data.saldoMotorista = vMotorista - vAdiantamento - vSaida - vDescontos;
     }
 
     // Calcular saldo do complementar

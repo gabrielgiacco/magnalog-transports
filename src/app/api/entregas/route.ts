@@ -304,7 +304,7 @@ export async function POST(req: NextRequest) {
         valorSaida: body.valorSaida || 0,
         adiantamentoMotorista: body.adiantamentoMotorista || 0,
         descontosMotorista: body.descontosMotorista || 0,
-        saldoMotorista: (body.valorMotorista || 0) + (body.valorDescarga || 0) - (body.adiantamentoMotorista || 0) - (body.valorSaida || 0) - (body.descontosMotorista || 0),
+        saldoMotorista: (body.valorMotorista || 0) - (body.adiantamentoMotorista || 0) - (body.valorSaida || 0) - (body.descontosMotorista || 0),
         dataAdiantamento: body.dataAdiantamento ? new Date(body.dataAdiantamento) : null,
         dataPagamentoSaldo: body.dataPagamentoSaldo ? new Date(body.dataPagamentoSaldo) : null,
         statusCanhoto: body.statusCanhoto || "PENDENTE",

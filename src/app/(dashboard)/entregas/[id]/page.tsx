@@ -708,6 +708,12 @@ export default function EntregaDetailPage() {
                     <span className="text-[10px] font-bold">RECEITA CLIENTE</span>
                     <span className="font-mono text-xs">{formatCurrency(entrega.valorFrete)}</span>
                   </div>
+                  {entrega.valorDescarga > 0 && (
+                    <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
+                      <span className="text-[10px] font-bold">DESCARGA (REEMBOLSO)</span>
+                      <span className="font-mono text-xs">{formatCurrency(entrega.valorDescarga)}</span>
+                    </div>
+                  )}
                   {entrega.armazenagemCalc ? (
                     <>
                       <div className="flex justify-between items-center bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-lg border border-amber-100 dark:border-amber-900/40">
@@ -733,9 +739,6 @@ export default function EntregaDetailPage() {
                     {entrega.motoristaCompl ? "Custo Motorista Principal" : "Custo Motorista (Terceiro)"}
                   </div>
                   <Field label="Valor Combinado" value={formatCurrency(entrega.valorMotorista)} color="#f97316" />
-                  {entrega.valorDescarga > 0 && (
-                    <Field label="Descarga (reembolso)" value={formatCurrency(entrega.valorDescarga)} color="#f97316" />
-                  )}
                   <Field label="Saldo a Pagar" value={formatCurrency(entrega.saldoMotorista)} color={entrega.saldoMotorista > 0 ? "#f97316" : "#10b981"} />
                   <div className="mt-1">
                     <StatusBadge status={entrega.statusCanhoto} />
