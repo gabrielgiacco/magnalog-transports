@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { buildObjectKey, presignPut, presignGet, deleteObject } from "@/lib/r2";
+import { logFromRequest } from "@/lib/audit";
 
 const MAX_SIZE = 15 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -25,7 +26,10 @@ export async function anexosList({ ownerType, ownerId }: Ctx) {
   const anexos = await prisma.anexo.findMany({
     where: { ownerType, ownerId },
     orderBy: { createdAt: "desc" },
-    include: { uploadadoPor: { select: { id: true, name: true } } },
+    include: {
+      uploadadoPor: { select: { id: true, name: true } },
+      liberadoPor: { select: { id: true, name: true } },
+    },
   });
   const comUrls = await Promise.all(
     anexos.map(async (a) => ({ ...a, url: await presignGet(a.objectKey, 3600) }))
@@ -90,6 +94,56 @@ export async function anexosConfirm(req: NextRequest, { ownerType, ownerId }: Ct
   });
   const url = await presignGet(anexo.objectKey, 3600);
   return NextResponse.json({ ...anexo, url }, { status: 201 });
+}
+
+/**
+ * PATCH /[anexoId] — libera/oculta o anexo no portal do cliente.
+ * Só faz sentido para anexos de avaria: documento de motorista/veículo nunca vai ao portal.
+ */
+export async function anexosSetVisibilidade(req: NextRequest, anexoId: string, { ownerType, ownerId }: Ctx) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const sessionUser = session.user as any;
+  const userId = sessionUser.id || sessionUser.userId;
+
+  if (ownerType !== "AVARIA") {
+    return NextResponse.json({ error: "Visibilidade no portal só se aplica a anexos de avaria" }, { status: 400 });
+  }
+
+  const body = await req.json();
+  const { visivelPortal } = body;
+  if (typeof visivelPortal !== "boolean") {
+    return NextResponse.json({ error: "visivelPortal (boolean) é obrigatório" }, { status: 400 });
+  }
+
+  const existente = await prisma.anexo.findUnique({ where: { id: anexoId } });
+  if (!existente || existente.ownerType !== ownerType || existente.ownerId !== ownerId) {
+    return NextResponse.json({ error: "Anexo não encontrado" }, { status: 404 });
+  }
+
+  const anexo = await prisma.anexo.update({
+    where: { id: anexoId },
+    data: {
+      visivelPortal,
+      liberadoPorId: visivelPortal ? userId || null : null,
+      liberadoEm: visivelPortal ? new Date() : null,
+    },
+    include: {
+      uploadadoPor: { select: { id: true, name: true } },
+      liberadoPor: { select: { id: true, name: true } },
+    },
+  });
+
+  await logFromRequest(req, visivelPortal ? "ANEXO_LIBERADO_PORTAL" : "ANEXO_OCULTADO_PORTAL", {
+    user: { id: sessionUser.id, email: sessionUser.email, name: sessionUser.name, role: sessionUser.role },
+    recursoTipo: "anexo",
+    recursoId: anexo.id,
+    recursoDesc: anexo.filename,
+    detalhes: { avariaId: ownerId, tipo: anexo.tipo, visivelPortal },
+  });
+
+  const url = await presignGet(anexo.objectKey, 3600);
+  return NextResponse.json({ ...anexo, url });
 }
 
 /** DELETE /[anexoId] — remove do R2 e DB */

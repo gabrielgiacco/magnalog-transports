@@ -13,6 +13,11 @@ const STATUS_LABELS: Record<string, string> = {
   EM_ROTA: "Em Rota", ENTREGUE: "Entregue", FINALIZADO: "Finalizado", OCORRENCIA: "Ocorrência",
 };
 
+const TIPO_AVARIA_LABELS: Record<string, string> = {
+  AVARIA: "Avaria", FALTA: "Falta", INVERSAO: "Inversão", SOBRA: "Sobra",
+  DEVOLUCAO: "Devolução", SEM_PEDIDO: "Sem Pedido",
+};
+
 export default function PortalPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -1062,9 +1067,16 @@ function CanhotosPortalSection({ entregaId }: { entregaId: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {anexos.map((a) => {
           const isImage = a.mimeType?.startsWith("image/");
+          const isRessalva = a.origem === "AVARIA";
           return (
-            <div key={a.id} className="rounded-lg overflow-hidden border" style={{ borderColor: "var(--border)", background: "var(--surface2)" }}>
-              <button type="button" onClick={() => setPreview(a)} className="block w-full aspect-[4/3] overflow-hidden" style={{ background: "var(--bg)" }}>
+            <div key={a.id} className="rounded-lg overflow-hidden border" style={{ borderColor: isRessalva ? "rgba(245,158,11,.45)" : "var(--border)", background: "var(--surface2)" }}>
+              <button type="button" onClick={() => setPreview(a)} className="block w-full aspect-[4/3] overflow-hidden relative" style={{ background: "var(--bg)" }}>
+                {isRessalva && (
+                  <span className="absolute top-1 left-1 z-10 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded flex items-center gap-1"
+                    style={{ background: "rgba(245,158,11,.9)", color: "#000" }}>
+                    <AlertTriangle size={8} /> Ressalva
+                  </span>
+                )}
                 {isImage ? (
                   <img src={a.url} alt={a.filename} className="w-full h-full object-cover" />
                 ) : (
@@ -1076,6 +1088,18 @@ function CanhotosPortalSection({ entregaId }: { entregaId: string }) {
               </button>
               <div className="p-1.5">
                 <div className="text-[10px] truncate" title={a.filename} style={{ color: "var(--text2)" }}>{a.filename}</div>
+                {isRessalva && a.avaria && (
+                  <div className="mt-1">
+                    <div className="text-[9px] font-bold" style={{ color: "#d97706" }}>
+                      {TIPO_AVARIA_LABELS[a.avaria.tipo] || a.avaria.tipo} · {formatDate(a.avaria.dataOcorrencia)}
+                    </div>
+                    {a.avaria.descricao && (
+                      <div className="text-[9px] leading-tight line-clamp-2" title={a.avaria.descricao} style={{ color: "var(--text3)" }}>
+                        {a.avaria.descricao}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <a href={a.url} download={a.filename} className="text-[10px] flex items-center gap-1 mt-1 hover:opacity-70" style={{ color: "var(--accent)" }} onClick={(e) => e.stopPropagation()}>
                   <Download size={10} /> Baixar
                 </a>

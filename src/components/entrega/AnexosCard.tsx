@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Upload, FileText, Image as ImageIcon, Trash2, Download, Loader2, Paperclip, X } from "lucide-react";
+import { Upload, FileText, Image as ImageIcon, Trash2, Download, Loader2, Paperclip, X, Eye, EyeOff } from "lucide-react";
 
 interface Anexo {
   id: string;
@@ -13,6 +13,9 @@ interface Anexo {
   url: string;
   createdAt: string;
   uploadadoPor?: { id: string; name: string | null } | null;
+  visivelPortal?: boolean;
+  liberadoPor?: { id: string; name: string | null } | null;
+  liberadoEm?: string | null;
 }
 
 const TIPO_LABEL: Record<string, string> = {
@@ -26,6 +29,7 @@ const TIPO_LABEL: Record<string, string> = {
   CONTRATO: "Contrato",
   DESCARGA: "Descarga",
   CANHOTO_DESCARGA: "Canhoto + Descarga",
+  DECLARACAO: "Declaração / Ressalva",
   OUTRO: "Outro",
 };
 
@@ -47,6 +51,8 @@ interface AnexosCardProps {
   /** Título do card */
   titulo?: string;
   readOnly?: boolean;
+  /** Mostra o botão de liberar/ocultar cada arquivo no portal do cliente (só anexos de avaria) */
+  portalToggle?: boolean;
 }
 
 export function AnexosCard({
@@ -56,6 +62,7 @@ export function AnexosCard({
   tipoDefault,
   titulo = "Canhotos & Anexos",
   readOnly = false,
+  portalToggle = false,
 }: AnexosCardProps) {
   const apiBase = apiBaseProp || (entregaId ? `/api/entregas/${entregaId}/anexos` : "");
   const [anexos, setAnexos] = useState<Anexo[]>([]);
@@ -148,6 +155,27 @@ export function AnexosCard({
     } catch { toast.error("Erro ao excluir"); }
   }
 
+  async function handleTogglePortal(a: Anexo) {
+    const liberar = !a.visivelPortal;
+    if (liberar && !window.confirm("Liberar este arquivo para o cliente ver no portal?")) return;
+    try {
+      const res = await fetch(`${apiBase}/${a.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visivelPortal: liberar }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Falha ao alterar visibilidade");
+      }
+      const atualizado = await res.json();
+      setAnexos((prev) => prev.map((x) => (x.id === a.id ? { ...x, ...atualizado } : x)));
+      toast.success(liberar ? "Liberado para o cliente" : "Oculto para o cliente");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao alterar visibilidade");
+    }
+  }
+
   return (
     <div className="rounded-2xl p-4 sm:p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
@@ -238,15 +266,34 @@ export function AnexosCard({
                   )}
                 </button>
                 <div className="p-2">
-                  <div className="flex items-center gap-1 mb-1">
+                  <div className="flex items-center gap-1 mb-1 flex-wrap">
                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: "rgba(249,115,22,.15)", color: "var(--accent)" }}>
                       {TIPO_LABEL[a.tipo] || a.tipo}
                     </span>
+                    {portalToggle && a.visivelPortal && (
+                      <span
+                        className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded flex items-center gap-1"
+                        style={{ background: "rgba(16,185,129,.15)", color: "#10b981" }}
+                        title={`Liberado${a.liberadoPor?.name ? ` por ${a.liberadoPor.name}` : ""}${a.liberadoEm ? ` em ${new Date(a.liberadoEm).toLocaleString("pt-BR")}` : ""}`}
+                      >
+                        <Eye size={9} /> Visível ao cliente
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] truncate" title={a.filename} style={{ color: "var(--text)" }}>{a.filename}</div>
                   <div className="text-[9px] mt-0.5 flex items-center justify-between" style={{ color: "var(--text3)" }}>
                     <span>{fmtSize(a.size)}</span>
                     <div className="flex items-center gap-1">
+                      {portalToggle && !readOnly && (
+                        <button
+                          onClick={() => handleTogglePortal(a)}
+                          className="p-1 rounded hover:opacity-70"
+                          style={{ color: a.visivelPortal ? "#10b981" : "var(--text3)" }}
+                          title={a.visivelPortal ? "Ocultar do portal do cliente" : "Liberar no portal do cliente"}
+                        >
+                          {a.visivelPortal ? <Eye size={11} /> : <EyeOff size={11} />}
+                        </button>
+                      )}
                       <a href={a.url} download={a.filename} onClick={(e) => e.stopPropagation()} className="p-1 rounded hover:opacity-70" title="Baixar">
                         <Download size={11} />
                       </a>

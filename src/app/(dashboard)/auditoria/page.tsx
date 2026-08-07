@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Input, Select, Loading, Empty, Modal, Table, Th, Td, Tr } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
-import { Shield, Search, Trash2, RefreshCw, ChevronDown, ChevronRight, Eye, AlertTriangle, LogIn, LogOut, ShoppingBag, MapPin, FileEdit } from "lucide-react";
+import { Shield, Search, Trash2, RefreshCw, ChevronDown, ChevronRight, Eye, EyeOff, AlertTriangle, LogIn, LogOut, ShoppingBag, MapPin, FileEdit } from "lucide-react";
 
 interface AuditLog {
   id: string;
@@ -63,6 +63,10 @@ const TIPOS_EVENTO = [
     { value: "OCORRENCIA_CRIADA", label: "Ocorrência criada" },
     { value: "OCORRENCIA_RESOLVIDA", label: "Ocorrência resolvida" },
   ] },
+  { group: "Anexos", items: [
+    { value: "ANEXO_LIBERADO_PORTAL", label: "Anexo liberado ao portal" },
+    { value: "ANEXO_OCULTADO_PORTAL", label: "Anexo oculto do portal" },
+  ] },
   { group: "Financeiro", items: [
     { value: "FATURA_CRIADA", label: "Fatura criada" },
     { value: "FATURA_EDITADA", label: "Fatura editada" },
@@ -88,6 +92,8 @@ const TIPO_LABEL: Record<string, { label: string; icon: any; color: string }> = 
   ENTREGA_APAGADA: { label: "Entrega apagada", icon: FileEdit, color: "#dc2626" },
   OCORRENCIA_CRIADA: { label: "Ocorrência criada", icon: AlertTriangle, color: "#d97706" },
   OCORRENCIA_RESOLVIDA: { label: "Ocorrência resolvida", icon: AlertTriangle, color: "#059669" },
+  ANEXO_LIBERADO_PORTAL: { label: "Anexo liberado ao portal", icon: Eye, color: "#d97706" },
+  ANEXO_OCULTADO_PORTAL: { label: "Anexo oculto do portal", icon: EyeOff, color: "#6b7280" },
   FATURA_CRIADA: { label: "Fatura criada", icon: FileEdit, color: "#059669" },
   FATURA_EDITADA: { label: "Fatura editada", icon: FileEdit, color: "#ea580c" },
   FATURA_APAGADA: { label: "Fatura apagada", icon: FileEdit, color: "#dc2626" },

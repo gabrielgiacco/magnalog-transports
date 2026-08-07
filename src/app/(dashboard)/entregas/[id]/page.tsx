@@ -1009,7 +1009,7 @@ export default function EntregaDetailPage() {
         )}
 
         {tab === "avarias" && (
-          <AvariasTab entregaId={id} entrega={entrega} />
+          <AvariasTab entregaId={id} entrega={entrega} isReadOnly={isReadOnly} />
         )}
 
         {tab === "canhotos" && (
@@ -1788,10 +1788,11 @@ const TIPO_COLORS_AV: Record<string, string> = {
   DEVOLUCAO: "#eab308", SEM_PEDIDO: "#6b7280",
 };
 
-function AvariasTab({ entregaId, entrega }: { entregaId: string; entrega: any }) {
+function AvariasTab({ entregaId, entrega, isReadOnly }: { entregaId: string; entrega: any; isReadOnly?: boolean }) {
   const router = useRouter();
   const [avarias, setAvarias] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandida, setExpandida] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/avarias?entregaId=${entregaId}&limit=100`)
@@ -1820,25 +1821,59 @@ function AvariasTab({ entregaId, entrega }: { entregaId: string; entrega: any })
         </Card>
       ) : (
         <div className="space-y-2">
-          {avarias.map((a: any) => (
-            <Card key={a.id} className="p-3 cursor-pointer hover:shadow-md transition-all"
-              onClick={() => router.push(`/avarias/${a.id}`)}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs font-bold" style={{ color: "var(--accent)" }}>{a.codigo}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${TIPO_COLORS_AV[a.tipo]}15`, color: TIPO_COLORS_AV[a.tipo] }}>
-                    {TIPO_LABELS_AV[a.tipo]}
-                  </span>
-                  <StatusBadge status={a.status} />
+          {avarias.map((a: any) => {
+            const aberta = expandida === a.id;
+            return (
+              <Card key={a.id} className="p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
+                    onClick={() => router.push(`/avarias/${a.id}`)}>
+                    <span className="font-mono text-xs font-bold" style={{ color: "var(--accent)" }}>{a.codigo}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${TIPO_COLORS_AV[a.tipo]}15`, color: TIPO_COLORS_AV[a.tipo] }}>
+                      {TIPO_LABELS_AV[a.tipo]}
+                    </span>
+                    <StatusBadge status={a.status} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-red-500 font-bold">{formatCurrency(a.valorPrejuizo)}</span>
+                    <span className="text-xs font-mono" style={{ color: "var(--text3)" }}>{formatDate(a.dataOcorrencia)}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setExpandida(aberta ? null : a.id); }}
+                      className="p-1 rounded hover:opacity-70"
+                      style={{ color: "var(--text3)" }}
+                      title={aberta ? "Fechar anexos" : "Declaração & anexos"}
+                    >
+                      {aberta ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-red-500 font-bold">{formatCurrency(a.valorPrejuizo)}</span>
-                  <span className="text-xs font-mono" style={{ color: "var(--text3)" }}>{formatDate(a.dataOcorrencia)}</span>
-                </div>
-              </div>
-              {a.motorista && <div className="text-[10px] mt-1" style={{ color: "var(--text3)" }}>Motorista: {a.motorista.nome}</div>}
-            </Card>
-          ))}
+                {a.motorista && <div className="text-[10px] mt-1" style={{ color: "var(--text3)" }}>Motorista: {a.motorista.nome}</div>}
+
+                {aberta && (
+                  <div className="mt-3 pt-3 space-y-3" style={{ borderTop: "1px solid var(--border)" }}>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <p className="text-[11px]" style={{ color: "var(--text3)" }}>
+                        Gere a declaração, colha a assinatura do motorista e anexe o documento escaneado aqui.
+                        Use o olho em cada arquivo para liberá-lo no portal do cliente.
+                      </p>
+                      <Button size="sm" variant="ghost"
+                        onClick={() => window.open(`/imprimir/declaracao-recebimento/${a.id}`, "_blank")}>
+                        <Printer size={13} /> Gerar Declaração
+                      </Button>
+                    </div>
+                    <AnexosCard
+                      apiBase={`/api/avarias/${a.id}/anexos`}
+                      tiposPermitidos={["DECLARACAO", "FOTO", "DOCUMENTO", "OUTRO"]}
+                      tipoDefault="DECLARACAO"
+                      titulo="Declaração & Anexos da Avaria"
+                      portalToggle
+                      readOnly={isReadOnly}
+                    />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

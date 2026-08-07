@@ -39,9 +39,53 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const comUrls = await Promise.all(
     anexos.map(async (a) => {
       const { objectKey, ...rest } = a;
-      return { ...rest, url: await presignGet(objectKey, 3600) };
+      return { ...rest, origem: "ENTREGA" as const, url: await presignGet(objectKey, 3600) };
     })
   );
 
-  return NextResponse.json(comUrls);
+  // Ressalvas — anexos de avaria que o operador liberou explicitamente para o cliente.
+  // Só vazam os dados de contexto (tipo, data, descrição); valor do prejuízo e status
+  // da avaria são internos e não podem ser serializados aqui.
+  const avarias = await prisma.avaria.findMany({
+    where: { entregaId: params.id },
+    select: { id: true, codigo: true, tipo: true, dataOcorrencia: true, descricao: true },
+  });
+
+  let ressalvas: any[] = [];
+  if (avarias.length) {
+    const porId = new Map(avarias.map((a) => [a.id, a]));
+    const anexosAvaria = await prisma.anexo.findMany({
+      where: {
+        ownerType: "AVARIA",
+        ownerId: { in: avarias.map((a) => a.id) },
+        visivelPortal: true,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, tipo: true, filename: true, mimeType: true, size: true,
+        descricao: true, createdAt: true, objectKey: true, ownerId: true,
+      },
+    });
+
+    ressalvas = await Promise.all(
+      anexosAvaria.map(async (a) => {
+        const { objectKey, ownerId, ...rest } = a;
+        const av = porId.get(ownerId);
+        return {
+          ...rest,
+          origem: "AVARIA" as const,
+          avaria: av
+            ? { codigo: av.codigo, tipo: av.tipo, dataOcorrencia: av.dataOcorrencia, descricao: av.descricao }
+            : null,
+          url: await presignGet(objectKey, 3600),
+        };
+      })
+    );
+  }
+
+  const todos = [...comUrls, ...ressalvas].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  return NextResponse.json(todos);
 }

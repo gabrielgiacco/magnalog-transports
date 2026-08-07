@@ -70,6 +70,7 @@ model User {
   auditLogs               AuditLog[]
   anexosEnviados          AnexoEntrega[]
   anexosGenericos         Anexo[]                @relation("AnexoUploader")
+  anexosLiberados         Anexo[]                @relation("AnexoLiberador")
 }
 
 enum TipoEventoAuditoria {
@@ -97,6 +98,8 @@ enum TipoEventoAuditoria {
   CONTA_PAGAR_APAGADA
   OCORRENCIA_CRIADA
   OCORRENCIA_RESOLVIDA
+  ANEXO_LIBERADO_PORTAL
+  ANEXO_OCULTADO_PORTAL
   USUARIO_CRIADO
   USUARIO_EDITADO
   USUARIO_APAGADO
@@ -369,6 +372,7 @@ enum TipoAnexo {
   CONTRATO
   DESCARGA
   CANHOTO_DESCARGA
+  DECLARACAO
   OUTRO
 }
 
@@ -388,7 +392,15 @@ model Anexo {
   uploadadoPor   User?     @relation("AnexoUploader", fields: [uploadadoPorId], references: [id])
   createdAt      DateTime  @default(now())
 
+  // Liberação para o portal do cliente (só se aplica a ownerType = "AVARIA").
+  // Nasce sempre privado; liberar é ação manual e auditada.
+  visivelPortal Boolean   @default(false)
+  liberadoPorId String?
+  liberadoPor   User?     @relation("AnexoLiberador", fields: [liberadoPorId], references: [id])
+  liberadoEm    DateTime?
+
   @@index([ownerType, ownerId])
+  @@index([ownerType, ownerId, visivelPortal])
   @@index([tipo])
 }
 

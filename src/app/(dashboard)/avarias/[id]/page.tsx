@@ -402,9 +402,10 @@ export default function AvariaDetailPage() {
 
         <AnexosCard
           apiBase={`/api/avarias/${id}/anexos`}
-          tiposPermitidos={["FOTO", "DOCUMENTO", "OUTRO"]}
+          tiposPermitidos={["DECLARACAO", "FOTO", "DOCUMENTO", "OUTRO"]}
           tipoDefault="FOTO"
           titulo="Fotos & Documentos da Avaria"
+          portalToggle
         />
       </div>
 
