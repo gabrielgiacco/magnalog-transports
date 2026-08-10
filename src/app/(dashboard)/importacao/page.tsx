@@ -29,7 +29,9 @@ interface ImportResult {
 }
 
 type Tab = "importar" | "notas" | "danfe" | "nfse" | "cte";
-type InputMode = "chave" | "xml";
+type InputMode = "chave" | "xml" | "lote";
+
+type LoteItem = { chave: string; status: "pendente" | "consultando" | "ok" | "erro"; erro?: string; xml?: string };
 
 // ── Tab Button ──
 function TabBtn({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: any; children: React.ReactNode }) {
@@ -84,6 +86,12 @@ export default function ImportacaoPage() {
   const [devolucaoResult, setDevolucaoResult] = useState<"nova" | "duplicada" | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const danfeRef = useRef<HTMLDivElement>(null);
+
+  // ── Lote DANFE state ──
+  const [loteInput, setLoteInput] = useState("");
+  const [loteItems, setLoteItems] = useState<LoteItem[]>([]);
+  const [loteRunning, setLoteRunning] = useState(false);
+  const [loteZipping, setLoteZipping] = useState(false);
 
   // ══════════════════════════════════════
   // IMPORTAR XML
@@ -204,6 +212,81 @@ export default function ImportacaoPage() {
   }
 
   function handleDanfeDrop(e: React.DragEvent) { e.preventDefault(); setDanfeDragging(false); const file = e.dataTransfer.files?.[0]; if (file) processFile(file); }
+
+  // ── Lote DANFE handlers ──
+  function parseChavesFromInput(raw: string): string[] {
+    const matches = raw.match(/\d{44}/g) || [];
+    return Array.from(new Set(matches));
+  }
+
+  function handleLotePreview() {
+    const chaves = parseChavesFromInput(loteInput);
+    if (chaves.length === 0) { toast.error("Nenhuma chave de 44 dígitos encontrada"); return; }
+    if (chaves.length > 50) { toast.error("Limite de 50 chaves por lote"); return; }
+    setLoteItems(chaves.map((c) => ({ chave: c, status: "pendente" })));
+  }
+
+  async function consultarUmaChave(chave: string): Promise<{ ok: true; xml: string } | { ok: false; erro: string }> {
+    try {
+      const res = await fetch("/api/consulta-danfe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chave }) });
+      const data = await res.json();
+      if (!res.ok) return { ok: false, erro: data.error || "Erro" };
+      return { ok: true, xml: data.xml };
+    } catch (e: any) {
+      return { ok: false, erro: e.message || "Erro de conexão" };
+    }
+  }
+
+  async function handleRodarLote() {
+    if (loteItems.length === 0) { toast.error("Adicione chaves primeiro (Analisar)"); return; }
+    setLoteRunning(true);
+    const CONCURRENCY = 3;
+    let idx = 0;
+    const items = [...loteItems];
+
+    async function worker() {
+      while (idx < items.length) {
+        const my = idx++;
+        setLoteItems((prev) => prev.map((it, i) => i === my ? { ...it, status: "consultando" } : it));
+        const r = await consultarUmaChave(items[my].chave);
+        setLoteItems((prev) => prev.map((it, i) => i === my ? (
+          r.ok ? { ...it, status: "ok", xml: r.xml } : { ...it, status: "erro", erro: r.erro }
+        ) : it));
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, () => worker()));
+    setLoteRunning(false);
+    toast.success("Consulta concluída");
+  }
+
+  async function handleBaixarZip() {
+    setLoteZipping(true);
+    try {
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const okItems = loteItems.filter((it) => it.status === "ok" && it.xml);
+      if (okItems.length === 0) { toast.error("Nenhum XML disponível para baixar"); return; }
+      okItems.forEach((it) => zip.file(`NFe_${it.chave}.xml`, it.xml!));
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `NFes_${new Date().toISOString().slice(0, 10)}_${okItems.length}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`ZIP com ${okItems.length} XML(s) baixado`);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar ZIP");
+    } finally {
+      setLoteZipping(false);
+    }
+  }
+
+  function handleLoteReset() {
+    setLoteInput("");
+    setLoteItems([]);
+  }
   function handleDanfeFileSelect(e: React.ChangeEvent<HTMLInputElement>) { const file = e.target.files?.[0]; if (file) processFile(file); e.target.value = ""; }
   function handleDanfeReset() { setDanfeData(null); setXmlContent(null); setFileName(""); setDanfeError(null); setZoom(100); setChave(""); setDanfeImportResult(null); setDevolucaoResult(null); }
 
@@ -570,12 +653,17 @@ export default function ImportacaoPage() {
                     <button onClick={() => { setDanfeMode("chave"); setDanfeError(null); }}
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold font-head transition-all"
                       style={danfeMode === "chave" ? { background: "var(--surface)", color: "var(--accent)", boxShadow: "0 1px 3px rgba(0,0,0,.08)" } : { color: "var(--text3)" }}>
-                      <Key size={16} /> Chave de Acesso
+                      <Key size={16} /> Chave
                     </button>
                     <button onClick={() => { setDanfeMode("xml"); setDanfeError(null); }}
                       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold font-head transition-all"
                       style={danfeMode === "xml" ? { background: "var(--surface)", color: "var(--accent)", boxShadow: "0 1px 3px rgba(0,0,0,.08)" } : { color: "var(--text3)" }}>
                       <Upload size={16} /> Upload XML
+                    </button>
+                    <button onClick={() => { setDanfeMode("lote"); setDanfeError(null); }}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold font-head transition-all"
+                      style={danfeMode === "lote" ? { background: "var(--surface)", color: "var(--accent)", boxShadow: "0 1px 3px rgba(0,0,0,.08)" } : { color: "var(--text3)" }}>
+                      <PackagePlus size={16} /> Lote (ZIP)
                     </button>
                   </div>
 
@@ -613,6 +701,71 @@ export default function ImportacaoPage() {
                         <span className="text-[11px] px-3 py-1 rounded-full font-bold font-mono mt-2" style={{ background: "var(--accent)", color: "white" }}>XML NF-e</span>
                       </div>
                     </div>
+                  )}
+
+                  {danfeMode === "lote" && (
+                    <Card className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold font-head mb-2 block" style={{ color: "var(--text2)" }}>
+                          Cole as chaves (uma por linha, ou separadas por qualquer coisa — só os 44 dígitos importam)
+                        </label>
+                        <textarea value={loteInput}
+                          onChange={(e) => setLoteInput(e.target.value)}
+                          placeholder={"52250612345678000199550010000000011000000011\n52250612345678000199550010000000021000000022\n..."}
+                          className="w-full px-4 py-3 rounded-xl text-xs font-mono outline-none transition-all"
+                          style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", minHeight: 140 }}
+                          disabled={loteRunning || loteZipping} />
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
+                            {parseChavesFromInput(loteInput).length} chave(s) válida(s) detectada(s) · máx 50 por lote
+                          </span>
+                          {loteItems.length > 0 && (
+                            <button onClick={handleLoteReset} disabled={loteRunning || loteZipping}
+                              className="text-[10px] font-bold text-red-500 hover:text-red-700">
+                              Limpar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button onClick={handleLotePreview} disabled={loteRunning || loteZipping || parseChavesFromInput(loteInput).length === 0}
+                          variant="ghost" className="flex-1">
+                          <Search size={14} /> Analisar
+                        </Button>
+                        <Button onClick={handleRodarLote} disabled={loteRunning || loteZipping || loteItems.length === 0} className="flex-1">
+                          {loteRunning ? <><Loader2 size={14} className="animate-spin" /> Consultando...</> : <><PackagePlus size={14} /> Consultar todas</>}
+                        </Button>
+                      </div>
+
+                      {loteItems.length > 0 && (
+                        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                          <div className="max-h-72 overflow-y-auto">
+                            {loteItems.map((it, i) => (
+                              <div key={it.chave} className="flex items-center gap-2 px-3 py-2 text-xs font-mono border-b" style={{ borderColor: "var(--border)", background: i % 2 ? "var(--surface2)" : "var(--surface)" }}>
+                                <span style={{ color: "var(--text3)", width: 24 }}>{i + 1}.</span>
+                                <span className="flex-1 truncate" style={{ color: "var(--text2)" }} title={it.chave}>...{it.chave.slice(-14)}</span>
+                                {it.status === "pendente" && <span style={{ color: "var(--text3)" }}>—</span>}
+                                {it.status === "consultando" && <Loader2 size={13} className="animate-spin" style={{ color: "var(--accent)" }} />}
+                                {it.status === "ok" && <span className="flex items-center gap-1" style={{ color: "#10b981" }}><Check size={13} /> OK</span>}
+                                {it.status === "erro" && <span className="flex items-center gap-1" style={{ color: "#ef4444" }} title={it.erro}><X size={13} /> Erro</span>}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center justify-between px-3 py-2 text-[11px] font-mono" style={{ background: "var(--surface2)", borderTop: "1px solid var(--border)" }}>
+                            <span style={{ color: "var(--text3)" }}>
+                              OK: <b style={{ color: "#10b981" }}>{loteItems.filter((it) => it.status === "ok").length}</b> ·
+                              Erro: <b style={{ color: "#ef4444" }}>{loteItems.filter((it) => it.status === "erro").length}</b> ·
+                              Pendente: <b>{loteItems.filter((it) => it.status === "pendente" || it.status === "consultando").length}</b>
+                            </span>
+                            <Button onClick={handleBaixarZip} size="sm"
+                              disabled={loteZipping || loteRunning || loteItems.filter((it) => it.status === "ok").length === 0}>
+                              {loteZipping ? <><Loader2 size={13} className="animate-spin" /> Gerando ZIP...</> : <><Download size={13} /> Baixar ZIP</>}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </Card>
                   )}
 
                   {danfeError && (
