@@ -14,6 +14,7 @@ import { baixarDanfePDF } from "@/lib/danfe-pdf";
 import { QUALIDADE_ENABLED } from "@/lib/features";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
 import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
+import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
 import { Smartphone } from "lucide-react";
 
 const STATUS_FLOW = [
@@ -49,6 +50,7 @@ export default function EntregaDetailPage() {
   const [ocorrForm, setOcorrForm] = useState({ tipo: "ATRASO", descricao: "" });
   const [tab, setTab] = useState("info");
   const [showLinkMotorista, setShowLinkMotorista] = useState(false);
+  const [showSugestao, setShowSugestao] = useState(false);
   const [selectedNotas, setSelectedNotas] = useState<string[]>([]);
   const [separando, setSeparando] = useState(false);
   const [danfeModal, setDanfeModal] = useState<{ open: boolean; xml: string | null; loading: boolean; fullscreen: boolean }>({ open: false, xml: null, loading: false, fullscreen: false });
@@ -79,14 +81,17 @@ export default function EntregaDetailPage() {
   const [searchNF, setSearchNF] = useState("");
   const [addingNFs, setAddingNFs] = useState(false);
 
+  async function reloadEntrega() {
+    const d = await fetch(`/api/entregas/${id}`).then((r) => r.json());
+    setEntrega(d);
+    setEditForm(formatForEdit(d));
+  }
+
   useEffect(() => {
-    fetch(`/api/entregas/${id}`).then((r) => r.json()).then((d) => { 
-      setEntrega(d); 
-      setEditForm(formatForEdit(d)); 
-    }).finally(() => setLoading(false));
-    
+    reloadEntrega().finally(() => setLoading(false));
     fetch("/api/motoristas?ativo=true").then((r) => r.json()).then(setMotoristas);
     fetch("/api/veiculos").then((r) => r.json()).then(setVeiculos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   function formatForEdit(e: any) {
@@ -518,6 +523,16 @@ export default function EntregaDetailPage() {
               <Button variant="ghost" size="sm" onClick={() => setShowLinkMotorista(true)}>
                 <Smartphone size={14} /> Link Motorista
               </Button>
+            )}
+            {!isReadOnly && (
+              <button
+                onClick={() => setShowSugestao(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                style={{ borderColor: "#3b82f6", color: "#3b82f6", background: "transparent" }}
+                title="Sugerir veículo baseado na carga ou histórico"
+              >
+                <Truck size={14} /> Sugerir Veículo
+              </button>
             )}
             {entrega.motoristaComplId && (
               <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}?motorista=complementar`, '_blank')}>
@@ -1538,6 +1553,13 @@ export default function EntregaDetailPage() {
         entregaCodigo={entrega.codigo}
         motoristaTelefone={entrega.motorista?.telefone}
         motoristaNome={entrega.motorista?.nome}
+      />
+
+      <SugestaoVeiculoModal
+        open={showSugestao}
+        onClose={() => setShowSugestao(false)}
+        entregaId={id}
+        onAtribuido={reloadEntrega}
       />
     </>
   );
