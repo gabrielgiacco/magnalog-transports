@@ -573,6 +573,24 @@ model TabelaArmazenagem {
   updatedAt      DateTime @updatedAt
 }
 
+enum TipoDescarga {
+  POR_PALETE
+  POR_AJUDANTE
+  SEM_VALOR
+}
+
+model TabelaDescarga {
+  id            String       @id @default(cuid())
+  cnpjCliente   String       @unique
+  nomeCliente   String
+  tipo          TipoDescarga @default(SEM_VALOR)
+  valorPalete   Float        @default(0)
+  valorAjudante Float        @default(0)
+  observacoes   String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
 model FaturaArmazenagem {
   id             String                  @id @default(cuid())
   numero         String                  @unique

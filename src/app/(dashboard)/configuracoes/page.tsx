@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Button, Input, Select } from "@/components/ui";
 import toast from "react-hot-toast";
-import { Settings, User, Shield, Bell, Globe, Palette, Save, Warehouse, Plus, Trash2, Edit2 } from "lucide-react";
+import { Settings, User, Shield, Bell, Globe, Palette, Save, Warehouse, Plus, Trash2, Edit2, PackageOpen } from "lucide-react";
 
 function Section({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
   return (
@@ -37,6 +37,13 @@ export default function ConfiguracoesPage() {
   const [editingArm, setEditingArm] = useState<string | null>(null);
   const [savingArm, setSavingArm] = useState(false);
 
+  // Descarga (admin only)
+  const [descargas, setDescargas] = useState<any[]>([]);
+  const [loadingDescargas, setLoadingDescargas] = useState(false);
+  const [descForm, setDescForm] = useState({ cnpjCliente: "", nomeCliente: "", tipo: "SEM_VALOR", valorPalete: "0", valorAjudante: "0", observacoes: "" });
+  const [editingDesc, setEditingDesc] = useState<string | null>(null);
+  const [savingDesc, setSavingDesc] = useState(false);
+
   const fetchTabelas = useCallback(async () => {
     if (user?.role !== "ADMIN") return;
     setLoadingTabelas(true);
@@ -47,6 +54,65 @@ export default function ConfiguracoesPage() {
   }, [user?.role]);
 
   useEffect(() => { fetchTabelas(); }, [fetchTabelas]);
+
+  const fetchDescargas = useCallback(async () => {
+    if (user?.role !== "ADMIN") return;
+    setLoadingDescargas(true);
+    try {
+      const res = await fetch("/api/descarga");
+      if (res.ok) setDescargas(await res.json());
+    } finally { setLoadingDescargas(false); }
+  }, [user?.role]);
+
+  useEffect(() => { fetchDescargas(); }, [fetchDescargas]);
+
+  async function handleSaveDesc() {
+    if (!descForm.cnpjCliente || !descForm.nomeCliente) { toast.error("CNPJ e nome são obrigatórios"); return; }
+    setSavingDesc(true);
+    try {
+      const res = await fetch("/api/descarga", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cnpjCliente: descForm.cnpjCliente,
+          nomeCliente: descForm.nomeCliente,
+          tipo: descForm.tipo,
+          valorPalete: parseFloat(descForm.valorPalete) || 0,
+          valorAjudante: parseFloat(descForm.valorAjudante) || 0,
+          observacoes: descForm.observacoes || null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(editingDesc ? "Tabela atualizada" : "Tabela adicionada");
+      setDescForm({ cnpjCliente: "", nomeCliente: "", tipo: "SEM_VALOR", valorPalete: "0", valorAjudante: "0", observacoes: "" });
+      setEditingDesc(null);
+      fetchDescargas();
+    } catch { toast.error("Erro ao salvar"); }
+    finally { setSavingDesc(false); }
+  }
+
+  async function handleDeleteDesc(id: string) {
+    if (!confirm("Excluir esta tabela de descarga?")) return;
+    await fetch("/api/descarga", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    fetchDescargas();
+    toast.success("Tabela removida");
+  }
+
+  function startEditDesc(t: any) {
+    setEditingDesc(t.id);
+    setDescForm({
+      cnpjCliente: t.cnpjCliente,
+      nomeCliente: t.nomeCliente,
+      tipo: t.tipo,
+      valorPalete: String(t.valorPalete),
+      valorAjudante: String(t.valorAjudante),
+      observacoes: t.observacoes || "",
+    });
+  }
 
   async function handleSaveArm() {
     if (!armForm.cnpjCliente || !armForm.nomeCliente) { toast.error("CNPJ e nome são obrigatórios"); return; }
@@ -245,6 +311,97 @@ export default function ConfiguracoesPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </Section>
+          )}
+
+          {/* Tabela de Descarga — admin only */}
+          {user?.role === "ADMIN" && (
+            <Section icon={PackageOpen} title="Tabela de Descarga por Cliente">
+              <p className="text-xs mb-4" style={{ color: "var(--text3)" }}>
+                Configure o modelo de cobrança da descarga por cliente. 3 tipos:
+                <b> Por Palete</b> (R$ × qtd de paletes) ·
+                <b> Por Ajudante</b> (R$ × 1 ajudante em Truck/Toco/menores, × 2 em Carreta) ·
+                <b> Sem Valor</b> (registro manual, sem cálculo).
+              </p>
+
+              {/* Form */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <Input label="CNPJ do Cliente" value={descForm.cnpjCliente} disabled={!!editingDesc}
+                  onChange={(e) => setDescForm((f) => ({ ...f, cnpjCliente: e.target.value }))} placeholder="00.000.000/0001-00" />
+                <Input label="Nome / Razão Social" value={descForm.nomeCliente}
+                  onChange={(e) => setDescForm((f) => ({ ...f, nomeCliente: e.target.value }))} placeholder="Ex: Softys" />
+                <Select label="Tipo de Cobrança" value={descForm.tipo}
+                  onChange={(e) => setDescForm((f) => ({ ...f, tipo: e.target.value }))}>
+                  <option value="POR_PALETE">Por Palete (R$ × paletes)</option>
+                  <option value="POR_AJUDANTE">Por Ajudante (Carreta=2, Truck ou menor=1)</option>
+                  <option value="SEM_VALOR">Sem Valor Estipulado (manual)</option>
+                </Select>
+                {descForm.tipo === "POR_PALETE" && (
+                  <Input label="R$ / Palete" type="number" step="0.01" value={descForm.valorPalete}
+                    onChange={(e) => setDescForm((f) => ({ ...f, valorPalete: e.target.value }))} placeholder="35.00" />
+                )}
+                {descForm.tipo === "POR_AJUDANTE" && (
+                  <Input label="R$ / Ajudante" type="number" step="0.01" value={descForm.valorAjudante}
+                    onChange={(e) => setDescForm((f) => ({ ...f, valorAjudante: e.target.value }))} placeholder="110.00" />
+                )}
+                {descForm.tipo === "SEM_VALOR" && (
+                  <Input label="Observações (opcional)" value={descForm.observacoes}
+                    onChange={(e) => setDescForm((f) => ({ ...f, observacoes: e.target.value }))} placeholder="Ex: negociar por entrega" />
+                )}
+              </div>
+              <div className="flex gap-2 mb-5">
+                <Button size="sm" onClick={handleSaveDesc} loading={savingDesc}>
+                  {editingDesc ? <><Save size={13} /> Atualizar</> : <><Plus size={13} /> Adicionar</>}
+                </Button>
+                {editingDesc && (
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    setEditingDesc(null);
+                    setDescForm({ cnpjCliente: "", nomeCliente: "", tipo: "SEM_VALOR", valorPalete: "0", valorAjudante: "0", observacoes: "" });
+                  }}>Cancelar</Button>
+                )}
+              </div>
+
+              {/* Lista */}
+              {loadingDescargas ? (
+                <p className="text-xs text-center py-4" style={{ color: "var(--text3)" }}>Carregando...</p>
+              ) : descargas.length === 0 ? (
+                <p className="text-xs text-center py-4" style={{ color: "var(--text3)" }}>Nenhuma tabela cadastrada</p>
+              ) : (
+                <div className="space-y-2">
+                  {descargas.map((t) => {
+                    const badge =
+                      t.tipo === "POR_PALETE" ? { label: `R$ ${Number(t.valorPalete).toFixed(2)}/palete`, color: "#10b981" } :
+                      t.tipo === "POR_AJUDANTE" ? { label: `R$ ${Number(t.valorAjudante).toFixed(2)}/ajudante`, color: "#3b82f6" } :
+                      { label: "Sem valor", color: "#94a3b8" };
+                    return (
+                      <div key={t.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold">{t.nomeCliente}</div>
+                          <div className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text3)" }}>
+                            CNPJ: {t.cnpjCliente}
+                          </div>
+                          <div className="mt-1">
+                            <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: `${badge.color}22`, color: badge.color }}>
+                              {badge.label}
+                            </span>
+                            {t.observacoes && <span className="ml-2 text-[10px]" style={{ color: "var(--text3)" }}>· {t.observacoes}</span>}
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 ml-3">
+                          <button onClick={() => startEditDesc(t)} className="p-1.5 rounded-lg hover:opacity-70 transition-all"
+                            style={{ background: "var(--surface)", color: "var(--text2)" }}>
+                            <Edit2 size={12} />
+                          </button>
+                          <button onClick={() => handleDeleteDesc(t.id)} className="p-1.5 rounded-lg hover:opacity-70 transition-all"
+                            style={{ background: "rgba(239,68,68,.1)", color: "#ef4444" }}>
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </Section>
