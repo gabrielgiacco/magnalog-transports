@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { logFromRequest } from "@/lib/audit";
 import { parseNFProducts } from "@/lib/nf-produtos";
+import { calcularDescarga } from "@/lib/descarga-calc";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -238,6 +239,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       // Descarga NAO entra no saldo do motorista - eh reembolso da MAGNA LOG (empresa paga
       // e a transportadora reembolsa via faturamento).
       data.saldoMotorista = vMotorista - vAdiantamento - vSaida - vDescontos;
+    }
+
+    // Auto-recalcula descarga quando paletes ou veiculo mudam E valorDescarga
+    // nao foi enviado explicitamente (respeita override manual).
+    if (valorDescarga === undefined && (body.quantidadePaletes !== undefined || body.veiculoId !== undefined)) {
+      const current = await prisma.entrega.findUnique({
+        where: { id: params.id },
+        select: { cnpj: true, quantidadePaletes: true, veiculoId: true },
+      });
+      if (current) {
+        const calc = await calcularDescarga({
+          cnpj: current.cnpj,
+          quantidadePaletes: body.quantidadePaletes ?? current.quantidadePaletes,
+          veiculoId: body.veiculoId ?? current.veiculoId,
+        });
+        if (calc.valor > 0) data.valorDescarga = calc.valor;
+      }
     }
 
     // Calcular saldo do complementar

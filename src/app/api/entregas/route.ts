@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { calcularDescarga } from "@/lib/descarga-calc";
 
 export const dynamic = "force-dynamic";
 
@@ -273,6 +274,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Auto-calcula descarga se nao foi enviada explicitamente
+    let valorDescargaFinal = Number(body.valorDescarga) || 0;
+    if (!valorDescargaFinal) {
+      const calc = await calcularDescarga({
+        cnpj: body.cnpj,
+        quantidadePaletes: body.quantidadePaletes,
+        veiculoId: body.veiculoId,
+      });
+      if (calc.valor > 0) valorDescargaFinal = calc.valor;
+    }
+
     const entrega = await prisma.entrega.create({
       data: {
         codigo,
@@ -294,7 +306,7 @@ export async function POST(req: NextRequest) {
         status: body.status || "PROGRAMADO",
         observacoes: body.observacoes,
         valorFrete: body.valorFrete || 0,
-        valorDescarga: body.valorDescarga || 0,
+        valorDescarga: valorDescargaFinal,
         valorArmazenagem: body.valorArmazenagem || 0,
         adiantamento: body.adiantamento || 0,
         saldoPendente: (body.valorFrete || 0) - (body.adiantamento || 0),
