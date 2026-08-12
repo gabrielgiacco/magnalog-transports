@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
         modelo: body.modelo || null,
         ano: isNaN(ano as any) ? null : ano,
         capacidadeKg: isNaN(capacidadeKg as any) ? null : capacidadeKg,
+        capacidadePaletes: typeof body.capacidadePaletes === "number" ? body.capacidadePaletes : null,
+        capacidadeM3: typeof body.capacidadeM3 === "number" ? body.capacidadeM3 : null,
         motoristaId: body.motoristaId || null,
         donoId: body.donoId || null,
       },

@@ -167,15 +167,17 @@ enum TipoVeiculo {
 }
 
 model Veiculo {
-  id            String      @id @default(cuid())
-  placa         String      @unique
-  tipo          TipoVeiculo
-  modelo        String?
-  ano           Int?
-  capacidadeKg  Float?
-  ativo         Boolean     @default(true)
-  motoristaId   String? // Vinculo de motorista padrão (quem dirige por default)
-  donoId        String? // Dono do veículo (pessoa que recebe o acerto financeiro)
+  id                String      @id @default(cuid())
+  placa             String      @unique
+  tipo              TipoVeiculo
+  modelo            String?
+  ano               Int?
+  capacidadeKg      Float?
+  capacidadePaletes Int?
+  capacidadeM3      Float?
+  ativo             Boolean     @default(true)
+  motoristaId       String? // Vinculo de motorista padrão (quem dirige por default)
+  donoId            String? // Dono do veículo (pessoa que recebe o acerto financeiro)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   motorista     Motorista?  @relation("VeiculoMotoristaPadrao", fields: [motoristaId], references: [id])

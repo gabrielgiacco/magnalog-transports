@@ -7,7 +7,7 @@ import { Plus, Edit2, Phone, FileText, User as UserIcon, Truck as TruckIcon, Sea
 import { AnexosCard } from "@/components/entrega/AnexosCard";
 
 const B_MOT = { nome: "", cpf: "", cnh: "", categoriaCnh: "E", telefone: "", pix: "", tipo: "TERCEIRO", valorDiaria: "" };
-const B_VEI = { placa: "", tipo: "TRUCK", modelo: "", ano: "", capacidadeKg: "", motoristaId: "", donoId: "" };
+const B_VEI = { placa: "", tipo: "TRUCK", modelo: "", ano: "", capacidadeKg: "", capacidadePaletes: "", capacidadeM3: "", motoristaId: "", donoId: "" };
 
 const TIPOS: Record<string, { label: string; icon: string; color: string }> = {
   VUC:         { label: "VUC",          icon: "🚐", color: "#3b82f6" },
@@ -62,7 +62,7 @@ export default function FrotaPage() {
 
   function openEditVei(v: any) {
     setFormType("veiculo"); setEditing(v);
-    setFormVei({ placa: v.placa, tipo: v.tipo, modelo: v.modelo || "", ano: String(v.ano || ""), capacidadeKg: String(v.capacidadeKg || ""), motoristaId: v.motoristaId || "", donoId: v.donoId || "" });
+    setFormVei({ placa: v.placa, tipo: v.tipo, modelo: v.modelo || "", ano: String(v.ano || ""), capacidadeKg: String(v.capacidadeKg || ""), capacidadePaletes: v.capacidadePaletes != null ? String(v.capacidadePaletes) : "", capacidadeM3: v.capacidadeM3 != null ? String(v.capacidadeM3) : "", motoristaId: v.motoristaId || "", donoId: v.donoId || "" });
     setShowModal(true);
   }
 
@@ -88,7 +88,12 @@ export default function FrotaPage() {
     setSaving(true);
     try {
       const method = editing ? "PUT" : "POST";
-      const body = editing ? { id: editing.id, ...formVei } : formVei;
+      const payload = {
+        ...formVei,
+        capacidadePaletes: formVei.capacidadePaletes.trim() === "" ? null : parseInt(formVei.capacidadePaletes, 10),
+        capacidadeM3: formVei.capacidadeM3.trim() === "" ? null : parseFloat(formVei.capacidadeM3.replace(",", ".")),
+      };
+      const body = editing ? { id: editing.id, ...payload } : payload;
       const res = await fetch("/api/veiculos", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -285,6 +290,8 @@ export default function FrotaPage() {
             </Select>
 
             <Input label="Capacidade (kg)" type="number" value={formVei.capacidadeKg} onChange={(e) => setV("capacidadeKg", e.target.value)} placeholder="14000" />
+            <Input label="Capacidade Paletes" type="number" value={formVei.capacidadePaletes} onChange={(e) => setV("capacidadePaletes", e.target.value)} placeholder="Vazio = padrão do tipo" />
+            <Input label="Capacidade M³" type="number" step="0.1" value={formVei.capacidadeM3} onChange={(e) => setV("capacidadeM3", e.target.value)} placeholder="Vazio = padrão do tipo" />
           </div>
         )}
         <div className="flex justify-end gap-3 mt-6 pt-4" style={{ borderTop: "1px solid var(--border)" }}>

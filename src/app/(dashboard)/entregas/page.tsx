@@ -16,6 +16,7 @@ import {
   Plus, Filter, RefreshCw, Search, Eye, ChevronLeft, ChevronRight,
   Package, MapPin, User, Truck, Trash2, ArrowUp, ArrowDown, ArrowUpDown, X, Calendar,
 } from "lucide-react";
+import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
 
 /* ── Dynamic Filter Types ────────────────────────────────────────── */
 interface DynamicFilter {
@@ -219,6 +220,9 @@ export default function EntregasPage() {
   const [showComplFields, setShowComplFields] = useState(false);
   const [motoristas, setMotoristas] = useState<any[]>([]);
   const [veiculos, setVeiculos] = useState<any[]>([]);
+
+  // Sugestão de veículo
+  const [sugestaoEntregaId, setSugestaoEntregaId] = useState<string | null>(null);
 
   // Debounce search
   const isFirstRender = useRef(true);
@@ -726,6 +730,14 @@ export default function EntregasPage() {
                                 <Trash2 size={13} />
                               </button>
                             )}
+                            {!isReadOnly && (
+                              <button className="p-1.5 rounded-lg hover:opacity-70 transition-all"
+                                style={{ background: "var(--surface2)", color: "#3b82f6" }}
+                                onClick={(ev) => { ev.stopPropagation(); setSugestaoEntregaId(e.id); }}
+                                title="Sugerir veículo">
+                                <Truck size={13} />
+                              </button>
+                            )}
                             <button className="p-1.5 rounded-lg hover:opacity-70 transition-all"
                               style={{ background: "var(--surface2)", color: "var(--text2)" }}
                               onClick={(ev) => { ev.stopPropagation(); router.push(`/entregas/${e.id}`); }}
@@ -926,6 +938,13 @@ export default function EntregasPage() {
           <Button onClick={handleSave} loading={saving}>Criar Entrega</Button>
         </div>
       </Modal>
+
+      <SugestaoVeiculoModal
+        open={sugestaoEntregaId !== null}
+        onClose={() => setSugestaoEntregaId(null)}
+        entregaId={sugestaoEntregaId}
+        onAtribuido={fetchEntregas}
+      />
     </>
   );
 }
