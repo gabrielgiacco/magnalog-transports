@@ -71,6 +71,7 @@ model User {
   anexosEnviados          AnexoEntrega[]
   anexosGenericos         Anexo[]                @relation("AnexoUploader")
   anexosLiberados         Anexo[]                @relation("AnexoLiberador")
+  declaracoesSaida        DeclaracaoSaida[]      @relation("DeclaracaoSaidaEmitida")
 }
 
 enum TipoEventoAuditoria {
@@ -928,6 +929,61 @@ model NotaDevolucao {
 
   @@index([avariaId])
   @@index([status])
+}
+
+// ─── Declaração de Saída ─────────────────────────────────────────────────
+// Documento de retirada: agrega avarias, notas de devolução e ocorrências
+// numa seleção única, e é impresso para o motorista assinar.
+
+enum OrigemSaidaItem {
+  AVARIA
+  DEVOLUCAO
+  OCORRENCIA
+}
+
+model DeclaracaoSaida {
+  id     String @id @default(cuid())
+  codigo String @unique // DS-00001
+
+  // Quem está retirando a mercadoria
+  transportadora String
+  motoristaNome  String
+  motoristaCpf   String?
+  placa          String
+
+  observacoes String? @db.Text
+  valorTotal  Float   @default(0) // snapshot do total impresso
+
+  emitidoPorId String
+  emitidoPor   User     @relation("DeclaracaoSaidaEmitida", fields: [emitidoPorId], references: [id])
+  createdAt    DateTime @default(now())
+
+  itens DeclaracaoSaidaItem[]
+
+  @@index([createdAt])
+}
+
+model DeclaracaoSaidaItem {
+  id           String          @id @default(cuid())
+  declaracaoId String
+  declaracao   DeclaracaoSaida @relation(fields: [declaracaoId], references: [id], onDelete: Cascade)
+
+  origem          OrigemSaidaItem
+  avariaId        String?
+  notaDevolucaoId String?
+  ocorrenciaId    String?
+
+  // Snapshot do que foi impresso — o documento é assinado, então não pode
+  // mudar se a avaria de origem for editada depois. Os ids acima ficam só
+  // para navegação e rastreio.
+  referencia String // "AVR-00025" | "NF 12345" | "ENT-00088"
+  descricao  String
+  quantidade Float?
+  valor      Float  @default(0)
+
+  @@index([declaracaoId])
+  @@index([avariaId])
+  @@index([notaDevolucaoId])
 }
 
 // ─── ERP Financeiro ──────────────────────────────────────────────────────

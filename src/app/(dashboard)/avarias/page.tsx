@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { DiariasTab } from "./DiariasTab";
+import { DeclaracaoSaidaTab } from "./DeclaracaoSaidaTab";
 
 const TIPO_LABELS: Record<string, string> = {
   AVARIA: "Avaria", FALTA: "Falta", INVERSAO: "Inversão", SOBRA: "Sobra",
@@ -45,7 +46,7 @@ function maskCPF(v: string) {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
-type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias" | "diarias" | "declaracao";
+type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias" | "diarias" | "declaracao" | "declaracao-saida";
 
 export default function AvariasPage() {
   const router = useRouter();
@@ -706,6 +707,7 @@ export default function AvariasPage() {
             { key: "ocorrencias", label: "Ocorrências", icon: AlertTriangle },
             { key: "diarias", label: "Diárias", icon: DollarSign },
             { key: "declaracao", label: "Declaração Recebimento", icon: ClipboardCheck },
+            { key: "declaracao-saida", label: "Declaração Saída", icon: LogOut },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === t.key ? "bg-orange-500/10 text-orange-500 shadow-sm" : "text-[var(--text2)] hover:bg-[var(--surface)]"}`}>
@@ -1334,6 +1336,8 @@ export default function AvariasPage() {
 
         {/* DIARIAS TAB */}
         {tab === "diarias" && <DiariasTab isAdmin={isAdmin} />}
+
+        {tab === "declaracao-saida" && <DeclaracaoSaidaTab />}
 
         {/* DECLARAÇÃO DE RECEBIMENTO TAB */}
         {tab === "declaracao" && (
