@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { parseNotaFiscalXML } from "@/lib/xml-parser";
 import { parseCTeXML } from "@/lib/cte-parser";
 import { geocodeAddress } from "@/lib/geocode";
+import { indexarProdutosDoXml } from "@/lib/produto-catalogo";
 
 export async function POST(req: NextRequest) {
   try {
@@ -253,6 +254,13 @@ export async function POST(req: NextRequest) {
           },
           include: { entrega: { select: { codigo: true } } },
         });
+
+        // Popula catalogo de produtos (falhas nao devem quebrar a importacao)
+        try {
+          await indexarProdutosDoXml(nota.xmlOriginal, nota.emitenteCnpj, nota.emitenteRazao, nota.dataEmissao);
+        } catch (e) {
+          console.error("Falha ao indexar produtos:", e);
+        }
 
         results.notas.push({
           numero: nota.numero,

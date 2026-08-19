@@ -579,6 +579,24 @@ enum TipoDescarga {
   SEM_VALOR
 }
 
+model ProdutoCatalogo {
+  id                String   @id @default(cuid())
+  fornecedorCnpj    String
+  fornecedorNome    String?
+  codigo            String
+  descricao         String
+  descricaoNorm     String
+  ncm               String?
+  unidade           String?
+  contagemUso       Int      @default(1)
+  primeiraOcorrencia DateTime @default(now())
+  ultimaOcorrencia   DateTime @default(now())
+
+  @@unique([fornecedorCnpj, codigo])
+  @@index([descricaoNorm])
+  @@index([ncm])
+}
+
 model TabelaDescarga {
   id            String       @id @default(cuid())
   cnpjCliente   String       @unique
