@@ -46,6 +46,24 @@ function maskCPF(v: string) {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
+/**
+ * Junta as NFs de uma avaria vindas das tres origens possiveis (FK direta,
+ * notas da entrega e notas de devolucao) sem repetir. Mostra ate 3 e resume o
+ * resto, porque uma avaria de devolucao pode ter uma dezena de notas.
+ */
+function resumoNFs(a: any): string {
+  const numeros: string[] = [
+    a.notaFiscal?.numero,
+    ...(a.entrega?.notas || []).map((n: any) => n.numero),
+    ...(a.devolucoes || []).map((d: any) => d.numero),
+  ].filter(Boolean);
+
+  const unicos = Array.from(new Set(numeros));
+  if (unicos.length === 0) return "—";
+  if (unicos.length <= 3) return `NF ${unicos.join(", ")}`;
+  return `NF ${unicos.slice(0, 3).join(", ")} +${unicos.length - 3}`;
+}
+
 type TabView = "dashboard" | "registros" | "devolucoes" | "ocorrencias" | "diarias" | "declaracao" | "declaracao-saida";
 
 export default function AvariasPage() {
@@ -875,7 +893,7 @@ export default function AvariasPage() {
                           </Td>
                           <Td><span className="text-xs" style={{ color: "var(--text2)" }}>{FASE_LABELS[a.fase] || a.fase}</span></Td>
                           <Td>
-                            <div className="text-xs">{a.notaFiscal ? `NF ${a.notaFiscal.numero}` : "—"}</div>
+                            <div className="text-xs">{resumoNFs(a)}</div>
                             <div className="text-[10px]" style={{ color: "var(--text3)" }}>{a.entrega?.razaoSocial || ""}</div>
                           </Td>
                           <Td><span className="text-xs" style={{ color: "var(--text2)" }}>{a.motorista?.nome || "—"}</span></Td>

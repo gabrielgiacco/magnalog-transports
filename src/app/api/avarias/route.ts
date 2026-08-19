@@ -38,12 +38,18 @@ export async function GET(req: NextRequest) {
     }
 
     if (q) {
+      // A NF de uma avaria mora em quatro lugares conforme a origem: FK direta,
+      // notas da entrega, NF por linha de produto (declaracao) e notas de
+      // devolucao. Buscar so a FK direta perde a maioria dos casos.
       where.OR = [
         { codigo: { contains: q, mode: "insensitive" } },
         { descricao: { contains: q, mode: "insensitive" } },
         { entrega: { razaoSocial: { contains: q, mode: "insensitive" } } },
-        { notaFiscal: { numero: { contains: q } } },
         { motorista: { nome: { contains: q, mode: "insensitive" } } },
+        { notaFiscal: { numero: { contains: q } } },
+        { entrega: { notas: { some: { numero: { contains: q } } } } },
+        { produtos: { some: { notaFiscal: { numero: { contains: q } } } } },
+        { devolucoes: { some: { numero: { contains: q } } } },
       ];
     }
 
@@ -54,8 +60,14 @@ export async function GET(req: NextRequest) {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          entrega: { select: { id: true, codigo: true, razaoSocial: true, cidade: true } },
+          entrega: {
+            select: {
+              id: true, codigo: true, razaoSocial: true, cidade: true,
+              notas: { select: { numero: true } },
+            },
+          },
           notaFiscal: { select: { id: true, numero: true, emitenteRazao: true } },
+          devolucoes: { select: { numero: true } },
           motorista: { select: { id: true, nome: true } },
           rota: { select: { id: true, codigo: true } },
           registradoPor: { select: { id: true, name: true } },
