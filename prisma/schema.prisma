@@ -592,6 +592,12 @@ model ProdutoCatalogo {
   primeiraOcorrencia DateTime @default(now())
   ultimaOcorrencia   DateTime @default(now())
 
+  // Último valor unitário visto e a data da NF de onde veio. Nulo = ainda não
+  // indexado com preço (rodar "Reprocessar Histórico"). valorUnitarioEm existe
+  // porque o backfill percorre as notas por id, não por data de emissão.
+  valorUnitario     Float?
+  valorUnitarioEm   DateTime?
+
   @@unique([fornecedorCnpj, codigo])
   @@index([descricaoNorm])
   @@index([ncm])

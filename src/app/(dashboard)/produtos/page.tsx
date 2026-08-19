@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, Table, Th, Td, Tr } from "@/components/ui";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { Search, RefreshCw, Boxes, Copy, Loader2, Database } from "lucide-react";
 
 type Resultado = {
@@ -16,6 +17,8 @@ type Resultado = {
   unidade: string | null;
   contagemUso: number;
   ultimaOcorrencia: string;
+  valorUnitario: number | null;
+  valorUnitarioEm: string | null;
   score: number;
   tokensMatch: string[];
 };
@@ -145,6 +148,7 @@ export default function ProdutosPage() {
                     <Th>Descrição</Th>
                     <Th>Fornecedor</Th>
                     <Th className="text-right">NCM</Th>
+                    <Th className="text-right">Valor Un.</Th>
                     <Th className="text-right">Uso</Th>
                   </tr>
                 </thead>
@@ -170,6 +174,23 @@ export default function ProdutosPage() {
                       </Td>
                       <Td className="text-right">
                         <span className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>{r.ncm || "—"}</span>
+                      </Td>
+                      <Td className="text-right">
+                        {r.valorUnitario == null ? (
+                          <span className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>—</span>
+                        ) : (
+                          <>
+                            <div className="text-xs font-mono font-bold" style={{ color: "var(--text)" }}>
+                              {formatCurrency(r.valorUnitario)}
+                            </div>
+                            {r.valorUnitarioEm && (
+                              <div className="text-[9px] font-mono mt-0.5" style={{ color: "var(--text3)" }}
+                                title="Valor unitário da NF mais recente em que este produto apareceu">
+                                NF de {formatDate(r.valorUnitarioEm)}
+                              </div>
+                            )}
+                          </>
+                        )}
                       </Td>
                       <Td className="text-right">
                         <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "rgba(249,115,22,.15)", color: "var(--accent)" }}>

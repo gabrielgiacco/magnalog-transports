@@ -52,7 +52,7 @@ export async function indexarProdutosDoXml(
     if (!descricaoNorm) continue;
 
     try {
-      await prisma.produtoCatalogo.upsert({
+      const registro = await prisma.produtoCatalogo.upsert({
         where: { fornecedorCnpj_codigo: { fornecedorCnpj: cnpj, codigo } },
         create: {
           fornecedorCnpj: cnpj,
@@ -65,6 +65,8 @@ export async function indexarProdutosDoXml(
           contagemUso: 1,
           primeiraOcorrencia: data,
           ultimaOcorrencia: data,
+          valorUnitario: p.valorUnitario || null,
+          valorUnitarioEm: data,
         },
         update: {
           descricao,
@@ -74,8 +76,19 @@ export async function indexarProdutosDoXml(
           fornecedorNome: nome,
           contagemUso: { increment: 1 },
           ultimaOcorrencia: data,
+          // preço fica de fora daqui: só vale se esta nota for a mais recente
         },
       });
+
+      // O backfill percorre as notas por id, não por data de emissão, então a
+      // última processada não é necessariamente a mais recente. Só sobrescreve
+      // o preço quando esta nota for mais nova que a que originou o valor atual.
+      if (!registro.valorUnitarioEm || registro.valorUnitarioEm < data) {
+        await prisma.produtoCatalogo.update({
+          where: { id: registro.id },
+          data: { valorUnitario: p.valorUnitario || null, valorUnitarioEm: data },
+        });
+      }
       contador++;
     } catch {
       // ignora produto individual com erro
@@ -94,6 +107,8 @@ export type BuscaResultado = {
   unidade: string | null;
   contagemUso: number;
   ultimaOcorrencia: Date;
+  valorUnitario: number | null;
+  valorUnitarioEm: Date | null;
   score: number;
   tokensMatch: string[];
 };
@@ -137,6 +152,8 @@ export async function buscarProdutos(query: string, limite = 30): Promise<BuscaR
       unidade: p.unidade,
       contagemUso: p.contagemUso,
       ultimaOcorrencia: p.ultimaOcorrencia,
+      valorUnitario: p.valorUnitario,
+      valorUnitarioEm: p.valorUnitarioEm,
       score,
       tokensMatch: matched,
     };
