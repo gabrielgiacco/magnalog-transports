@@ -72,6 +72,7 @@ model User {
   anexosGenericos         Anexo[]                @relation("AnexoUploader")
   anexosLiberados         Anexo[]                @relation("AnexoLiberador")
   declaracoesSaida        DeclaracaoSaida[]      @relation("DeclaracaoSaidaEmitida")
+  orcamentos              Orcamento[]            @relation("OrcamentoCriado")
 }
 
 enum TipoEventoAuditoria {
@@ -602,6 +603,46 @@ model ProdutoCatalogo {
   @@unique([fornecedorCnpj, codigo])
   @@index([descricaoNorm])
   @@index([ncm])
+}
+
+// ─── Orçamento (a partir do Catálogo de Produtos) ────────────────────────
+
+model Orcamento {
+  id          String  @id @default(cuid())
+  codigo      String  @unique // ORC-00001
+  observacoes String? @db.Text
+  valorTotal  Float   @default(0)
+
+  criadoPorId String
+  criadoPor   User     @relation("OrcamentoCriado", fields: [criadoPorId], references: [id])
+  createdAt   DateTime @default(now())
+
+  itens OrcamentoItem[]
+
+  @@index([createdAt])
+}
+
+model OrcamentoItem {
+  id          String    @id @default(cuid())
+  orcamentoId String
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+
+  produtoCatalogoId String? // vínculo; não é a fonte do que foi impresso
+
+  // Snapshot: o preço do catálogo é sobrescrito a cada NF nova do produto.
+  // Sem congelar, reimprimir amanhã daria outro número.
+  codigo          String
+  descricao       String
+  fornecedorNome  String?
+  fornecedorCnpj  String
+  unidade         String?
+  valorUnitario   Float
+  valorUnitarioEm DateTime?
+
+  quantidade Float
+  valorTotal Float
+
+  @@index([orcamentoId])
 }
 
 model TabelaDescarga {
