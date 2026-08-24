@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { DanfeData, parseDanfeXML } from "@/lib/danfe-parser";
-import { baixarDanfePDF } from "@/lib/danfe-pdf";
+import { baixarDanfeOficial, ROTULO_FORMATO, type FormatoDanfe } from "@/lib/danfe-pdf";
 import { NfseTab } from "./NfseTab";
 import { CteTab } from "./CteTab";
 
@@ -85,6 +85,7 @@ export default function ImportacaoPage() {
   const [sendingDevolucao, setSendingDevolucao] = useState(false);
   const [devolucaoResult, setDevolucaoResult] = useState<"nova" | "duplicada" | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [formatoDanfe, setFormatoDanfe] = useState<FormatoDanfe>("completo");
   const danfeRef = useRef<HTMLDivElement>(null);
 
   // ── Lote DANFE state ──
@@ -309,14 +310,15 @@ export default function ImportacaoPage() {
   }
 
   async function handleDownloadPdf() {
-    const el = document.getElementById("danfe-print");
-    if (!el || !danfeData) return;
+    if (!danfeData?.chaveAcesso) { toast.error("Chave de acesso indisponivel"); return; }
     setDownloadingPdf(true);
     try {
       const nome = `DANFE_${danfeData.numero || "nfe"}_${danfeData.serie || ""}`;
-      await baixarDanfePDF(el as HTMLElement, nome);
+      // xmlContent serve de reserva: se a nota ainda nao estiver na Area do
+      // Cliente do Meu Danfe, a rota envia esse XML (gratis) e baixa em seguida.
+      await baixarDanfeOficial(danfeData.chaveAcesso, formatoDanfe, { filename: nome, xml: xmlContent || undefined });
       toast.success("PDF gerado!");
-    } catch { toast.error("Erro ao gerar PDF"); }
+    } catch (e: any) { toast.error(e.message || "Erro ao gerar PDF"); }
     finally { setDownloadingPdf(false); }
   }
   async function handleAddToEntrega() {
@@ -838,6 +840,17 @@ export default function ImportacaoPage() {
                         </span>
                       )}
                       <Button variant="ghost" size="sm" onClick={handleDownloadXml}><Download size={14} /> XML</Button>
+                      <select
+                        value={formatoDanfe}
+                        onChange={(e) => setFormatoDanfe(e.target.value as FormatoDanfe)}
+                        className="text-xs px-2 py-1.5 rounded-lg outline-none"
+                        style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                        title="Formato do PDF oficial"
+                      >
+                        {(Object.keys(ROTULO_FORMATO) as FormatoDanfe[]).map((f) => (
+                          <option key={f} value={f}>{ROTULO_FORMATO[f]}</option>
+                        ))}
+                      </select>
                       <Button variant="ghost" size="sm" onClick={handleDownloadPdf} disabled={downloadingPdf}>
                         {downloadingPdf ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} PDF
                       </Button>

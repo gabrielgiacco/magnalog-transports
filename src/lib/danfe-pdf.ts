@@ -1,47 +1,63 @@
-// Utilitário para converter o DANFE renderizado (HTML) em PDF baixável.
-// Usa html2pdf.js (client-only) — carrega via dynamic import pra não quebrar SSR.
+// Baixa o DANFE/DACTE oficial em PDF, gerado pelo Meu Danfe.
+//
+// Antes isto rasterizava o HTML do DanfeViewer com html2canvas/jsPDF: o texto
+// não era selecionável e o layout dependia de escala. Agora vem o PDF oficial
+// vetorial da API, que é gratuito para documento já na Área do Cliente.
+//
+// O visual (papel, margens, fonte, quais campos aparecem) é configurado no menu
+// Layout PDF da Área do Cliente do Meu Danfe, não aqui.
 
-export async function baixarDanfePDF(element: HTMLElement, filename: string) {
-  if (typeof window === "undefined") return;
-  const html2pdf = (await import("html2pdf.js")).default;
-  const nome = filename.replace(/[^a-z0-9._-]+/gi, "_");
+export type FormatoDanfe = "completo" | "simplificado" | "etiqueta" | "cupom";
 
-  // Clona o elemento pra remover qualquer transform (zoom) aplicado no viewer.
-  // Sem isso, se o usuário estiver com zoom != 100%, o PDF sai distorcido.
-  const clone = element.cloneNode(true) as HTMLElement;
-  clone.style.transform = "none";
-  clone.style.transformOrigin = "top left";
-  clone.style.width = "210mm";
+export const ROTULO_FORMATO: Record<FormatoDanfe, string> = {
+  completo: "DANFE completo",
+  simplificado: "DANFE simplificado",
+  etiqueta: "Etiqueta",
+  cupom: "Cupom de varejo",
+};
 
-  // Container temporário fora da tela pra renderização controlada
-  const container = document.createElement("div");
-  container.style.position = "fixed";
-  container.style.left = "-9999px";
-  container.style.top = "0";
-  container.style.background = "#ffffff";
-  container.style.width = "210mm";
-  container.appendChild(clone);
-  document.body.appendChild(container);
+interface Opcoes {
+  /** Nome do arquivo salvo. Sem isso, usa o nome devolvido pela API. */
+  filename?: string;
+  /** XML da nota, usado se ela ainda não estiver na Área do Cliente. */
+  xml?: string;
+  /** true abre em nova aba em vez de baixar. */
+  abrir?: boolean;
+}
 
-  try {
-    await html2pdf()
-      .set({
-        margin: [4, 4, 4, 4],
-        filename: nome.endsWith(".pdf") ? nome : `${nome}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 3,
-          useCORS: true,
-          letterRendering: true,
-          backgroundColor: "#ffffff",
-          windowWidth: 794, // 210mm em pixels a 96dpi
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      })
-      .from(clone)
-      .save();
-  } finally {
-    document.body.removeChild(container);
+export async function baixarDanfeOficial(
+  chave: string,
+  formato: FormatoDanfe = "completo",
+  opcoes: Opcoes = {}
+): Promise<void> {
+  const res = await fetch("/api/danfe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chave, formato, xml: opcoes.xml }),
+  });
+
+  if (!res.ok) {
+    let msg = "Erro ao gerar o DANFE.";
+    try { msg = (await res.json()).error || msg; } catch { /* resposta não-JSON */ }
+    throw new Error(msg);
   }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+
+  if (opcoes.abrir) {
+    window.open(url, "_blank");
+    // Não revoga na hora: a aba nova ainda precisa da URL.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return;
+  }
+
+  const nome = (opcoes.filename || `DANFE_${chave}`).replace(/[^a-z0-9._-]+/gi, "_");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nome.endsWith(".pdf") ? nome : `${nome}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

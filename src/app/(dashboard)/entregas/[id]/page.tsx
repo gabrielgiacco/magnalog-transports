@@ -10,7 +10,7 @@ import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { parseDanfeXML } from "@/lib/danfe-parser";
-import { baixarDanfePDF } from "@/lib/danfe-pdf";
+import { baixarDanfeOficial, ROTULO_FORMATO, type FormatoDanfe } from "@/lib/danfe-pdf";
 import { QUALIDADE_ENABLED } from "@/lib/features";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
 import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
@@ -55,6 +55,7 @@ export default function EntregaDetailPage() {
   const [separando, setSeparando] = useState(false);
   const [danfeModal, setDanfeModal] = useState<{ open: boolean; xml: string | null; loading: boolean; fullscreen: boolean }>({ open: false, xml: null, loading: false, fullscreen: false });
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [formatoDanfe, setFormatoDanfe] = useState<FormatoDanfe>("completo");
   const [showQualityPrompt, setShowQualityPrompt] = useState(false);
 
   const [showResolveModal, setShowResolveModal] = useState(false);
@@ -1242,17 +1243,33 @@ export default function EntregaDetailPage() {
                   <Download size={16} className="text-slate-500 dark:text-neutral-400" />
                   <span className="text-xs text-slate-500 dark:text-neutral-400">XML</span>
                 </button>
+                <select
+                  value={formatoDanfe}
+                  onChange={(e) => setFormatoDanfe(e.target.value as FormatoDanfe)}
+                  className="text-xs px-2 py-1.5 rounded-lg outline-none"
+                  style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+                  title="Formato do PDF oficial"
+                >
+                  {(Object.keys(ROTULO_FORMATO) as FormatoDanfe[]).map((f) => (
+                    <option key={f} value={f}>{ROTULO_FORMATO[f]}</option>
+                  ))}
+                </select>
                 <button
                   onClick={async () => {
-                    const el = document.getElementById("danfe-print");
-                    if (!el || !danfeModal.xml) return;
+                    if (!danfeModal.xml) return;
                     setDownloadingPdf(true);
                     try {
                       const parsed = parseDanfeXML(danfeModal.xml);
-                      await baixarDanfePDF(el as HTMLElement, `DANFE_${parsed.numero || "nfe"}_${parsed.serie || ""}`);
+                      if (!parsed.chaveAcesso) throw new Error("Chave de acesso indisponível");
+                      // O XML vai junto como reserva: se a nota ainda não estiver
+                      // na Área do Cliente, a rota envia (grátis) e baixa depois.
+                      await baixarDanfeOficial(parsed.chaveAcesso, formatoDanfe, {
+                        filename: `DANFE_${parsed.numero || "nfe"}_${parsed.serie || ""}`,
+                        xml: danfeModal.xml,
+                      });
                       toast.success("PDF gerado!");
-                    } catch {
-                      toast.error("Erro ao gerar PDF");
+                    } catch (e: any) {
+                      toast.error(e.message || "Erro ao gerar PDF");
                     } finally {
                       setDownloadingPdf(false);
                     }
