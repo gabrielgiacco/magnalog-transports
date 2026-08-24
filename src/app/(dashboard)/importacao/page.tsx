@@ -9,7 +9,7 @@ import {
   Upload, FileText, CheckCircle, XCircle, AlertTriangle, X, ChevronRight,
   Search, RefreshCw, ChevronLeft, ExternalLink, FileSearch,
   Printer, Download, RotateCcw, FileX, Eye, ZoomIn, ZoomOut, Key, Loader2, PackagePlus, Check,
-  Receipt, Link2, Trash2, Truck, DownloadCloud,
+  Receipt, Link2, Trash2, Truck, DownloadCloud, ClipboardList,
 } from "lucide-react";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { DanfeData, parseDanfeXML } from "@/lib/danfe-parser";
@@ -17,6 +17,7 @@ import { baixarDanfeOficial, ROTULO_FORMATO, type FormatoDanfe } from "@/lib/dan
 import { NfseTab } from "./NfseTab";
 import { CteTab } from "./CteTab";
 import { SincronizacaoTab } from "./SincronizacaoTab";
+import { MdfeTab } from "./MdfeTab";
 
 // ── Types ──
 interface ResultItem {
@@ -29,7 +30,7 @@ interface ImportResult {
   notas: ResultItem[]; ctes: any[];
 }
 
-type Tab = "importar" | "notas" | "danfe" | "nfse" | "cte" | "sincronizar";
+type Tab = "importar" | "notas" | "danfe" | "nfse" | "cte" | "mdfe" | "sincronizar";
 type InputMode = "chave" | "xml" | "lote";
 
 type LoteItem = { chave: string; status: "pendente" | "consultando" | "ok" | "erro"; erro?: string; xml?: string };
@@ -360,6 +361,7 @@ export default function ImportacaoPage() {
           <TabBtn active={tab === "danfe"} onClick={() => setTab("danfe")} icon={FileSearch}>Consulta DANFE</TabBtn>
           <TabBtn active={tab === "nfse"} onClick={() => setTab("nfse")} icon={Receipt}>Notas de Serviço</TabBtn>
           <TabBtn active={tab === "cte"} onClick={() => setTab("cte")} icon={Truck}>CT-e</TabBtn>
+          <TabBtn active={tab === "mdfe"} onClick={() => setTab("mdfe")} icon={ClipboardList}>MDF-e</TabBtn>
           <TabBtn active={tab === "sincronizar"} onClick={() => setTab("sincronizar")} icon={DownloadCloud}>Sincronizar</TabBtn>
         </div>
 
@@ -875,6 +877,8 @@ export default function ImportacaoPage() {
 
           {/* ═══════ TAB: CT-e ═══════ */}
           {tab === "cte" && <CteTab />}
+
+          {tab === "mdfe" && <MdfeTab />}
 
           {tab === "sincronizar" && <SincronizacaoTab />}
         </div>

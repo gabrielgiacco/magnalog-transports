@@ -259,6 +259,7 @@ model Rota {
   qualidade             QualidadeOperacional?
   avarias               Avaria[]
   lancamentos           LancamentoFinanceiro[]
+  mdfes                 Mdfe[]
 }
 
 enum StatusEntrega {
@@ -603,6 +604,86 @@ model ProdutoCatalogo {
   @@unique([fornecedorCnpj, codigo])
   @@index([descricaoNorm])
   @@index([ncm])
+}
+
+// ─── MDF-e (Manifesto Eletronico de Documentos Fiscais) ──────────────────
+// Importado do emissor. O TMS nao emite.
+
+enum StatusMdfe {
+  AUTORIZADO
+  ENCERRADO
+  CANCELADO
+}
+
+model Mdfe {
+  id          String @id @default(cuid())
+  chaveAcesso String @unique
+  numero      String
+  serie       String?
+  modelo      String @default("58")
+
+  emitenteCnpj String
+  emitenteNome String?
+
+  ufInicio              String
+  ufFim                 String
+  municipioCarregamento String?
+
+  dataEmissao      DateTime?
+  // dhIniViagem e opcional no layout e nao vem nos manifestos da Magna Log;
+  // o parser cai para dhEmi. E daqui que sai o "aberto ha N dias".
+  dataInicioViagem DateTime?
+
+  // Modal rodoviario
+  placaTracao     String?
+  placaReboque    String?
+  rntrc           String?
+  condutorNome    String?
+  condutorCpf     String?
+  contratanteCnpj String?
+
+  qtdCTe     Int   @default(0)
+  qtdNFe     Int   @default(0)
+  valorCarga Float @default(0)
+  pesoCarga  Float @default(0)
+
+  // cStat do protocolo: 100 = autorizado
+  cStat String?
+
+  status      StatusMdfe @default(AUTORIZADO)
+  encerradoEm DateTime?
+  // MANUAL = alguem marcou na tela. EVENTO = veio do XML 110112.
+  // A origem importa: uma e palavra, a outra e documento fiscal.
+  encerradoPor       String?
+  protocoloEncerramento String?
+
+  rotaId String?
+  rota   Rota?   @relation(fields: [rotaId], references: [id])
+
+  xmlOriginal String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  documentos MdfeDocumento[]
+
+  @@index([status])
+  @@index([rotaId])
+  @@index([dataInicioViagem])
+}
+
+model MdfeDocumento {
+  id     String @id @default(cuid())
+  mdfeId String
+  mdfe   Mdfe   @relation(fields: [mdfeId], references: [id], onDelete: Cascade)
+
+  tipo        String // "CTE" | "NFE"
+  chaveAcesso String
+
+  municipioDescarga       String?
+  codigoMunicipioDescarga String?
+
+  @@index([mdfeId])
+  @@index([chaveAcesso])
 }
 
 // ─── Orçamento (a partir do Catálogo de Produtos) ────────────────────────
