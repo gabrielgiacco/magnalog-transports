@@ -617,6 +617,56 @@ model ProdutoCatalogo {
   @@index([ncm])
 }
 
+// ─── Conciliacao bancaria ────────────────────────────────────────────────
+// O extrato entra por OFX do banco ou pelo export do app Minhas Financas.
+// Open Finance direto e inviavel: so instituicao autorizada pelo BC participa.
+
+model ContaBancaria {
+  id      String  @id @default(cuid())
+  nome    String  @unique // "Sicredi Empresas", "Banco Inter PJ"
+  banco   String?
+  agencia String?
+  numero  String?
+  ativa   Boolean @default(true)
+
+  // Casa o <ACCTID> do cabecalho do OFX com esta conta, para o import saber
+  // onde a transacao entra sem o usuario escolher a cada arquivo.
+  identificadorOfx String? @unique
+
+  transacoes  TransacaoBancaria[]
+  lancamentos LancamentoFinanceiro[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TransacaoBancaria {
+  id      String        @id @default(cuid())
+  contaId String
+  conta   ContaBancaria @relation(fields: [contaId], references: [id], onDelete: Cascade)
+
+  data      DateTime
+  valor     Float // negativo = saida
+  descricao String
+  documento String? // CNPJ/CPF extraido da descricao, quando houver
+
+  // Dedupe de reimportacao. FITID quando vem de OFX; hash de
+  // conta+data+valor+descricao quando vem do CSV, que nao tem identificador.
+  idExterno String
+  origem    String // "OFX" | "MINHAS_FINANCAS"
+
+  status       String  @default("PENDENTE") // PENDENTE | CONCILIADA | IGNORADA
+  lancamentoId String?
+  lancamento   LancamentoFinanceiro? @relation(fields: [lancamentoId], references: [id], onDelete: SetNull)
+
+  importadaEm DateTime @default(now())
+
+  @@unique([contaId, idExterno])
+  @@index([status])
+  @@index([data])
+  @@index([lancamentoId])
+}
+
 // ─── MDF-e (Manifesto Eletronico de Documentos Fiscais) ──────────────────
 // Importado do emissor. O TMS nao emite.
 
@@ -1145,6 +1195,7 @@ enum FormaPagamento {
 
 enum OrigemLancamento {
   MANUAL
+  EXTRATO_BANCARIO
   FATURA
   FATURA_ARMAZENAGEM
   ACERTO_MOTORISTA
@@ -1267,7 +1318,16 @@ model LancamentoFinanceiro {
   origem         OrigemLancamento @default(MANUAL)
 
   formaPagamento FormaPagamento?
-  contaBancaria  String?
+  contaBancaria  String? // legado: texto livre, nunca preenchido. Use contaBancariaRel.
+
+  contaBancariaId  String?
+  contaBancariaRel ContaBancaria? @relation(fields: [contaBancariaId], references: [id], onDelete: SetNull)
+  transacoes       TransacaoBancaria[]
+
+  // Equivalente ao "Ignorar nos totais" do Minhas Financas: segue no caixa,
+  // sai do DRE. Necessario porque o extrato traz despesa pessoal e tarifa
+  // bancaria junto com o operacional.
+  foraDoDre Boolean @default(false)
 
   categoriaId    String?
   subcategoriaId String?
@@ -1308,6 +1368,7 @@ model LancamentoFinanceiro {
   @@index([diariaId])
   @@index([status, dataPagamento])
   @@index([tipo, dataPagamento])
+  @@index([contaBancariaId])
 }
 
 model NormaPaletizacao {

@@ -9,9 +9,10 @@ import { ContasPagarTab } from "./ContasPagarTab";
 import { ContasReceberTab } from "./ContasReceberTab";
 import { FluxoCaixaTab } from "./FluxoCaixaTab";
 import { DreTab } from "./DreTab";
-import { LayoutDashboard, HandCoins, ArrowDownToLine, ArrowUpFromLine, FilePlus, LineChart, FileBarChart2 } from "lucide-react";
+import { ConciliacaoTab } from "./ConciliacaoTab";
+import { LayoutDashboard, HandCoins, ArrowDownToLine, ArrowUpFromLine, FilePlus, LineChart, FileBarChart2, Landmark } from "lucide-react";
 
-type Tab = "painel" | "acertos" | "lancamentos" | "contas-pagar" | "contas-receber" | "fluxo-caixa" | "dre";
+type Tab = "painel" | "acertos" | "lancamentos" | "contas-pagar" | "contas-receber" | "conciliacao" | "fluxo-caixa" | "dre";
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: "painel", label: "Painel", icon: LayoutDashboard },
@@ -19,6 +20,7 @@ const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: "lancamentos", label: "Lançamentos", icon: FilePlus },
   { key: "contas-pagar", label: "Contas a Pagar", icon: ArrowDownToLine },
   { key: "contas-receber", label: "Contas a Receber", icon: ArrowUpFromLine },
+  { key: "conciliacao", label: "Conciliação", icon: Landmark },
   { key: "fluxo-caixa", label: "Fluxo de Caixa", icon: LineChart },
   { key: "dre", label: "DRE", icon: FileBarChart2 },
 ];
@@ -43,6 +45,7 @@ export default function FinanceiroPage() {
       case "lancamentos": return "Receitas e despesas avulsas";
       case "contas-pagar": return "Despesas a pagar";
       case "contas-receber": return "Recebimentos de clientes";
+      case "conciliacao": return "Casa o extrato do banco com os lançamentos";
       case "fluxo-caixa": return "Projeção 30/60/90 dias";
       case "dre": return "Demonstrativo de Resultado do Exercício";
     }
@@ -78,6 +81,7 @@ export default function FinanceiroPage() {
           {tab === "lancamentos" && <LancamentosTab />}
           {tab === "contas-pagar" && <ContasPagarTab />}
           {tab === "contas-receber" && <ContasReceberTab />}
+          {tab === "conciliacao" && <ConciliacaoTab />}
           {tab === "fluxo-caixa" && <FluxoCaixaTab />}
           {tab === "dre" && <DreTab />}
         </div>
