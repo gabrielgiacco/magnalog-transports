@@ -73,6 +73,7 @@ model User {
   anexosLiberados         Anexo[]                @relation("AnexoLiberador")
   declaracoesSaida        DeclaracaoSaida[]      @relation("DeclaracaoSaidaEmitida")
   orcamentos              Orcamento[]            @relation("OrcamentoCriado")
+  notasCanceladas         NotaFiscal[]           @relation("NotaCancelada")
 }
 
 enum TipoEventoAuditoria {
@@ -449,6 +450,16 @@ model NotaFiscal {
   dataEmissao       DateTime?
   entregaId         String?
   xmlOriginal       String?   @db.Text
+
+  // Cancelamento informado manualmente. A API do Meu Danfe nao responde
+  // situacao de documento (provado na Fase 0), entao nao ha como descobrir
+  // isto sozinho — a informacao chega do cliente e alguem registra aqui.
+  cancelada       Boolean   @default(false)
+  canceladaEm     DateTime?
+  canceladaMotivo String?
+  canceladaPorId  String?
+  canceladaPor    User?     @relation("NotaCancelada", fields: [canceladaPorId], references: [id])
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   entrega           Entrega?  @relation(fields: [entregaId], references: [id], onDelete: Cascade)

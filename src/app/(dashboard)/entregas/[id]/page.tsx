@@ -280,6 +280,35 @@ export default function EntregaDetailPage() {
     } finally { setSaving(false); }
   }
 
+  // Cancelamento de NF é registro manual: a API do Meu Danfe não informa
+  // situação de documento, então a informação vem do cliente e alguém marca.
+  async function handleToggleCancelada(nf: any) {
+    const cancelar = !nf.cancelada;
+    let motivo: string | null = null;
+    if (cancelar) {
+      motivo = window.prompt(
+        `Marcar a NF ${nf.numero} como CANCELADA?\n\nIsto registra apenas no TMS — quem cancela na SEFAZ é o emitente.\nInforme o motivo ou quem avisou:`,
+        ""
+      );
+      if (motivo === null) return;
+    } else if (!window.confirm(`Desfazer o cancelamento da NF ${nf.numero}?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/notas/${nf.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cancelada: cancelar, motivo }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Erro");
+      toast.success(cancelar ? `NF ${nf.numero} marcada como cancelada` : "Cancelamento desfeito");
+      const updated = await fetch(`/api/entregas/${id}`).then((r) => r.json());
+      setEntrega(updated);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao atualizar a nota");
+    }
+  }
+
   async function handleReentrega() {
     if (!confirm("Gerar uma Reentrega criará uma NOVA entrega com as mesmas NFs e manterá a atual fechada com a rota antiga (para histórico financeiro). Deseja continuar?")) return;
     setSaving(true);
@@ -575,6 +604,19 @@ export default function EntregaDetailPage() {
               )}
             </div>
           </div>
+          {entrega.notas?.some((nf: any) => nf.cancelada) && (
+            <div className="flex items-center gap-3 p-3 rounded-xl mb-3 flex-wrap"
+              style={{ background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.35)" }}>
+              <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
+              <span className="text-sm text-red-600 flex-1">
+                <b>Atenção:</b> {entrega.notas.filter((nf: any) => nf.cancelada).length} nota(s) desta carga
+                {" "}está(ão) cancelada(s) —{" "}
+                {entrega.notas.filter((nf: any) => nf.cancelada).map((nf: any) => `NF ${nf.numero}`).join(", ")}.
+                {" "}Não entregar contra nota cancelada.
+              </span>
+            </div>
+          )}
+
           {entrega.status === "OCORRENCIA" ? (
              <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 flex-wrap">
                <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
@@ -831,11 +873,34 @@ export default function EntregaDetailPage() {
                           )}
                           <FileText size={13} className="text-slate-400 dark:text-neutral-500 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs font-semibold">NF {nf.numero}</div>
+                            <div className="text-xs font-semibold flex items-center gap-2">
+                              <span className={nf.cancelada ? "line-through opacity-60" : ""}>NF {nf.numero}</span>
+                              {nf.cancelada && (
+                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded"
+                                  style={{ background: "rgba(239,68,68,.15)", color: "#ef4444" }}>
+                                  Cancelada
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[10px] font-mono truncate text-slate-500 dark:text-neutral-400">{nf.emitenteRazao}</div>
+                            {nf.cancelada && nf.canceladaMotivo && (
+                              <div className="text-[10px] mt-0.5 text-red-500">{nf.canceladaMotivo}</div>
+                            )}
                           </div>
-                          <div className="text-right">
-                            <div className="text-xs font-mono text-emerald-600 font-bold">{formatCurrency(nf.valorNota)}</div>
+                          <div className="text-right flex items-center gap-2">
+                            <div className={`text-xs font-mono font-bold ${nf.cancelada ? "line-through opacity-50 text-slate-400" : "text-emerald-600"}`}>
+                              {formatCurrency(nf.valorNota)}
+                            </div>
+                            {!isReadOnly && (
+                              <button
+                                onClick={(ev) => { ev.stopPropagation(); handleToggleCancelada(nf); }}
+                                className="p-1 rounded hover:opacity-70 flex-shrink-0"
+                                style={{ color: nf.cancelada ? "#ef4444" : "var(--text3)" }}
+                                title={nf.cancelada ? "Desfazer cancelamento" : "Marcar nota como cancelada"}
+                              >
+                                <AlertCircle size={13} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
             dataChegada: true,
             dataEntrega: true,
             cidade: true,
-            notas: { select: { numero: true } },
+            notas: { select: { numero: true, cancelada: true } },
             motorista: { select: { nome: true } },
             ocorrencias: { select: { tipo: true, descricao: true, resolvida: true, createdAt: true }, orderBy: { createdAt: "desc" as const } },
           },

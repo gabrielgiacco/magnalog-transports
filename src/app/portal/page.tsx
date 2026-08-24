@@ -923,6 +923,20 @@ function DetalheNotaModal({ nota, onClose }: { nota: any; onClose: () => void })
         </div>
 
         <div className="p-6 space-y-5">
+          {/* Nota cancelada — precede a ocorrência porque invalida a entrega inteira */}
+          {e?.notas?.some((n: any) => n.cancelada) && (
+            <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.4)" }}>
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle size={16} className="text-red-500" />
+                <span className="text-sm font-bold text-red-500">Nota fiscal cancelada</span>
+              </div>
+              <p className="text-sm" style={{ color: "var(--text2)" }}>
+                {e.notas.filter((n: any) => n.cancelada).map((n: any) => `NF ${n.numero}`).join(", ")}
+                {" "}consta como cancelada nesta carga.
+              </p>
+            </div>
+          )}
+
           {/* Ocorrência destacada */}
           {ocorrenciaAberta && (
             <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.3)" }}>
