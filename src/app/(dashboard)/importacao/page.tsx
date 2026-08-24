@@ -9,13 +9,14 @@ import {
   Upload, FileText, CheckCircle, XCircle, AlertTriangle, X, ChevronRight,
   Search, RefreshCw, ChevronLeft, ExternalLink, FileSearch,
   Printer, Download, RotateCcw, FileX, Eye, ZoomIn, ZoomOut, Key, Loader2, PackagePlus, Check,
-  Receipt, Link2, Trash2, Truck,
+  Receipt, Link2, Trash2, Truck, DownloadCloud,
 } from "lucide-react";
 import { DanfeViewer } from "@/components/danfe/DanfeViewer";
 import { DanfeData, parseDanfeXML } from "@/lib/danfe-parser";
 import { baixarDanfeOficial, ROTULO_FORMATO, type FormatoDanfe } from "@/lib/danfe-pdf";
 import { NfseTab } from "./NfseTab";
 import { CteTab } from "./CteTab";
+import { SincronizacaoTab } from "./SincronizacaoTab";
 
 // ── Types ──
 interface ResultItem {
@@ -28,7 +29,7 @@ interface ImportResult {
   notas: ResultItem[]; ctes: any[];
 }
 
-type Tab = "importar" | "notas" | "danfe" | "nfse" | "cte";
+type Tab = "importar" | "notas" | "danfe" | "nfse" | "cte" | "sincronizar";
 type InputMode = "chave" | "xml" | "lote";
 
 type LoteItem = { chave: string; status: "pendente" | "consultando" | "ok" | "erro"; erro?: string; xml?: string };
@@ -359,6 +360,7 @@ export default function ImportacaoPage() {
           <TabBtn active={tab === "danfe"} onClick={() => setTab("danfe")} icon={FileSearch}>Consulta DANFE</TabBtn>
           <TabBtn active={tab === "nfse"} onClick={() => setTab("nfse")} icon={Receipt}>Notas de Serviço</TabBtn>
           <TabBtn active={tab === "cte"} onClick={() => setTab("cte")} icon={Truck}>CT-e</TabBtn>
+          <TabBtn active={tab === "sincronizar"} onClick={() => setTab("sincronizar")} icon={DownloadCloud}>Sincronizar</TabBtn>
         </div>
 
         <div className="p-6 space-y-5">
@@ -873,6 +875,8 @@ export default function ImportacaoPage() {
 
           {/* ═══════ TAB: CT-e ═══════ */}
           {tab === "cte" && <CteTab />}
+
+          {tab === "sincronizar" && <SincronizacaoTab />}
         </div>
       </div>
 
