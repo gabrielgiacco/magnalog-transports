@@ -99,7 +99,8 @@ export function ConciliacaoTab() {
       }
       if (!r.ok) throw new Error(d.error || "Erro ao importar");
 
-      toast.success(`${d.novas} nova(s) · ${d.duplicadas} já existia(m) — ${d.conta.nome}`);
+      const onde = d.conta ? d.conta.nome : `${d.contasCriadas?.length ? d.contasCriadas.length + " conta(s) criada(s) · " : ""}${d.origem === "MINHAS_FINANCAS" ? "Minhas Finanças" : "OFX"}`;
+      toast.success(`${d.novas} nova(s) · ${d.duplicadas} já existia(m) — ${onde}`);
       setArquivoPendente(null);
       carregar();
     } catch (e: any) {
@@ -167,8 +168,9 @@ export function ConciliacaoTab() {
             <div>
               <div className="text-sm font-semibold">Conciliação bancária</div>
               <div className="text-xs mt-0.5" style={{ color: "var(--text2)" }}>
-                Importe o extrato em OFX e o sistema sugere qual lançamento cada movimento paga,
-                mostrando o motivo. Nada é conciliado sem a sua confirmação.
+                Importe o extrato em OFX do banco ou o CSV exportado do Minhas Finanças. O sistema
+                sugere qual lançamento cada movimento paga, mostrando o motivo. Nada é conciliado
+                sem a sua confirmação.
               </div>
             </div>
           </div>
@@ -178,9 +180,9 @@ export function ConciliacaoTab() {
             </Button>
             <Button onClick={() => inputRef.current?.click()} disabled={importando}>
               {importando ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              Importar OFX
+              Importar extrato
             </Button>
-            <input ref={inputRef} type="file" accept=".ofx,.OFX,text/plain" className="hidden"
+            <input ref={inputRef} type="file" accept=".ofx,.OFX,.csv,.CSV,text/plain,text/csv" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) enviar(f); e.target.value = ""; }} />
           </div>
         </div>
@@ -215,7 +217,7 @@ export function ConciliacaoTab() {
       )}
 
       {loading ? <Loading /> : transacoes.length === 0 ? (
-        <Empty icon="🏦" text="Nenhuma transação pendente. Importe um extrato OFX para começar." />
+        <Empty icon="🏦" text="Nenhuma transação pendente. Importe um extrato para começar." />
       ) : (
         <>
           <div className="space-y-2">

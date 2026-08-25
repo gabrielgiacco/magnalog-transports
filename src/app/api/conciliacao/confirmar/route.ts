@@ -77,10 +77,15 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // criar: a linha do extrato vira lançamento novo, já pago
+        // criar: a linha do extrato vira lançamento novo, já pago.
+        // O CPF/CNPJ que veio na descrição identifica o favorecido: 9 de cada
+        // 12 documentos do extrato real são de motorista cadastrado. Sem isto
+        // o lançamento nasceria anônimo e alguém teria que digitar o nome.
+        const favorecido = await resolverFavorecido(tx, t.documento);
         const novo = await tx.lancamentoFinanceiro.create({
           data: {
             descricao: t.descricao,
+            favorecido,
             tipo: t.valor < 0 ? "DESPESA" : "RECEITA",
             valor: Math.abs(t.valor),
             dataVencimento: t.data,
@@ -112,4 +117,28 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json(resultado);
+}
+
+/**
+ * Traduz o CPF/CNPJ achado na descrição do extrato para um nome conhecido.
+ * O banco escreve "Maxwel"; o cadastro tem "MAXWEEL" — o documento e o unico
+ * identificador estavel entre os dois lados.
+ */
+async function resolverFavorecido(tx: any, documento: string | null): Promise<string | null> {
+  if (!documento) return null;
+  const doc = documento.replace(/\D/g, "");
+  if (doc.length !== 11 && doc.length !== 14) return null;
+
+  if (doc.length === 11) {
+    const motoristas = await tx.motorista.findMany({ select: { nome: true, cpf: true } });
+    const m = motoristas.find((x: any) => (x.cpf || "").replace(/\D/g, "") === doc);
+    if (m) return m.nome;
+  } else {
+    const cliente = await tx.cliente.findFirst({
+      where: { cnpj: { contains: doc } },
+      select: { razaoSocial: true },
+    });
+    if (cliente) return cliente.razaoSocial;
+  }
+  return null;
 }
