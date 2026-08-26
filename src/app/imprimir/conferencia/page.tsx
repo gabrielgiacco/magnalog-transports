@@ -156,6 +156,12 @@ export default async function ConferenciaPage({ searchParams }: { searchParams: 
           @page { size: A4 landscape; margin: 8mm; }
           body { padding: 0; }
           .no-print { display: none !important; }
+          /* Reafirma os layouts em linha. Regras globais de impressao ja
+             forcaram display:block aqui uma vez, empilhando o que devia
+             ficar lado a lado. */
+          .header-container { display: flex !important; }
+          .kpis-print { display: flex !important; }
+          .signature-area { display: flex !important; }
         }
       ` }} />
 

@@ -361,8 +361,17 @@ html.dark .badge-CLIENTE       { background: rgba(168,85,247,.12); color: #c084f
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @media print {
+  /* As regras abaixo são AGRESSIVAS: escondem a página inteira e forçam
+     display:block em containers, para isolar o DANFE dentro do dashboard.
+     Por isso ficam escopadas a `body:has(#danfe-print)`.
+
+     Sem esse escopo elas vazavam para /imprimir/* e o `display: block`
+     atropelava o `display: flex` das fichas — os KPIs da conferência e as
+     linhas de assinatura das declarações imprimiam empilhados, embora na
+     tela ficassem lado a lado. */
+
   /* Hide everything except DANFE */
-  body > * {
+  body:has(#danfe-print) > * {
     display: none !important;
   }
 
@@ -386,11 +395,11 @@ html.dark .badge-CLIENTE       { background: rgba(168,85,247,.12); color: #c084f
   }
 
   /* Make sure parent elements are visible */
-  body,
-  body > div,
-  body > div > div,
-  main,
-  #__next {
+  body:has(#danfe-print),
+  body:has(#danfe-print) > div,
+  body:has(#danfe-print) > div > div,
+  body:has(#danfe-print) main,
+  body:has(#danfe-print) #__next {
     display: block !important;
     visibility: visible !important;
     overflow: visible !important;

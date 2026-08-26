@@ -108,6 +108,11 @@ export default async function DeclaracaoRecebimentoPage({ params }: { params: { 
           @page { size: A4 portrait; margin: 15mm; }
           body { padding: 0; }
           .no-print { display: none !important; }
+          /* Reafirma os layouts em linha. Regras globais de impressao ja
+             forcaram display:block aqui uma vez, empilhando o que devia
+             ficar lado a lado. */
+          .header { display: flex !important; }
+          .assinaturas { display: flex !important; }
         }
       ` }} />
 
