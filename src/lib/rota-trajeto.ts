@@ -4,14 +4,20 @@
  */
 
 /**
- * Depósito da Magna Log: AV. Eurípedes Menezes Qd 08 Lt 02, Aparecida de
- * Goiânia - GO. Coordenada obtida uma vez no Nominatim; toda rota sai e
- * volta daqui, então ela entra no cálculo como primeiro e último ponto.
+ * Depósito da Magna Log. Ponto fixo: toda rota sai e volta daqui, então ele
+ * entra no cálculo como primeiro e último ponto. Só muda se a empresa mudar
+ * de endereço — é o único lugar do sistema a alterar quando isso acontecer.
+ *
+ * Coordenada conferida por duas fontes independentes que batem em 5 m: o
+ * link do Google Maps do local e o Plus Code 5QCP+PQ decodificado.
  */
 export const DEPOSITO = {
-  lat: -16.8176443,
-  lng: -49.2147434,
+  lat: -16.8282067,
+  lng: -49.2131055,
   nome: "Magna Log — Aparecida de Goiânia",
+  endereco: "Avenida Tanner de Melo, Qd 06 Lt 02 — Lot. Real Grandeza",
+  cidade: "Aparecida de Goiânia - GO",
+  cep: "74988-818",
 };
 
 export interface Ponto {

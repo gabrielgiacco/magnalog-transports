@@ -94,7 +94,7 @@ interface RouteMapProps {
   trajeto?: [number, number][];
   /** Traçado é linha reta (roteador fora do ar) — muda o estilo da linha */
   trajetoAproximado?: boolean;
-  deposito?: { lat: number; lng: number; nome: string };
+  deposito?: { lat: number; lng: number; nome: string; endereco?: string; cidade?: string };
 }
 
 export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focusId, trajeto, trajetoAproximado, deposito }: RouteMapProps) {
@@ -152,9 +152,13 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focus
       {deposito && trajeto && trajeto.length > 1 && (
         <Marker position={[deposito.lat, deposito.lng]} icon={depositoIcon}>
           <Popup>
-            <div className="p-1">
+            <div className="p-1 min-w-[180px]">
               <div className="font-bold text-sm text-slate-800">{deposito.nome}</div>
-              <div className="text-xs text-slate-500">Saída e retorno da rota</div>
+              {deposito.endereco && <div className="mt-1 text-xs text-slate-600">{deposito.endereco}</div>}
+              {deposito.cidade && <div className="text-xs text-slate-600">{deposito.cidade}</div>}
+              <div className="mt-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                Saída e retorno da rota
+              </div>
             </div>
           </Popup>
         </Marker>
