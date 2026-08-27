@@ -85,6 +85,7 @@ export default async function DeclaracaoRecebimentoPage({ params }: { params: { 
         .company { flex: 1; text-align: center; }
         .company-name { font-weight: bold; font-size: 15px; margin-bottom: 2px; }
         .doc-title { font-style: italic; text-decoration: underline; font-weight: bold; font-size: 13px; }
+        .codigo { text-align: right; font-weight: bold; font-size: 12px; margin-bottom: 6px; }
         .intro { text-align: justify; margin: 14px 0 18px; }
         .field { margin-bottom: 3px; }
         .field b { font-weight: bold; }
@@ -128,6 +129,8 @@ export default async function DeclaracaoRecebimentoPage({ params }: { params: { 
             <div className="doc-title">DECLARAÇÃO DE RECEBIMENTO</div>
           </div>
         </div>
+
+        <div className="codigo">Nº {avaria.codigo}</div>
 
         <p className="intro">
           Declaramos ter conferido e recebido a(s) mercadoria(s) especificada(s) na(s) seguinte(s) nota(s) fiscal(is),
