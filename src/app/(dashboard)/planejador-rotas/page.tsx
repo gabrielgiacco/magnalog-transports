@@ -7,7 +7,15 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Input, Select, ComboboxMotorista } from "@/components/ui";
 import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation, Navigation2, Plus, AlertCircle, Filter, X, Package } from "lucide-react";
 import { formatWeight, formatCurrency } from "@/lib/utils";
+import { DEPOSITO } from "@/lib/rota-trajeto";
 import type { MapEntrega } from "@/components/map/RouteMap";
+
+interface Trajeto {
+  distanciaKm: number;
+  duracaoHoras: number;
+  linha: [number, number][];
+  aproximado: boolean;
+}
 
 // Carregar o mapa dinamicamente, com SSR desabilitado
 const RouteMap = dynamic(() => import("@/components/map/RouteMap"), {
@@ -35,6 +43,9 @@ export default function PlanejadorRotasPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [focusDelivery, setFocusDelivery] = useState<string | null>(null);
   const [selectedFornecedores, setSelectedFornecedores] = useState<string[]>([]);
+  const [trajeto, setTrajeto] = useState<Trajeto | null>(null);
+  const [calculandoTrajeto, setCalculandoTrajeto] = useState(false);
+  const [retornarDeposito, setRetornarDeposito] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -152,24 +163,70 @@ export default function PlanejadorRotasPage() {
     return e.notas?.some(n => n.emitenteRazao && selectedFornecedores.includes(n.emitenteRazao)) ?? false;
   }
 
-  const mapEntregas = useMemo(() => entregas.filter(e => e.latitude != null && e.longitude != null && matchFornecedor(e)), [entregas, selectedFornecedores]);
-
-  const selectedEntregas = entregas.filter(e => selectedIds.includes(e.id));
-  const totalPeso = selectedEntregas.reduce((s, e) => s + (e.pesoTotal || 0), 0);
-  const totalVol = selectedEntregas.reduce((s, e) => s + (e.volumeTotal || 0), 0);
-  const totalDescarga = selectedEntregas.reduce((s, e) => s + (e.valorDescarga || 0), 0);
-
-  const disponiveis = entregas.filter(e => !selectedIds.includes(e.id) && matchFornecedor(e));
-  const filteredDisponiveis = disponiveis.filter(e => {
+  function matchBusca(e: MapEntrega) {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
       (e.razaoSocial || "").toLowerCase().includes(q) ||
       (e.codigo || "").toLowerCase().includes(q) ||
       (e.cidade || "").toLowerCase().includes(q) ||
-      e.notas?.some(n => (n.numero || "").toLowerCase().includes(q))
+      (e.notas?.some(n => (n.numero || "").toLowerCase().includes(q)) ?? false)
     );
-  });
+  }
+
+  // A busca vale para o mapa também: filtrar por "costa" e continuar vendo os
+  // 41 pinos do fornecedor inteiro fazia o filtro parecer quebrado.
+  // Entrega já selecionada nunca some do mapa — ela é a rota em construção.
+  const mapEntregas = useMemo(
+    () => entregas.filter(e =>
+      e.latitude != null && e.longitude != null &&
+      (selectedIds.includes(e.id) || (matchFornecedor(e) && matchBusca(e)))
+    ),
+    [entregas, selectedFornecedores, searchQuery, selectedIds]
+  );
+
+  // Ordem de clique = ordem das paradas na rota, por isso percorre selectedIds
+  // e não entregas.
+  const selectedEntregas = useMemo(
+    () => selectedIds.map(id => entregas.find(e => e.id === id)).filter(Boolean) as MapEntrega[],
+    [selectedIds, entregas]
+  );
+  const totalPeso = selectedEntregas.reduce((s, e) => s + (e.pesoTotal || 0), 0);
+  const totalVol = selectedEntregas.reduce((s, e) => s + (e.volumeTotal || 0), 0);
+  const totalDescarga = selectedEntregas.reduce((s, e) => s + (e.valorDescarga || 0), 0);
+
+  // Recalcula o traçado a cada parada adicionada ou removida. O atraso segura
+  // a rajada de chamadas de quem monta a rota clicando rápido no mapa.
+  useEffect(() => {
+    const paradas = selectedEntregas
+      .filter(e => e.latitude != null && e.longitude != null)
+      .map(e => ({ lat: e.latitude, lng: e.longitude }));
+
+    if (paradas.length === 0) { setTrajeto(null); return; }
+
+    let cancelado = false;
+    const timer = setTimeout(async () => {
+      setCalculandoTrajeto(true);
+      try {
+        const res = await fetch("/api/rotas/trajeto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paradas, retornarDeposito }),
+        });
+        const data = await res.json();
+        if (!cancelado) setTrajeto(res.ok ? data : null);
+      } catch {
+        if (!cancelado) setTrajeto(null);
+      } finally {
+        if (!cancelado) setCalculandoTrajeto(false);
+      }
+    }, 500);
+
+    return () => { cancelado = true; clearTimeout(timer); };
+  }, [selectedEntregas, retornarDeposito]);
+
+  const disponiveis = entregas.filter(e => !selectedIds.includes(e.id) && matchFornecedor(e));
+  const filteredDisponiveis = disponiveis.filter(matchBusca);
 
   function focusOnMap(e: MapEntrega) {
     if (e.latitude && e.longitude) {
@@ -246,8 +303,18 @@ export default function PlanejadorRotasPage() {
             ) : mapEntregas.length === 0 ? (
               <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-500">
                 <Map size={48} className="mb-4 text-slate-300" />
-                <p>{selectedFornecedores.length > 0 ? "Nenhuma entrega com coordenadas para os fornecedores selecionados." : "Nenhuma entrega disponível com coordenadas."}</p>
-                {selectedFornecedores.length > 0 ? (
+                <p>
+                  {searchQuery
+                    ? `Nenhuma entrega com coordenadas para "${searchQuery}".`
+                    : selectedFornecedores.length > 0
+                      ? "Nenhuma entrega com coordenadas para os fornecedores selecionados."
+                      : "Nenhuma entrega disponível com coordenadas."}
+                </p>
+                {searchQuery ? (
+                  <Button variant="ghost" className="mt-4" onClick={() => setSearchQuery("")}>
+                    Limpar Busca
+                  </Button>
+                ) : selectedFornecedores.length > 0 ? (
                   <Button variant="ghost" className="mt-4" onClick={() => setSelectedFornecedores([])}>
                     Limpar Filtro
                   </Button>
@@ -258,11 +325,14 @@ export default function PlanejadorRotasPage() {
                 )}
               </div>
             ) : (
-              <RouteMap 
-                entregas={mapEntregas} 
-                selectedIds={selectedIds} 
-                onToggleEntrega={toggleEntrega} 
+              <RouteMap
+                entregas={mapEntregas}
+                selectedIds={selectedIds}
+                onToggleEntrega={toggleEntrega}
                 focusId={focusDelivery || undefined}
+                trajeto={trajeto?.linha}
+                trajetoAproximado={trajeto?.aproximado}
+                deposito={DEPOSITO}
               />
             )}
           </Card>
@@ -300,6 +370,52 @@ export default function PlanejadorRotasPage() {
                   <div className="text-[10px] font-mono text-indigo-600/70 uppercase">Custo Total de Descarga</div>
                   <div className="text-xl font-black text-indigo-700">{formatCurrency(totalDescarga)}</div>
                 </div>
+
+                {selectedIds.length > 0 && (
+                  <div className="col-span-3 mt-1 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase text-blue-600/70">
+                        <Navigation size={12} />
+                        Distância da Rota
+                      </div>
+                      {calculandoTrajeto && <RefreshCw size={12} className="animate-spin text-blue-500" />}
+                    </div>
+
+                    {trajeto ? (
+                      <>
+                        <div className="mt-1 flex items-baseline gap-3">
+                          <span className="text-2xl font-black text-blue-700">
+                            {trajeto.distanciaKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km
+                          </span>
+                          {trajeto.duracaoHoras > 0 && (
+                            <span className="font-mono text-xs text-blue-600/80">
+                              ~{Math.floor(trajeto.duracaoHoras)}h{String(Math.round((trajeto.duracaoHoras % 1) * 60)).padStart(2, "0")} dirigindo
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 text-[10px] leading-snug text-blue-600/70">
+                          {trajeto.aproximado
+                            ? "Em linha reta — o roteador não respondeu, a distância real por estrada é maior."
+                            : `Por estrada, saindo do depósito${retornarDeposito ? " e voltando para ele" : ""}.`}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="mt-1 text-xs text-blue-600/60">
+                        {calculandoTrajeto ? "Calculando…" : "Nenhuma parada com coordenada."}
+                      </div>
+                    )}
+
+                    <label className="mt-2 flex cursor-pointer items-center gap-2 border-t border-blue-100 pt-2 text-[11px] text-blue-700">
+                      <input
+                        type="checkbox"
+                        checked={retornarDeposito}
+                        onChange={e => setRetornarDeposito(e.target.checked)}
+                        className="accent-blue-600"
+                      />
+                      Incluir retorno ao depósito
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 

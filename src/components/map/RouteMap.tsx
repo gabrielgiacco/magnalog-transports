@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { formatWeight } from "@/lib/utils";
@@ -22,14 +22,26 @@ const defaultIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-const selectedIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png",
+const depositoIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41]
 });
+
+// A parada selecionada mostra a ordem em que o caminhão passa nela: sem o
+// número, uma linha ligando dez pontos não diz por onde ela começa.
+function ordemIcon(n: number) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:26px;height:26px;border-radius:50%;background:#f97316;border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);color:#fff;font:700 12px/21px system-ui,sans-serif;text-align:center;">${n}</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -14],
+  });
+}
 
 // Componente para ajustar o zoom do mapa automaticamente baseado nos marcadores
 function ChangeView({ bounds }: { bounds: L.LatLngBounds | null }) {
@@ -78,9 +90,14 @@ interface RouteMapProps {
   selectedIds: string[];
   onToggleEntrega: (id: string) => void;
   focusId?: string;
+  /** Traçado por estrada, pares [lat, lng] vindos do OSRM */
+  trajeto?: [number, number][];
+  /** Traçado é linha reta (roteador fora do ar) — muda o estilo da linha */
+  trajetoAproximado?: boolean;
+  deposito?: { lat: number; lng: number; nome: string };
 }
 
-export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focusId }: RouteMapProps) {
+export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focusId, trajeto, trajetoAproximado, deposito }: RouteMapProps) {
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
 
@@ -119,6 +136,30 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focus
       <ChangeView bounds={bounds} />
       <FocusController focusId={focusId} markerRefs={markerRefs} />
 
+      {/* Desenhado antes dos marcadores para a linha passar por baixo deles */}
+      {trajeto && trajeto.length > 1 && (
+        <Polyline
+          positions={trajeto}
+          pathOptions={{
+            color: trajetoAproximado ? "#94a3b8" : "#2563eb",
+            weight: 4,
+            opacity: 0.75,
+            dashArray: trajetoAproximado ? "8 8" : undefined,
+          }}
+        />
+      )}
+
+      {deposito && trajeto && trajeto.length > 1 && (
+        <Marker position={[deposito.lat, deposito.lng]} icon={depositoIcon}>
+          <Popup>
+            <div className="p-1">
+              <div className="font-bold text-sm text-slate-800">{deposito.nome}</div>
+              <div className="text-xs text-slate-500">Saída e retorno da rota</div>
+            </div>
+          </Popup>
+        </Marker>
+      )}
+
       {entregas.map((entrega) => {
         const isSelected = selectedIds.includes(entrega.id);
         
@@ -144,7 +185,7 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focus
             key={entrega.id} 
             ref={(r) => { markerRefs.current[entrega.id] = r; }}
             position={position}
-            icon={isSelected ? selectedIcon : defaultIcon}
+            icon={isSelected ? ordemIcon(selectedIds.indexOf(entrega.id) + 1) : defaultIcon}
             eventHandlers={{
               click: () => onToggleEntrega(entrega.id),
             }}
