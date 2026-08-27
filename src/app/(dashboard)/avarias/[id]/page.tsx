@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, StatusBadge, Modal, Select, Textarea } from "@/components/ui";
-import { formatCurrency, formatDate, formatCNPJ } from "@/lib/utils";
+import { formatCurrency, formatDate, formatCNPJ, formatCPF } from "@/lib/utils";
 import {
   ChevronLeft, AlertTriangle, Package, MapPin, User, Truck, FileText,
   CheckCircle2, Clock, XCircle, Upload, Eye, ChevronDown, ChevronUp, Box, Info, Weight, LogOut, Square, CheckSquare, Trash2,
@@ -262,8 +262,24 @@ export default function AvariaDetailPage() {
                 </div>
               ) : <Field label="Entrega" value={null} />}
               {avaria.notaFiscal && <Field label="Nota Fiscal" value={`NF ${avaria.notaFiscal.numero} — ${avaria.notaFiscal.emitenteRazao}`} />}
-              <Field label="Motorista" value={avaria.motorista?.nome} />
+              {/* Quem entrega a mercadoria e motorista de terceiro e nao tem
+                  cadastro no TMS: o nome digitado na declaracao vence o
+                  vinculo. Mesma ordem de fallback da impressao, para a tela
+                  nunca mostrar um motorista diferente do que sai no papel. */}
+              <Field
+                label="Motorista"
+                value={avaria.motoristaChegada || avaria.motorista?.nome || avaria.entrega?.motorista?.nome}
+              />
+              {(avaria.motoristaCpfChegada || avaria.motorista?.cpf || avaria.entrega?.motorista?.cpf) && (
+                <Field label="CPF Motorista" mono
+                  value={formatCPF(String(avaria.motoristaCpfChegada || avaria.motorista?.cpf || avaria.entrega?.motorista?.cpf))} />
+              )}
               {avaria.motorista?.telefone && <Field label="Tel. Motorista" value={avaria.motorista.telefone} mono />}
+              {avaria.transportadoraChegada && <Field label="Transportadora" value={avaria.transportadoraChegada} />}
+              {(avaria.placaChegada || avaria.entrega?.veiculo?.placa) && (
+                <Field label="Placa" mono value={avaria.placaChegada || avaria.entrega?.veiculo?.placa} />
+              )}
+              {avaria.dataChegada && <Field label="Data de Chegada" value={formatDate(avaria.dataChegada)} mono />}
               {avaria.rota && <Field label="Rota" value={avaria.rota.codigo} mono />}
             </div>
           </Card>

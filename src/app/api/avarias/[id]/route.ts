@@ -80,7 +80,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       include: {
         entrega: {
           select: { id: true, codigo: true, razaoSocial: true, cidade: true, uf: true, cnpj: true,
-            motorista: { select: { id: true, nome: true } },
+            motorista: { select: { id: true, nome: true, cpf: true } },
+            veiculo: { select: { placa: true } },
             notas: { select: { id: true, numero: true, emitenteRazao: true } },
           },
         },
