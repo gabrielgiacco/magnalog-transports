@@ -13,6 +13,10 @@ import { Calendar, Search, Eye, RefreshCw, ChevronLeft, ChevronRight, Clock, Lis
 type FiltroData = "TODAS" | "HOJE" | "AMANHA" | "SEMANA" | "MES";
 type ViewMode = "lista" | "calendario";
 
+// Agendamentos mostra só o que ainda está em aberto: entregue, finalizado e
+// ocorrência saem da lista e do calendário.
+const STATUS_PENDENTES = ["PROGRAMADO", "EM_SEPARACAO", "CARREGADO", "EM_ROTA"];
+
 export default function AgendamentosPage() {
   const router = useRouter();
   const [entregas, setEntregas] = useState<any[]>([]);
@@ -59,6 +63,7 @@ export default function AgendamentosPage() {
       sortBy: "dataAgendada",
       sortOrder: "asc",
     });
+    STATUS_PENDENTES.forEach((st) => params.append("status", st));
 
     if (debouncedSearch) params.set("cliente", debouncedSearch);
 
@@ -112,6 +117,7 @@ export default function AgendamentosPage() {
       dataInicio: new Date(Date.UTC(year, month, 1)).toISOString(),
       dataFim: new Date(Date.UTC(year, month, ultimoDia, 23, 59, 59, 999)).toISOString(),
     });
+    STATUS_PENDENTES.forEach((st) => params.append("status", st));
     if (debouncedSearch) params.set("cliente", debouncedSearch);
     try {
       const res = await fetch(`/api/entregas?${params}`);
