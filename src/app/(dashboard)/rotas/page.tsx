@@ -28,16 +28,18 @@ export default function RotasPage() {
   // Filters for route list
   const [filterNF, setFilterNF] = useState("");
   const [filterMotorista, setFilterMotorista] = useState("");
+  const [mostrarFinalizadas, setMostrarFinalizadas] = useState(false);
 
   const fetchRotas = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (filterNF) params.set("nf", filterNF);
     if (filterMotorista) params.set("motorista", filterMotorista);
+    if (mostrarFinalizadas) params.set("mostrarFinalizadas", "true");
     const res = await fetch(`/api/rotas?${params}`);
     setRotas(await res.json());
     setLoading(false);
-  }, [filterNF, filterMotorista]);
+  }, [filterNF, filterMotorista, mostrarFinalizadas]);
 
   useEffect(() => { fetchRotas(); }, [fetchRotas]);
 
@@ -148,7 +150,7 @@ export default function RotasPage() {
     <>
       <Topbar
         title="Rotas"
-        subtitle={`${rotas.length} rota(s) registradas`}
+        subtitle={`${rotas.length} rota(s) ${mostrarFinalizadas ? "registradas" : "em aberto"}`}
         actions={
           <Button onClick={() => setShowModal(true)}>
             <Plus size={15} /> Nova Rota
@@ -192,6 +194,11 @@ export default function RotasPage() {
                 Limpar
               </button>
             )}
+            <label className="flex items-center gap-2 text-xs cursor-pointer select-none" style={{ color: "var(--text2)" }}>
+              <input type="checkbox" checked={mostrarFinalizadas} onChange={(e) => setMostrarFinalizadas(e.target.checked)}
+                className="accent-orange-500 w-3.5 h-3.5" />
+              Mostrar finalizadas
+            </label>
             <Button variant="ghost" size="sm" onClick={fetchRotas}><RefreshCw size={13} /> <span className="hidden xs:inline">Atualizar</span></Button>
           </div>
         </Card>

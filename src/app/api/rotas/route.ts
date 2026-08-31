@@ -12,9 +12,13 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status");
   const nfFilter = searchParams.get("nf");
   const motoristaFilter = searchParams.get("motorista");
+  const mostrarFinalizadas = searchParams.get("mostrarFinalizadas") === "true";
 
   const where: any = {};
+  // Por padrão a lista mostra só o que ainda está em aberto (planejada / em
+  // andamento). Um filtro de status explícito continua tendo precedência.
   if (status) where.status = status;
+  else if (!mostrarFinalizadas) where.status = { notIn: ["CONCLUIDA", "CANCELADA"] };
   if (nfFilter) {
     where.entregas = { some: { notas: { some: { numero: { contains: nfFilter, mode: "insensitive" } } } } };
   }
