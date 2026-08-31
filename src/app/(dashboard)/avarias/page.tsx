@@ -154,7 +154,7 @@ export default function AvariasPage() {
   const [declSavingPrint, setDeclSavingPrint] = useState(false);
   const [declEntregaSearch, setDeclEntregaSearch] = useState("");
   const [declEntregaResults, setDeclEntregaResults] = useState<any[]>([]);
-  const [declEntrega, setDeclEntrega] = useState<any>(null);
+  const [declEntregas, setDeclEntregas] = useState<any[]>([]);
   const [declProdutosPorNf, setDeclProdutosPorNf] = useState<Record<string, any[]>>({});
   const [declXmlNfs, setDeclXmlNfs] = useState<any[]>([]);
   const [declUploadingXml, setDeclUploadingXml] = useState(false);
@@ -487,7 +487,8 @@ export default function AvariasPage() {
   }, [declEntregaSearch]);
 
   async function selectDeclEntrega(e: any) {
-    setDeclEntrega(e);
+    if (declEntregas.some((x) => x.id === e.id)) return;
+    setDeclEntregas((prev) => [...prev, e]);
     setDeclEntregaSearch("");
     setDeclEntregaResults([]);
 
@@ -511,10 +512,22 @@ export default function AvariasPage() {
           } catch { map[nf.id] = []; }
         })
       );
-      setDeclProdutosPorNf(map);
-    } else {
-      setDeclProdutosPorNf({});
+      // mescla com o que já veio das outras entregas / XMLs
+      setDeclProdutosPorNf((prev) => ({ ...prev, ...map }));
     }
+  }
+
+  // Remove uma entrega da declaração junto com as NFs e divergências dela.
+  function removeDeclEntrega(entregaId: string) {
+    const alvo = declEntregas.find((x) => x.id === entregaId);
+    const nfIds: string[] = (alvo?.notas || []).map((n: any) => n.id);
+    setDeclEntregas((prev) => prev.filter((x) => x.id !== entregaId));
+    setDeclProdutosPorNf((prev) => {
+      const next = { ...prev };
+      nfIds.forEach((id) => delete next[id]);
+      return next;
+    });
+    setDeclLinhas((prev) => prev.filter((l) => !nfIds.some((id) => l.key.startsWith(`${id}_`))));
   }
 
   function toggleDeclLinha(nfId: string, nfNumero: string, idx: number, prod: any) {
@@ -580,7 +593,7 @@ export default function AvariasPage() {
 
   function resetDeclForm() {
     setDeclStep(1);
-    setDeclEntrega(null);
+    setDeclEntregas([]);
     setDeclEntregaSearch("");
     setDeclEntregaResults([]);
     setDeclProdutosPorNf({});
@@ -646,10 +659,14 @@ export default function AvariasPage() {
         fase: "CONFERENCIA",
         dataOcorrencia: new Date().toISOString().slice(0, 10),
         localOcorrencia: "Aparecida de Goiânia",
-        descricao: `Declaração de Recebimento — ${declEntrega?.razaoSocial || declXmlNfs[0]?.emitenteRazao || "Devolução avulsa"}`,
+        descricao: `Declaração de Recebimento — ${declEntregas.length > 1
+          ? `${declEntregas[0].razaoSocial} e mais ${declEntregas.length - 1} entrega(s)`
+          : declEntregas[0]?.razaoSocial || declXmlNfs[0]?.emitenteRazao || "Devolução avulsa"}`,
         observacoes: declDados.observacoes || null,
-        entregaId: declEntrega?.id || null,
-        motoristaId: declEntrega?.motorista?.id || null,
+        // Avaria tem um único entregaId: guarda a primeira como principal. O
+        // vínculo real de cada linha vai em produtos[].notaFiscalId.
+        entregaId: declEntregas[0]?.id || null,
+        motoristaId: declEntregas[0]?.motorista?.id || null,
         transportadoraChegada: declDados.transportadora || null,
         motoristaChegada: declDados.motoristaNome || null,
         motoristaCpfChegada: declDados.motoristaCpf || null,
@@ -1741,44 +1758,54 @@ export default function AvariasPage() {
         {declStep === 1 && (
           <div className="space-y-4">
             <p className="text-xs" style={{ color: "var(--text2)" }}>
-              Busque a entrega recebida no armazém. A declaração vai vincular esta carga e listar os produtos das NFs.
+              Busque as entregas recebidas no armazém. Pode adicionar quantas precisar — a declaração lista os produtos de todas as NFs juntas.
             </p>
 
-            {declEntrega ? (
-              <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
-                <div className="flex-1">
-                  <div className="text-sm font-semibold">{declEntrega.razaoSocial}</div>
-                  <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
-                    {declEntrega.codigo} · {declEntrega.cidade} · {declEntrega.notas?.length || 0} NF(s) · {declEntrega.motorista?.nome || "sem motorista"}
+            {declEntregas.length > 0 && (
+              <div className="space-y-1">
+                {declEntregas.map((ent: any) => (
+                  <div key={ent.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold">{ent.razaoSocial}</div>
+                      <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
+                        {ent.codigo} · {ent.cidade} · {ent.notas?.length || 0} NF(s) · {ent.motorista?.nome || "sem motorista"}
+                      </div>
+                    </div>
+                    <button onClick={() => removeDeclEntrega(ent.id)} title="Remover esta entrega"
+                      className="px-2 py-0.5 rounded text-base leading-none hover:opacity-70"
+                      style={{ color: "var(--text3)" }}>×</button>
                   </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => { setDeclEntrega(null); setDeclProdutosPorNf({}); setDeclLinhas([]); }}>Trocar</Button>
+                ))}
               </div>
-            ) : (
-              <div className="relative">
-                <input
-                  value={declEntregaSearch}
-                  onChange={(e) => setDeclEntregaSearch(e.target.value)}
-                  placeholder="Buscar por NF, cliente ou código..."
-                  className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                  style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
-                />
-                {declEntregaResults.length > 0 && (
-                  <div className="absolute z-10 top-full mt-1 w-full rounded-lg shadow-xl max-h-64 overflow-y-auto" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                    {declEntregaResults.map((e: any) => (
-                      <div key={e.id} onClick={() => selectDeclEntrega(e)}
-                        className="px-3 py-2 cursor-pointer hover:bg-[var(--surface2)] transition-colors"
+            )}
+
+            <div className="relative">
+              <input
+                value={declEntregaSearch}
+                onChange={(e) => setDeclEntregaSearch(e.target.value)}
+                placeholder={declEntregas.length > 0 ? "Adicionar outra entrega..." : "Buscar por NF, cliente ou código..."}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+              />
+              {declEntregaResults.length > 0 && (
+                <div className="absolute z-10 top-full mt-1 w-full rounded-lg shadow-xl max-h-64 overflow-y-auto" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  {declEntregaResults.map((e: any) => {
+                    const jaAdicionada = declEntregas.some((x: any) => x.id === e.id);
+                    return (
+                      <div key={e.id} onClick={() => { if (!jaAdicionada) selectDeclEntrega(e); }}
+                        className={`px-3 py-2 transition-colors ${jaAdicionada ? "opacity-50 cursor-default" : "cursor-pointer hover:bg-[var(--surface2)]"}`}
                         style={{ borderBottom: "1px solid var(--border)" }}>
                         <div className="text-sm font-semibold">{e.razaoSocial}</div>
                         <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>
                           {e.codigo} · {e.cidade} · {e.notas?.length || 0} NF(s) · {e.motorista?.nome || "sem motorista"}
+                          {jaAdicionada && <span style={{ color: "var(--accent)" }}> · já adicionada</span>}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* OU importar XML de devolução (sem entrega vinculada) */}
             <div className="pt-3" style={{ borderTop: "1px dashed var(--border)" }}>
@@ -1816,7 +1843,7 @@ export default function AvariasPage() {
 
             <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
               <Button variant="ghost" onClick={() => { setShowDeclModal(false); resetDeclForm(); }}>Cancelar</Button>
-              <Button onClick={() => setDeclStep(2)} disabled={!declEntrega && declXmlNfs.length === 0}>Próximo</Button>
+              <Button onClick={() => setDeclStep(2)} disabled={declEntregas.length === 0 && declXmlNfs.length === 0}>Próximo</Button>
             </div>
           </div>
         )}
@@ -1857,7 +1884,7 @@ export default function AvariasPage() {
             ) : (() => {
               const q = declProdutoSearch.trim().toLowerCase();
               const notasDoModal: any[] = [
-                ...(declEntrega?.notas || []),
+                ...declEntregas.flatMap((ent: any) => ent.notas || []),
                 ...declXmlNfs,
               ];
               const cardsRenderizados = notasDoModal.map((nf: any) => {
