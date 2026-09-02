@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { Button, Card, Empty, Loading, Table, Td, Th, Tr } from "@/components/ui";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { TIPO_TICKET_LABELS, TIPOS_TICKET } from "@/lib/ticket-calc";
-import { Check, Download, RefreshCw, X } from "lucide-react";
+import { Check, Download, RefreshCw, Trash2, X } from "lucide-react";
 
 type Periodo = "SEMANA" | "QUINZENA" | "MES" | "PERSONALIZADO";
 
@@ -63,6 +64,8 @@ function intervaloDoPeriodo(p: Periodo): { inicio: string; fim: string } {
 
 export function TicketsTab() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "ADMIN";
   const [periodo, setPeriodo] = useState<Periodo>("MES");
   const [inicio, setInicio] = useState(() => intervaloDoPeriodo("MES").inicio);
   const [fim, setFim] = useState(() => intervaloDoPeriodo("MES").fim);
@@ -114,6 +117,19 @@ export function TicketsTab() {
       fetchDados();
     } catch {
       toast.error("Erro ao atualizar");
+    }
+  }
+
+  // Só ADMIN — a rota também barra os demais papéis no servidor.
+  async function excluir(id: string, numero: string) {
+    if (!confirm(`Excluir a solicitação ${numero}? Os itens vinculados vão junto e não dá para desfazer.`)) return;
+    try {
+      const res = await fetch(`/api/tickets/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      toast.success(`${numero} excluída`);
+      fetchDados();
+    } catch {
+      toast.error("Erro ao excluir");
     }
   }
 
@@ -294,6 +310,13 @@ export function TicketsTab() {
                             style={{ background: "var(--surface2)", color: "var(--text2)" }}>
                             Entrega
                           </button>
+                          {isAdmin && (
+                            <button onClick={() => excluir(s.id, s.numero)} title="Excluir solicitação"
+                              className="p-1.5 rounded-lg hover:opacity-70 transition-all"
+                              style={{ background: "rgba(239,68,68,.1)", color: "#ef4444" }}>
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       </Td>
                     </Tr>

@@ -80,10 +80,14 @@ export function TicketModal({
   const [copia, setCopia] = useState("");
   const [assunto, setAssunto] = useState("");
   const [sel, setSel] = useState<Record<string, Selecionado>>({});
+  // Registro já gravado nesta sessão do modal, com a assinatura do conteúdo que
+  // gerou ele — evita um TCK novo a cada clique de botão.
+  const [criada, setCriada] = useState<{ id: string; numero: string; assinatura: string } | null>(null);
 
   const carregar = useCallback(
     async (cnpj?: string) => {
       setLoading(true);
+      setCriada(null);
       try {
         const url = `/api/entregas/${entregaId}/ticket-preview${cnpj ? `?embarcador=${cnpj}` : ""}`;
         const res = await fetch(url);
@@ -169,7 +173,14 @@ export function TicketModal({
   }
 
   // Persiste antes de copiar/baixar, para o histórico guardar exatamente o que saiu.
-  async function persistir(corpoHtml: string) {
+  //
+  // Grava UMA vez por documento, não uma por clique: copiar e depois baixar o
+  // .eml do mesmo ticket reaproveita o registro. A assinatura cobre o corpo e o
+  // cabeçalho — mexeu em qualquer campo, vira um ticket novo de verdade.
+  async function persistir(corpoHtml: string): Promise<{ id: string; numero: string }> {
+    const assinatura = JSON.stringify({ corpoHtml, para, copia, assunto });
+    if (criada && criada.assinatura === assinatura) return criada;
+
     const itens = defaults!.sugestoes
       .filter((s) => sel[s.tipo]?.marcado)
       .map((s) => {
@@ -208,7 +219,11 @@ export function TicketModal({
       }),
     });
     if (!res.ok) throw new Error((await res.json()).error || "Erro ao salvar solicitação");
-    return res.json();
+
+    const salva = await res.json();
+    const nova = { id: salva.id, numero: salva.numero, assinatura };
+    setCriada(nova);
+    return nova;
   }
 
   async function handleCopiar(abrirEmail: boolean) {
@@ -224,12 +239,12 @@ export function TicketModal({
     setSalvando(true);
     try {
       const resultado = await copiarRico(htmlFragmento, texto);
-      await persistir(htmlEmail);
+      const registro = await persistir(htmlEmail);
 
       if (resultado === "texto") {
         toast("Copiado como texto puro — o navegador bloqueou a cópia formatada", { icon: "⚠️" });
       } else {
-        toast.success("Tabelas copiadas — cole no e-mail com Ctrl+V");
+        toast.success(`${registro.numero} — copiado, cole no e-mail com Ctrl+V`);
       }
 
       if (abrirEmail) abrirMailto({ para, copia, assunto });
