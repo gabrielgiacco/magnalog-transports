@@ -108,6 +108,7 @@ export const TIPO_VEICULO_LABELS: Record<string, string> = {
   TRUCK: "Truck",
   CARRETA: "Carreta",
   BITRUCK: "Bitruck",
+  UTILITARIO: "Utilitário",
 };
 
 export const ROLE_LABELS: Record<string, string> = {

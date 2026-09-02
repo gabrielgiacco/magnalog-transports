@@ -4,7 +4,34 @@ import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Button, Input, Select } from "@/components/ui";
 import toast from "react-hot-toast";
-import { Settings, User, Shield, Bell, Globe, Palette, Save, Warehouse, Plus, Trash2, Edit2, PackageOpen } from "lucide-react";
+import { Settings, User, Shield, Bell, Globe, Palette, Save, Warehouse, Plus, Trash2, Edit2, PackageOpen, Receipt } from "lucide-react";
+
+const TCK_VAZIO = {
+  cnpjEmbarcador: "", nomeEmbarcador: "", emailsPara: "", emailsCopia: "",
+  assuntoModelo: "SOLICITAÇÃO DE TICKET - NF {NF}", textoIntro: "Boa tarde!\n\nSegue solicitação de ticket abaixo,", textoAssinatura: "",
+  valorPalete: "0", percentualReentrega: "80",
+  diariaVuc: "0", diariaTresQuartos: "0", diariaToco: "0", diariaTruck: "0",
+  diariaCarreta: "0", diariaBitruck: "0", diariaUtilitario: "0",
+  aliqIrpj: "8", aliqCsll: "12", aliqCofins: "7.6", aliqPis: "1.65", aliqIss: "3",
+};
+
+const CAMPOS_DIARIA: { key: keyof typeof TCK_VAZIO; label: string }[] = [
+  { key: "diariaVuc", label: "VUC" },
+  { key: "diariaTresQuartos", label: "3/4" },
+  { key: "diariaToco", label: "Toco" },
+  { key: "diariaTruck", label: "Truck" },
+  { key: "diariaCarreta", label: "Carreta" },
+  { key: "diariaBitruck", label: "Bitruck" },
+  { key: "diariaUtilitario", label: "Utilitário" },
+];
+
+const CAMPOS_ALIQUOTA: { key: keyof typeof TCK_VAZIO; label: string }[] = [
+  { key: "aliqIrpj", label: "IRPJ %" },
+  { key: "aliqCsll", label: "CSLL %" },
+  { key: "aliqCofins", label: "COFINS %" },
+  { key: "aliqPis", label: "PIS %" },
+  { key: "aliqIss", label: "ISS %" },
+];
 
 function Section({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
   return (
@@ -43,6 +70,60 @@ export default function ConfiguracoesPage() {
   const [descForm, setDescForm] = useState({ cnpjCliente: "", nomeCliente: "", tipo: "SEM_VALOR", valorPalete: "0", valorAjudante: "0", observacoes: "" });
   const [editingDesc, setEditingDesc] = useState<string | null>(null);
   const [savingDesc, setSavingDesc] = useState(false);
+
+  // Valores de Ticket por embarcador (admin only)
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [tckForm, setTckForm] = useState({ ...TCK_VAZIO });
+  const [editingTck, setEditingTck] = useState<string | null>(null);
+  const [savingTck, setSavingTck] = useState(false);
+
+  const fetchTickets = useCallback(async () => {
+    if (user?.role !== "ADMIN") return;
+    setLoadingTickets(true);
+    try {
+      const res = await fetch("/api/tickets/tabelas");
+      if (res.ok) setTickets(await res.json());
+    } finally { setLoadingTickets(false); }
+  }, [user?.role]);
+
+  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+
+  async function handleSaveTck() {
+    if (!tckForm.cnpjEmbarcador || !tckForm.nomeEmbarcador) { toast.error("CNPJ e nome do embarcador são obrigatórios"); return; }
+    setSavingTck(true);
+    try {
+      const res = await fetch("/api/tickets/tabelas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tckForm),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(editingTck ? "Valores atualizados" : "Embarcador adicionado");
+      setTckForm({ ...TCK_VAZIO });
+      setEditingTck(null);
+      fetchTickets();
+    } catch { toast.error("Erro ao salvar"); }
+    finally { setSavingTck(false); }
+  }
+
+  async function handleDeleteTck(id: string) {
+    if (!confirm("Excluir os valores de ticket deste embarcador?")) return;
+    await fetch("/api/tickets/tabelas", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    fetchTickets();
+    toast.success("Registro removido");
+  }
+
+  function startEditTck(t: any) {
+    setEditingTck(t.id);
+    const f: any = { ...TCK_VAZIO };
+    for (const k of Object.keys(TCK_VAZIO)) f[k] = t[k] == null ? "" : String(t[k]);
+    setTckForm(f);
+  }
 
   const fetchTabelas = useCallback(async () => {
     if (user?.role !== "ADMIN") return;
@@ -402,6 +483,135 @@ export default function ConfiguracoesPage() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </Section>
+          )}
+
+          {/* Valores de Ticket por embarcador — admin only */}
+          {user?.role === "ADMIN" && (
+            <Section icon={Receipt} title="Valores de Ticket por Embarcador">
+              <p className="text-xs mb-4" style={{ color: "var(--text3)" }}>
+                Alimenta a <b>Solicitação de Aprovação de Ticket</b> gerada na tela da entrega. O embarcador é o{" "}
+                <b>emitente da nota fiscal</b> (ex: Unicharm) — não o cliente de destino. A armazenagem continua vindo da
+                tabela própria acima.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <Input label="CNPJ do Embarcador" value={tckForm.cnpjEmbarcador} disabled={!!editingTck}
+                  onChange={(e) => setTckForm((f) => ({ ...f, cnpjEmbarcador: e.target.value }))} placeholder="00.000.000/0001-00" />
+                <Input label="Nome / Razão Social" value={tckForm.nomeEmbarcador}
+                  onChange={(e) => setTckForm((f) => ({ ...f, nomeEmbarcador: e.target.value }))} placeholder="Ex: Unicharm do Brasil" />
+                <Input label='E-mails "Para" (separados por vírgula)' value={tckForm.emailsPara}
+                  onChange={(e) => setTckForm((f) => ({ ...f, emailsPara: e.target.value }))} placeholder="customer-service@cliente.com" />
+                <Input label='E-mails "Cópia"' value={tckForm.emailsCopia}
+                  onChange={(e) => setTckForm((f) => ({ ...f, emailsCopia: e.target.value }))} placeholder="financeiro@magnalog.com.br" />
+              </div>
+
+              <div className="mb-3">
+                <Input label="Assunto padrão" value={tckForm.assuntoModelo}
+                  onChange={(e) => setTckForm((f) => ({ ...f, assuntoModelo: e.target.value }))} />
+                <div className="text-[10px] mt-1" style={{ color: "var(--text3)" }}>
+                  Use <code>{"{NF}"}</code>, <code>{"{CLIENTE}"}</code> e <code>{"{DATA}"}</code> — são substituídos na hora de gerar.
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <Input label="R$ / Palete (paletização)" type="number" step="0.01" value={tckForm.valorPalete}
+                  onChange={(e) => setTckForm((f) => ({ ...f, valorPalete: e.target.value }))} placeholder="39.00" />
+                <Input label="% da reentrega sobre o frete" type="number" step="0.01" value={tckForm.percentualReentrega}
+                  onChange={(e) => setTckForm((f) => ({ ...f, percentualReentrega: e.target.value }))} placeholder="80" />
+              </div>
+
+              <div className="text-[10px] font-mono uppercase tracking-wider mb-2" style={{ color: "var(--text3)" }}>
+                Diária por perfil de veículo (R$)
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                {CAMPOS_DIARIA.map((c) => (
+                  <Input key={c.key} label={c.label} type="number" step="0.01" value={tckForm[c.key]}
+                    onChange={(e) => setTckForm((f) => ({ ...f, [c.key]: e.target.value }))} placeholder="0.00" />
+                ))}
+              </div>
+
+              <div className="text-[10px] font-mono uppercase tracking-wider mb-2" style={{ color: "var(--text3)" }}>
+                Impostos somados ao valor da descarga
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                {CAMPOS_ALIQUOTA.map((c) => (
+                  <Input key={c.key} label={c.label} type="number" step="0.01" value={tckForm[c.key]}
+                    onChange={(e) => setTckForm((f) => ({ ...f, [c.key]: e.target.value }))} />
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-wider mb-1.5" style={{ color: "var(--text3)" }}>
+                    Texto de introdução do e-mail
+                  </label>
+                  <textarea rows={3} value={tckForm.textoIntro}
+                    onChange={(e) => setTckForm((f) => ({ ...f, textoIntro: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
+                    style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-wider mb-1.5" style={{ color: "var(--text3)" }}>
+                    Assinatura
+                  </label>
+                  <textarea rows={3} value={tckForm.textoAssinatura}
+                    onChange={(e) => setTckForm((f) => ({ ...f, textoAssinatura: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
+                    style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+                </div>
+              </div>
+
+              <div className="flex gap-2 mb-5">
+                <Button size="sm" onClick={handleSaveTck} loading={savingTck}>
+                  {editingTck ? <><Save size={13} /> Atualizar</> : <><Plus size={13} /> Adicionar</>}
+                </Button>
+                {editingTck && (
+                  <Button size="sm" variant="ghost" onClick={() => { setEditingTck(null); setTckForm({ ...TCK_VAZIO }); }}>
+                    Cancelar
+                  </Button>
+                )}
+              </div>
+
+              {loadingTickets ? (
+                <p className="text-xs text-center py-4" style={{ color: "var(--text3)" }}>Carregando...</p>
+              ) : tickets.length === 0 ? (
+                <p className="text-xs text-center py-4" style={{ color: "var(--text3)" }}>Nenhum embarcador cadastrado</p>
+              ) : (
+                <div className="space-y-2">
+                  {tickets.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold">{t.nomeEmbarcador}</div>
+                        <div className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text3)" }}>
+                          CNPJ: {t.cnpjEmbarcador}{t.emailsPara ? ` · ${t.emailsPara}` : ""}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "#10b98122", color: "#10b981" }}>
+                            R$ {Number(t.valorPalete).toFixed(2)}/palete
+                          </span>
+                          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "#3b82f622", color: "#3b82f6" }}>
+                            Reentrega {Number(t.percentualReentrega).toFixed(0)}%
+                          </span>
+                          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "#f9731622", color: "#f97316" }}>
+                            Carreta R$ {Number(t.diariaCarreta).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1.5 ml-3">
+                        <button onClick={() => startEditTck(t)} className="p-1.5 rounded-lg hover:opacity-70 transition-all"
+                          style={{ background: "var(--surface)", color: "var(--text2)" }}>
+                          <Edit2 size={12} />
+                        </button>
+                        <button onClick={() => handleDeleteTck(t.id)} className="p-1.5 rounded-lg hover:opacity-70 transition-all"
+                          style={{ background: "rgba(239,68,68,.1)", color: "#ef4444" }}>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </Section>

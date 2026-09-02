@@ -74,6 +74,7 @@ model User {
   declaracoesSaida        DeclaracaoSaida[]      @relation("DeclaracaoSaidaEmitida")
   orcamentos              Orcamento[]            @relation("OrcamentoCriado")
   notasCanceladas         NotaFiscal[]           @relation("NotaCancelada")
+  solicitacoesTicket      SolicitacaoTicket[]    @relation("TicketCriadoPor")
 }
 
 enum TipoEventoAuditoria {
@@ -355,6 +356,7 @@ model Entrega {
   notasServico   NotaServico[]
   diarias        Diaria[]
   anexos         AnexoEntrega[]
+  solicitacoesTicket SolicitacaoTicket[]
 
   // Token para upload público via link (motorista sobe canhoto pelo celular)
   uploadToken       String?   @unique
@@ -797,6 +799,132 @@ model TabelaDescarga {
   observacoes   String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+}
+
+// ─── Solicitação de Aprovação de Ticket ──────────────────────────────────
+// Valores e destinatários por EMBARCADOR (emitente da NF, ex: Unicharm) —
+// não confundir com Entrega.cnpj, que é o destinatário da carga.
+
+model TabelaTicket {
+  id             String @id @default(cuid())
+  cnpjEmbarcador String @unique
+  nomeEmbarcador String
+
+  // Cabeçalho do e-mail
+  emailsPara      String? @db.Text
+  emailsCopia     String? @db.Text
+  assuntoModelo   String?
+  textoIntro      String? @db.Text
+  textoAssinatura String? @db.Text
+
+  // Paletização
+  valorPalete Float @default(0)
+
+  // Diária por perfil de veículo (espelha o enum TipoVeiculo)
+  diariaVuc         Float @default(0)
+  diariaTresQuartos Float @default(0)
+  diariaToco        Float @default(0)
+  diariaTruck       Float @default(0)
+  diariaCarreta     Float @default(0)
+  diariaBitruck     Float @default(0)
+  diariaUtilitario  Float @default(0)
+
+  // Reentrega
+  percentualReentrega Float @default(80)
+
+  // Alíquotas aplicadas sobre o valor da descarga (em %)
+  aliqIrpj   Float @default(8)
+  aliqCsll   Float @default(12)
+  aliqCofins Float @default(7.6)
+  aliqPis    Float @default(1.65)
+  aliqIss    Float @default(3)
+
+  observacoes String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum TipoTicket {
+  PALETIZACAO
+  DESCARGA
+  DIARIA
+  REENTREGA
+  ARMAZENAGEM
+}
+
+enum StatusSolicitacaoTicket {
+  ENVIADA
+  APROVADA
+  RECUSADA
+  CANCELADA
+}
+
+model SolicitacaoTicket {
+  id        String  @id @default(cuid())
+  numero    String  @unique
+  entregaId String
+  entrega   Entrega @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+
+  embarcadorCnpj String
+  embarcadorNome String
+
+  // Snapshot congelado das linhas comuns às tabelas do e-mail
+  dataSolicitacao DateTime  @default(now())
+  transportador   String    @default("MAGNA LOG")
+  cliente         String
+  localidade      String
+  notasFiscais    String    @db.Text
+  dataAgenda      DateTime?
+  cteNumero       String?
+  perfilVeiculo   String?
+  placaVeiculo    String?
+  volumes         Int       @default(0)
+
+  destinatarios String  @db.Text
+  copia         String? @db.Text
+  assunto       String
+  corpoHtml     String  @db.Text
+
+  valorTotal   Float                   @default(0)
+  status       StatusSolicitacaoTicket @default(ENVIADA)
+  respondidaEm DateTime?
+  observacoes  String?                 @db.Text
+
+  criadoPorId String?
+  criadoPor   User?   @relation("TicketCriadoPor", fields: [criadoPorId], references: [id])
+
+  itens ItemSolicitacaoTicket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entregaId])
+  @@index([embarcadorCnpj])
+  @@index([status])
+  @@index([dataSolicitacao])
+}
+
+model ItemSolicitacaoTicket {
+  id            String            @id @default(cuid())
+  solicitacaoId String
+  solicitacao   SolicitacaoTicket @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+
+  tipo        TipoTicket
+  valor       Float      @default(0)
+  observacoes String?
+
+  // Memória de cálculo — só preenchida quando tipo = DESCARGA
+  valorBase   Float?
+  valorIrpj   Float?
+  valorCsll   Float?
+  valorCofins Float?
+  valorPis    Float?
+  valorIss    Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([solicitacaoId])
+  @@index([tipo])
 }
 
 model FaturaArmazenagem {

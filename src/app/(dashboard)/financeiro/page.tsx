@@ -10,9 +10,10 @@ import { ContasReceberTab } from "./ContasReceberTab";
 import { FluxoCaixaTab } from "./FluxoCaixaTab";
 import { DreTab } from "./DreTab";
 import { ConciliacaoTab } from "./ConciliacaoTab";
-import { LayoutDashboard, HandCoins, ArrowDownToLine, ArrowUpFromLine, FilePlus, LineChart, FileBarChart2, Landmark } from "lucide-react";
+import { TicketsTab } from "./TicketsTab";
+import { LayoutDashboard, HandCoins, ArrowDownToLine, ArrowUpFromLine, FilePlus, LineChart, FileBarChart2, Landmark, Receipt } from "lucide-react";
 
-type Tab = "painel" | "acertos" | "lancamentos" | "contas-pagar" | "contas-receber" | "conciliacao" | "fluxo-caixa" | "dre";
+type Tab = "painel" | "acertos" | "lancamentos" | "contas-pagar" | "contas-receber" | "conciliacao" | "fluxo-caixa" | "dre" | "tickets";
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: "painel", label: "Painel", icon: LayoutDashboard },
@@ -23,6 +24,7 @@ const TABS: { key: Tab; label: string; icon: any }[] = [
   { key: "conciliacao", label: "Conciliação", icon: Landmark },
   { key: "fluxo-caixa", label: "Fluxo de Caixa", icon: LineChart },
   { key: "dre", label: "DRE", icon: FileBarChart2 },
+  { key: "tickets", label: "Tickets", icon: Receipt },
 ];
 
 export default function FinanceiroPage() {
@@ -84,6 +86,7 @@ export default function FinanceiroPage() {
           {tab === "conciliacao" && <ConciliacaoTab />}
           {tab === "fluxo-caixa" && <FluxoCaixaTab />}
           {tab === "dre" && <DreTab />}
+          {tab === "tickets" && <TicketsTab />}
         </div>
       </div>
     </>

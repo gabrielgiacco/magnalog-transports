@@ -15,7 +15,8 @@ import { QUALIDADE_ENABLED } from "@/lib/features";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
 import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
-import { Smartphone } from "lucide-react";
+import { TicketModal } from "@/components/entrega/TicketModal";
+import { Smartphone, Receipt } from "lucide-react";
 
 const STATUS_FLOW = [
   { key: "PROGRAMADO", label: "Programado", icon: "📋" },
@@ -42,6 +43,7 @@ export default function EntregaDetailPage() {
   const [showComplFields, setShowComplFields] = useState(false);
   const [showOcorrencia, setShowOcorrencia] = useState(false);
   const [showDiaria, setShowDiaria] = useState(false);
+  const [showTicket, setShowTicket] = useState(false);
   const [diariaForm, setDiariaForm] = useState({ motivo: "", valor: "", observacoes: "" });
   const [savingDiaria, setSavingDiaria] = useState(false);
   const [motoristas, setMotoristas] = useState<any[]>([]);
@@ -577,6 +579,16 @@ export default function EntregaDetailPage() {
                 title="Gerar diária (penalidade financeira sem alterar status)"
               >
                 <DollarSign size={14} /> Gerar Diária
+              </button>
+            )}
+            {!isReadOnly && (
+              <button
+                onClick={() => setShowTicket(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                style={{ borderColor: "#059669", color: "#059669", background: "transparent" }}
+                title="Montar a solicitação de aprovação de ticket para o embarcador"
+              >
+                <Receipt size={14} /> Solicitar Ticket
               </button>
             )}
             {!isReadOnly && entrega.status !== "OCORRENCIA" && entrega.status !== "FINALIZADO" && (
@@ -1483,6 +1495,9 @@ export default function EntregaDetailPage() {
           </Button>
         </div>
       </Modal>
+
+      {/* Solicitação de Ticket */}
+      <TicketModal open={showTicket} onClose={() => setShowTicket(false)} entregaId={String(id)} />
 
       {/* Diária Modal */}
       <Modal open={showDiaria} onClose={() => setShowDiaria(false)} title="Gerar Diária" size="sm">
