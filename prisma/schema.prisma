@@ -813,6 +813,9 @@ model TabelaTicket {
   cnpjEmbarcador String @unique
   nomeEmbarcador String
 
+  // Contato de WhatsApp do embarcador, usado no aviso de entrega concluída
+  whatsapp String?
+
   // Cabeçalho do e-mail
   emailsPara      String? @db.Text
   emailsCopia     String? @db.Text
@@ -1544,10 +1547,11 @@ enum StatusMensagemWhats {
 // só as ENVIADA de uma competência contam. Os campos são snapshot congelado —
 // editar cliente ou entrega depois não altera o histórico.
 model MensagemWhats {
-  id           String              @id @default(cuid())
-  entregaId    String?
-  telefone     String // E.164 normalizado, ex "5511999998888"
-  destinatario String // nome do cliente no momento do envio
+  id             String            @id @default(cuid())
+  entregaId      String?
+  embarcadorCnpj String? // embarcador avisado (emitente da NF), só dígitos
+  telefone       String // E.164 normalizado, ex "5511999998888"
+  destinatario   String // nome do embarcador no momento do envio
   texto        String              @db.Text
   status       StatusMensagemWhats @default(ENVIADA)
   erro         String?             @db.Text

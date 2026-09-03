@@ -143,6 +143,16 @@ export default function EntregaDetailPage() {
     await applyStatusChange(newStatus);
   }
 
+  // Só vale abrir o modal de aviso se houver um embarcador com número válido.
+  async function temEmbarcadorComWhatsApp(): Promise<boolean> {
+    try {
+      const r = await fetch(`/api/entregas/${id}/embarcadores`);
+      if (!r.ok) return false;
+      const d = await r.json();
+      return (d.embarcadores || []).some((e: any) => e.telefoneValido);
+    } catch { return false; }
+  }
+
   async function applyStatusChange(newStatus: string, dataEntregaISO?: string) {
     setSaving(true);
     try {
@@ -162,10 +172,11 @@ export default function EntregaDetailPage() {
       setEntrega(updated);
       toast.success("Status atualizado");
 
-      // Concluiu a entrega e o cliente tem telefone? Oferece o aviso — nunca
-      // envia sozinho: cada mensagem sai de uma cota mensal pequena.
+      // Concluiu a entrega e algum embarcador tem WhatsApp cadastrado? Oferece
+      // o aviso — nunca envia sozinho: cada mensagem sai de uma cota pequena.
+      // Sem número cadastrado não abre nada, para não virar popup inútil.
       const concluiu = newStatus === "ENTREGUE" || newStatus === "FINALIZADO";
-      const podeAvisar = concluiu && Boolean(updated.cliente?.telefone);
+      const podeAvisar = concluiu && (await temEmbarcadorComWhatsApp());
 
       if (newStatus === "FINALIZADO" && QUALIDADE_ENABLED) {
         setShowQualityPrompt(true);
@@ -609,9 +620,9 @@ export default function EntregaDetailPage() {
                 onClick={() => setShowAvisoEntrega(true)}
                 className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-green-50 dark:hover:bg-green-950/30"
                 style={{ borderColor: "#25d366", color: "#25d366", background: "transparent" }}
-                title="Avisar o cliente por WhatsApp que a entrega foi concluída"
+                title="Avisar o embarcador por WhatsApp que a entrega foi concluída"
               >
-                <MessageCircle size={14} /> Avisar Cliente
+                <MessageCircle size={14} /> Avisar Embarcador
               </button>
             )}
             {!isReadOnly && entrega.status !== "OCORRENCIA" && entrega.status !== "FINALIZADO" && (
@@ -1687,11 +1698,6 @@ export default function EntregaDetailPage() {
         open={showAvisoEntrega}
         onClose={() => setShowAvisoEntrega(false)}
         entregaId={id}
-        entregaCodigo={entrega.codigo}
-        clienteNome={entrega.cliente?.razaoSocial || entrega.razaoSocial}
-        clienteTelefone={entrega.cliente?.telefone}
-        dataEntrega={entrega.dataEntrega}
-        notaNumero={entrega.notas?.[0]?.numero}
         isAdmin={isAdmin}
       />
 

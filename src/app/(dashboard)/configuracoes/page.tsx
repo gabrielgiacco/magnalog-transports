@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { Settings, User, Shield, Bell, Globe, Palette, Save, Warehouse, Plus, Trash2, Edit2, PackageOpen, Receipt, MessageCircle } from "lucide-react";
 
 const TCK_VAZIO = {
-  cnpjEmbarcador: "", nomeEmbarcador: "", emailsPara: "", emailsCopia: "",
+  cnpjEmbarcador: "", nomeEmbarcador: "", whatsapp: "", emailsPara: "", emailsCopia: "",
   assuntoModelo: "SOLICITAÇÃO DE TICKET - NF {NF}", textoIntro: "Boa tarde!\n\nSegue solicitação de ticket abaixo,", textoAssinatura: "",
   valorPalete: "0", percentualReentrega: "80",
   diariaVuc: "0", diariaTresQuartos: "0", diariaToco: "0", diariaTruck: "0",
@@ -535,6 +535,8 @@ export default function ConfiguracoesPage() {
                   onChange={(e) => setTckForm((f) => ({ ...f, cnpjEmbarcador: e.target.value }))} placeholder="00.000.000/0001-00" />
                 <Input label="Nome / Razão Social" value={tckForm.nomeEmbarcador}
                   onChange={(e) => setTckForm((f) => ({ ...f, nomeEmbarcador: e.target.value }))} placeholder="Ex: Unicharm do Brasil" />
+                <Input label="WhatsApp (aviso de entrega concluída)" value={tckForm.whatsapp}
+                  onChange={(e) => setTckForm((f) => ({ ...f, whatsapp: e.target.value }))} placeholder="(11) 99999-9999" />
                 <Input label='E-mails "Para" (separados por vírgula)' value={tckForm.emailsPara}
                   onChange={(e) => setTckForm((f) => ({ ...f, emailsPara: e.target.value }))} placeholder="customer-service@cliente.com" />
                 <Input label='E-mails "Cópia"' value={tckForm.emailsCopia}
@@ -619,7 +621,7 @@ export default function ConfiguracoesPage() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold">{t.nomeEmbarcador}</div>
                         <div className="text-[10px] font-mono mt-0.5" style={{ color: "var(--text3)" }}>
-                          CNPJ: {t.cnpjEmbarcador}{t.emailsPara ? ` · ${t.emailsPara}` : ""}
+                          CNPJ: {t.cnpjEmbarcador}{t.whatsapp ? ` · zap ${t.whatsapp}` : ""}{t.emailsPara ? ` · ${t.emailsPara}` : ""}
                         </div>
                         <div className="mt-1 flex flex-wrap gap-1.5">
                           <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "#10b98122", color: "#10b981" }}>

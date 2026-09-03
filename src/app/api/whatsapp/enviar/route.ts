@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { consultarCota, getConfig, competenciaAtual } from "@/lib/whatsapp-cota";
 import { enviarTexto, PingoError } from "@/lib/pingo";
-import { normalizarTelefoneBR } from "@/lib/telefone";
+import { resolverContatosEntrega } from "@/lib/embarcador-contato";
 import { logFromRequest } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { entregaId, texto, forcarReserva, reenviar } = body;
+  const { entregaId, embarcadorCnpj, texto, forcarReserva, reenviar } = body;
 
   if (!entregaId) {
     return NextResponse.json({ error: "entregaId é obrigatório" }, { status: 400 });
@@ -58,22 +58,37 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const entrega = await prisma.entrega.findUnique({
-    where: { id: entregaId },
-    include: { cliente: true },
-  });
-  if (!entrega) {
+  const contatos = await resolverContatosEntrega(entregaId);
+  if (!contatos) {
     return NextResponse.json({ error: "Entrega não encontrada" }, { status: 404 });
   }
 
-  const telefone = normalizarTelefoneBR(entrega.cliente?.telefone);
+  // Sem escolha explícita, o primeiro embarcador da entrega.
+  const cnpjEscolhido = String(embarcadorCnpj || "").replace(/\D/g, "");
+  const embarcador = cnpjEscolhido
+    ? contatos.embarcadores.find((e) => e.cnpj === cnpjEscolhido)
+    : contatos.embarcadores[0];
+
+  if (!embarcador) {
+    return NextResponse.json(
+      {
+        error: "SEM_EMBARCADOR",
+        message: contatos.embarcadores.length
+          ? "O embarcador informado não pertence a esta entrega."
+          : "Esta entrega não tem nota fiscal, então não dá para saber o embarcador.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const telefone = embarcador.telefoneValido;
   if (!telefone) {
     return NextResponse.json(
       {
         error: "TELEFONE_INVALIDO",
-        message: entrega.cliente?.telefone
-          ? `O telefone "${entrega.cliente.telefone}" não é um número brasileiro válido.`
-          : "O cliente desta entrega não tem telefone cadastrado.",
+        message: embarcador.whatsapp
+          ? `O WhatsApp "${embarcador.whatsapp}" de ${embarcador.nome} não é um número brasileiro válido.`
+          : `${embarcador.nome} não tem WhatsApp cadastrado. Cadastre em Configurações → Valores de Ticket por Embarcador.`,
       },
       { status: 400 }
     );
@@ -96,7 +111,7 @@ export async function POST(req: NextRequest) {
   // Clique duplo aqui custa dinheiro — bloqueia a menos que seja reenvio explícito.
   if (!reenviar) {
     const jaEnviada = await prisma.mensagemWhats.findFirst({
-      where: { entregaId, status: "ENVIADA" },
+      where: { entregaId, embarcadorCnpj: embarcador.cnpj, status: "ENVIADA" },
       orderBy: { createdAt: "desc" },
     });
     if (jaEnviada) {
@@ -110,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const destinatario = entrega.cliente?.razaoSocial || entrega.razaoSocial || "Cliente";
+  const destinatario = embarcador.nome;
   const competencia = competenciaAtual();
 
   try {
@@ -119,6 +134,7 @@ export async function POST(req: NextRequest) {
     const registro = await prisma.mensagemWhats.create({
       data: {
         entregaId,
+        embarcadorCnpj: embarcador.cnpj,
         telefone,
         destinatario,
         texto: mensagem,
@@ -133,7 +149,7 @@ export async function POST(req: NextRequest) {
       user,
       recursoTipo: "Entrega",
       recursoId: entregaId,
-      recursoDesc: `Aviso de entrega ${entrega.codigo} para ${destinatario}`,
+      recursoDesc: `Aviso da entrega ${contatos.codigo} ao embarcador ${destinatario}`,
       detalhes: { telefone, caracteres: mensagem.length, usouReserva: cota.estado === "reserva" },
     });
 
@@ -147,6 +163,7 @@ export async function POST(req: NextRequest) {
     await prisma.mensagemWhats.create({
       data: {
         entregaId,
+        embarcadorCnpj: embarcador.cnpj,
         telefone,
         destinatario,
         texto: mensagem,
@@ -162,7 +179,7 @@ export async function POST(req: NextRequest) {
       sucesso: false,
       recursoTipo: "Entrega",
       recursoId: entregaId,
-      recursoDesc: `Falha no aviso da entrega ${entrega.codigo}`,
+      recursoDesc: `Falha no aviso da entrega ${contatos.codigo} ao embarcador ${destinatario}`,
       detalhes: { telefone, erro },
     });
 

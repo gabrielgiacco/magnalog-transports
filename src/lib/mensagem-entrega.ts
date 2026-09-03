@@ -1,4 +1,6 @@
-// Rascunho do aviso de entrega concluída enviado ao cliente.
+// Rascunho do aviso de entrega concluída enviado ao EMBARCADOR (o emitente da
+// NF, quem contratou o frete). Ele quer saber que a carga dele chegou e para
+// quem — por isso o destinatário aparece no texto, e não como interlocutor.
 //
 // Função pura de propósito: o texto pode ser conferido sem rede e sem banco, e
 // o usuário sempre edita no modal antes de enviar.
@@ -7,9 +9,10 @@ import { formatDate } from "@/lib/utils";
 
 export interface DadosAviso {
   codigo: string;
-  razaoSocial?: string | null;
+  /** Quem recebeu a carga (destinatário), citado no texto. */
+  destinatario?: string | null;
   dataEntrega?: Date | string | null;
-  notas?: { numero?: string | null }[];
+  notaNumero?: string | null;
 }
 
 /** Corta no limite sem partir palavra no meio. */
@@ -26,18 +29,18 @@ function truncar(texto: string, max: number): string {
 export function montarAvisoEntrega(dados: DadosAviso, maxChars = 600): string {
   const partes: string[] = ["Olá!"];
 
-  const nf = dados.notas?.map((n) => n.numero).filter(Boolean)[0];
   partes.push(
-    nf
-      ? `A entrega ${dados.codigo} (NF ${nf}) foi concluída`
-      : `A entrega ${dados.codigo} foi concluída`
+    dados.notaNumero
+      ? `A entrega ${dados.codigo} (NF ${dados.notaNumero})`
+      : `A entrega ${dados.codigo}`
   );
 
+  if (dados.destinatario) partes.push(`para ${dados.destinatario}`);
+  partes.push("foi concluída");
   if (dados.dataEntrega) partes.push(`em ${formatDate(dados.dataEntrega)}`);
 
-  let texto = partes.join(" ") + ".";
-  if (dados.razaoSocial) texto += ` Obrigado pela preferência, ${dados.razaoSocial}!`;
-  texto += "\n\n— Magnalog Transportes";
+  const texto =
+    partes.join(" ") + ".\n\nQualquer dúvida, estamos à disposição.\n— Magnalog Transportes";
 
   return truncar(texto, maxChars);
 }

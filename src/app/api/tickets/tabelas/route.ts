@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
 
   const dados = {
     nomeEmbarcador: String(body.nomeEmbarcador),
+    whatsapp: body.whatsapp || null,
     emailsPara: body.emailsPara || null,
     emailsCopia: body.emailsCopia || null,
     assuntoModelo: body.assuntoModelo || null,
