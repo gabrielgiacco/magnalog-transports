@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Button, Input, Select } from "@/components/ui";
 import toast from "react-hot-toast";
-import { Settings, User, Shield, Bell, Globe, Palette, Save, Warehouse, Plus, Trash2, Edit2, PackageOpen, Receipt } from "lucide-react";
+import { Settings, User, Shield, Bell, Globe, Palette, Save, Warehouse, Plus, Trash2, Edit2, PackageOpen, Receipt, MessageCircle } from "lucide-react";
 
 const TCK_VAZIO = {
   cnpjEmbarcador: "", nomeEmbarcador: "", emailsPara: "", emailsCopia: "",
@@ -78,6 +78,11 @@ export default function ConfiguracoesPage() {
   const [editingTck, setEditingTck] = useState<string | null>(null);
   const [savingTck, setSavingTck] = useState(false);
 
+  // WhatsApp (Pingo Notify)
+  const [whats, setWhats] = useState<any>(null);
+  const [loadingWhats, setLoadingWhats] = useState(false);
+  const [savingWhats, setSavingWhats] = useState(false);
+
   const fetchTickets = useCallback(async () => {
     if (user?.role !== "ADMIN") return;
     setLoadingTickets(true);
@@ -88,6 +93,34 @@ export default function ConfiguracoesPage() {
   }, [user?.role]);
 
   useEffect(() => { fetchTickets(); }, [fetchTickets]);
+
+  const fetchWhats = useCallback(async () => {
+    setLoadingWhats(true);
+    try {
+      const res = await fetch("/api/whatsapp/config");
+      if (res.ok) setWhats(await res.json());
+    } finally { setLoadingWhats(false); }
+  }, []);
+
+  useEffect(() => { fetchWhats(); }, [fetchWhats]);
+
+  async function handleSaveWhats(mudanca: Record<string, any>) {
+    if (!whats) return;
+    setSavingWhats(true);
+    try {
+      const res = await fetch("/api/whatsapp/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...whats.config, ...mudanca }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.message || d.error || "Erro ao salvar");
+      setWhats({ ...whats, config: d.config, cota: d.cota });
+      toast.success("Configuração salva");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao salvar");
+    } finally { setSavingWhats(false); }
+  }
 
   async function handleSaveTck() {
     if (!tckForm.cnpjEmbarcador || !tckForm.nomeEmbarcador) { toast.error("CNPJ e nome do embarcador são obrigatórios"); return; }
@@ -617,32 +650,126 @@ export default function ConfiguracoesPage() {
             </Section>
           )}
 
-          {/* Notificações */}
-          <Section icon={Bell} title="Notificações">
-            <div className="space-y-3">
-              {[
-                { label: "Alertar sobre entregas atrasadas", desc: "Notificação quando prazo vencer", checked: true },
-                { label: "Alertar sobre ocorrências abertas", desc: "Notificação de novas ocorrências", checked: true },
-                { label: "Resumo diário", desc: "Email com resumo das entregas do dia", checked: false },
-              ].map((item) => (
-                <label
-                  key={item.label}
-                  className="flex items-start gap-3 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    defaultChecked={item.checked}
-                    className="mt-0.5 accent-orange-500 w-4 h-4"
-                  />
-                  <div>
-                    <div className="text-sm font-medium">{item.label}</div>
-                    <div className="text-xs mt-0.5" style={{ color: "var(--text3)" }}>
-                      {item.desc}
-                    </div>
+          {/* WhatsApp (Pingo Notify) */}
+          <Section icon={MessageCircle} title="WhatsApp (Pingo Notify)">
+            {loadingWhats || !whats ? (
+              <div className="text-sm" style={{ color: "var(--text3)" }}>Carregando...</div>
+            ) : (
+              <div className="space-y-4">
+                {!whats.credenciaisConfiguradas && (
+                  <div className="flex items-start gap-3 p-3 rounded-xl"
+                    style={{ background: "rgba(245,158,11,.08)", border: "1px solid rgba(245,158,11,.25)" }}>
+                    <Bell size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm" style={{ color: "var(--text2)" }}>
+                      Faltam as variáveis <code>PINGO_API_KEY</code> e <code>PINGO_CONNECTION_ID</code> no
+                      ambiente. Sem elas o envio pelo sistema não funciona — só o link do WhatsApp.
+                    </p>
                   </div>
-                </label>
-              ))}
-            </div>
+                )}
+
+                {/* Consumo da cota */}
+                <div>
+                  <div className="flex items-baseline justify-between mb-2">
+                    <span className="text-sm font-medium">
+                      {whats.cota.usadas} de {whats.cota.cotaMensal} mensagens
+                    </span>
+                    <span className="text-xs" style={{ color: "var(--text3)" }}>
+                      {whats.cota.competencia}
+                    </span>
+                  </div>
+                  <div className="relative h-2.5 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, (whats.cota.usadas / Math.max(1, whats.cota.cotaMensal)) * 100)}%`,
+                        background:
+                          whats.cota.estado === "esgotada" ? "#ef4444"
+                          : whats.cota.estado === "reserva" ? "#f59e0b"
+                          : "#25d366",
+                      }}
+                    />
+                    {/* Marca onde começa a reserva */}
+                    <div
+                      className="absolute top-0 h-full w-px"
+                      style={{
+                        left: `${Math.min(100, (whats.cota.limiteReserva / Math.max(1, whats.cota.cotaMensal)) * 100)}%`,
+                        background: "var(--text3)",
+                      }}
+                      title={`Reserva a partir da ${whats.cota.limiteReserva}ª`}
+                    />
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ color: "var(--text3)" }}>
+                    Restam {whats.cota.restantes}. A partir da {whats.cota.limiteReserva}ª só ADMIN envia.
+                    Depois disso, sobra o link do WhatsApp — que não gasta cota.
+                  </p>
+                </div>
+
+                {user?.role === "ADMIN" && (
+                  <>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={whats.config.ativo}
+                        disabled={savingWhats}
+                        onChange={(e) => handleSaveWhats({ ativo: e.target.checked })}
+                        className="mt-0.5 accent-orange-500 w-4 h-4"
+                      />
+                      <div>
+                        <div className="text-sm font-medium">Envio pelo sistema ativo</div>
+                        <div className="text-xs mt-0.5" style={{ color: "var(--text3)" }}>
+                          Desligado, o modal de aviso só oferece o link do WhatsApp
+                        </div>
+                      </div>
+                    </label>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        label="Cota mensal"
+                        type="number"
+                        defaultValue={whats.config.cotaMensal}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value);
+                          if (v !== whats.config.cotaMensal) handleSaveWhats({ cotaMensal: v });
+                        }}
+                      />
+                      <Input
+                        label="Travar a partir de"
+                        type="number"
+                        defaultValue={whats.config.limiteReserva}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value);
+                          if (v !== whats.config.limiteReserva) handleSaveWhats({ limiteReserva: v });
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Últimas mensagens */}
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest font-mono mb-2" style={{ color: "var(--text3)" }}>
+                    Últimos envios
+                  </div>
+                  {whats.mensagens.length === 0 ? (
+                    <p className="text-sm" style={{ color: "var(--text3)" }}>Nenhuma mensagem enviada ainda.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {whats.mensagens.map((m: any) => (
+                        <div key={m.id} className="flex items-center justify-between gap-3 text-xs py-1.5 px-2.5 rounded-lg"
+                          style={{ background: "var(--surface2)" }}>
+                          <span className="truncate" title={m.erro || undefined}>
+                            {m.entrega?.codigo ? `${m.entrega.codigo} · ` : ""}{m.destinatario}
+                          </span>
+                          <span className="flex-shrink-0" style={{ color: m.status === "ENVIADA" ? "#25d366" : "#ef4444" }}>
+                            {m.status === "ENVIADA" ? "enviada" : "falhou"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </Section>
 
           {/* Sistema */}

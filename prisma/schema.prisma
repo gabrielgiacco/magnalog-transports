@@ -75,6 +75,7 @@ model User {
   orcamentos              Orcamento[]            @relation("OrcamentoCriado")
   notasCanceladas         NotaFiscal[]           @relation("NotaCancelada")
   solicitacoesTicket      SolicitacaoTicket[]    @relation("TicketCriadoPor")
+  mensagensWhats          MensagemWhats[]        @relation("MensagemWhatsEnviadaPor")
 }
 
 enum TipoEventoAuditoria {
@@ -107,6 +108,7 @@ enum TipoEventoAuditoria {
   USUARIO_CRIADO
   USUARIO_EDITADO
   USUARIO_APAGADO
+  WHATSAPP_ENVIADO
   OUTRO
 }
 
@@ -357,6 +359,7 @@ model Entrega {
   diarias        Diaria[]
   anexos         AnexoEntrega[]
   solicitacoesTicket SolicitacaoTicket[]
+  mensagensWhats     MensagemWhats[]
 
   // Token para upload público via link (motorista sobe canhoto pelo celular)
   uploadToken       String?   @unique
@@ -1515,4 +1518,48 @@ model NormaPaletizacao {
   @@unique([clienteCnpj, fornecedorCnpj, codigoProduto])
   @@index([clienteCnpj])
   @@index([fornecedorCnpj])
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp (Pingo Notify)
+// ---------------------------------------------------------------------------
+
+// Configuração única do envio de WhatsApp. As credenciais NÃO ficam aqui —
+// vivem em PINGO_API_KEY / PINGO_CONNECTION_ID nas env vars.
+model WhatsAppConfig {
+  id            String   @id @default("default")
+  ativo         Boolean  @default(false) // desligado até a conexão ser testada
+  cotaMensal    Int      @default(100) // teto do plano gratuito
+  limiteReserva Int      @default(90) // trava aqui; o resto é reserva de ADMIN
+  maxCaracteres Int      @default(600) // limite de texto do plano gratuito
+  updatedAt     DateTime @updatedAt
+}
+
+enum StatusMensagemWhats {
+  ENVIADA
+  FALHOU
+}
+
+// Log de mensagens enviadas. É este log que serve de contador da cota mensal:
+// só as ENVIADA de uma competência contam. Os campos são snapshot congelado —
+// editar cliente ou entrega depois não altera o histórico.
+model MensagemWhats {
+  id           String              @id @default(cuid())
+  entregaId    String?
+  telefone     String // E.164 normalizado, ex "5511999998888"
+  destinatario String // nome do cliente no momento do envio
+  texto        String              @db.Text
+  status       StatusMensagemWhats @default(ENVIADA)
+  erro         String?             @db.Text
+  providerId   String? // id da mensagem devolvido pelo Pingo
+  competencia  String // "2026-09", calculado em America/Sao_Paulo
+  enviadoPorId String?
+  createdAt    DateTime            @default(now())
+
+  entrega    Entrega? @relation(fields: [entregaId], references: [id], onDelete: SetNull)
+  enviadoPor User?    @relation("MensagemWhatsEnviadaPor", fields: [enviadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([competencia])
+  @@index([entregaId])
+  @@index([createdAt(sort: Desc)])
 }

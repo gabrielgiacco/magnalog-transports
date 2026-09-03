@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import toast from "react-hot-toast";
 import { Button, Modal } from "@/components/ui";
 import { Copy, RefreshCw, Trash2, MessageCircle, Smartphone, Clock } from "lucide-react";
+import { linkWhatsApp } from "@/lib/telefone";
 
 interface Props {
   open: boolean;
@@ -69,15 +70,10 @@ export function LinkMotoristaModal({ open, onClose, entregaId, entregaCodigo, mo
   }
 
   function enviarWhatsApp() {
-    const tel = String(motoristaTelefone || "").replace(/\D/g, "");
-    const msg = encodeURIComponent(
+    const msg =
       `Olá${motoristaNome ? ` ${motoristaNome.split(" ")[0]}` : ""}! ` +
-      `Para enviar o canhoto da entrega ${entregaCodigo}, acesse: ${link}`
-    );
-    const url = tel
-      ? `https://wa.me/${tel.startsWith("55") ? tel : "55" + tel}?text=${msg}`
-      : `https://wa.me/?text=${msg}`;
-    window.open(url, "_blank");
+      `Para enviar o canhoto da entrega ${entregaCodigo}, acesse: ${link}`;
+    window.open(linkWhatsApp(motoristaTelefone, msg), "_blank");
   }
 
   const horasRestantes = expira ? Math.floor((new Date(expira).getTime() - Date.now()) / (60 * 60 * 1000)) : 0;

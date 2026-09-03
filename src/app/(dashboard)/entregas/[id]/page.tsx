@@ -14,9 +14,10 @@ import { baixarDanfeOficial, ROTULO_FORMATO, type FormatoDanfe } from "@/lib/dan
 import { QUALIDADE_ENABLED } from "@/lib/features";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
 import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
+import { AvisoEntregaModal } from "@/components/entrega/AvisoEntregaModal";
 import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
 import { TicketModal } from "@/components/entrega/TicketModal";
-import { Smartphone, Receipt } from "lucide-react";
+import { Smartphone, Receipt, MessageCircle } from "lucide-react";
 
 const STATUS_FLOW = [
   { key: "PROGRAMADO", label: "Programado", icon: "📋" },
@@ -52,6 +53,8 @@ export default function EntregaDetailPage() {
   const [ocorrForm, setOcorrForm] = useState({ tipo: "ATRASO", descricao: "" });
   const [tab, setTab] = useState("info");
   const [showLinkMotorista, setShowLinkMotorista] = useState(false);
+  const [showAvisoEntrega, setShowAvisoEntrega] = useState(false);
+  const [avisoPendente, setAvisoPendente] = useState(false);
   const [showSugestao, setShowSugestao] = useState(false);
   const [selectedNotas, setSelectedNotas] = useState<string[]>([]);
   const [separando, setSeparando] = useState(false);
@@ -158,8 +161,18 @@ export default function EntregaDetailPage() {
       }
       setEntrega(updated);
       toast.success("Status atualizado");
+
+      // Concluiu a entrega e o cliente tem telefone? Oferece o aviso — nunca
+      // envia sozinho: cada mensagem sai de uma cota mensal pequena.
+      const concluiu = newStatus === "ENTREGUE" || newStatus === "FINALIZADO";
+      const podeAvisar = concluiu && Boolean(updated.cliente?.telefone);
+
       if (newStatus === "FINALIZADO" && QUALIDADE_ENABLED) {
         setShowQualityPrompt(true);
+        // A qualidade vem primeiro; o aviso entra na fila para depois dela.
+        setAvisoPendente(podeAvisar);
+      } else if (podeAvisar) {
+        setShowAvisoEntrega(true);
       }
     } catch { toast.error("Erro ao atualizar"); }
     finally { setSaving(false); }
@@ -589,6 +602,16 @@ export default function EntregaDetailPage() {
                 title="Montar a solicitação de aprovação de ticket para o embarcador"
               >
                 <Receipt size={14} /> Solicitar Ticket
+              </button>
+            )}
+            {!isReadOnly && (entrega.status === "ENTREGUE" || entrega.status === "FINALIZADO") && (
+              <button
+                onClick={() => setShowAvisoEntrega(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-green-50 dark:hover:bg-green-950/30"
+                style={{ borderColor: "#25d366", color: "#25d366", background: "transparent" }}
+                title="Avisar o cliente por WhatsApp que a entrega foi concluída"
+              >
+                <MessageCircle size={14} /> Avisar Cliente
               </button>
             )}
             {!isReadOnly && entrega.status !== "OCORRENCIA" && entrega.status !== "FINALIZADO" && (
@@ -1281,7 +1304,15 @@ export default function EntregaDetailPage() {
       </Modal>
 
       {/* Quality Prompt Modal */}
-      <Modal open={showQualityPrompt} onClose={() => setShowQualityPrompt(false)} title="Avaliação de Qualidade Operacional" size="lg">
+      <Modal
+        open={showQualityPrompt}
+        onClose={() => {
+          setShowQualityPrompt(false);
+          if (avisoPendente) { setAvisoPendente(false); setShowAvisoEntrega(true); }
+        }}
+        title="Avaliação de Qualidade Operacional"
+        size="lg"
+      >
         <div className="mb-4 p-3 rounded-xl flex items-center gap-3" style={{ background: "rgba(249,115,22,.08)", border: "1px solid rgba(249,115,22,.2)" }}>
           <ShieldCheck size={20} className="text-orange-500 flex-shrink-0" />
           <p className="text-sm" style={{ color: "var(--text2)" }}>
@@ -1650,6 +1681,18 @@ export default function EntregaDetailPage() {
         entregaCodigo={entrega.codigo}
         motoristaTelefone={entrega.motorista?.telefone}
         motoristaNome={entrega.motorista?.nome}
+      />
+
+      <AvisoEntregaModal
+        open={showAvisoEntrega}
+        onClose={() => setShowAvisoEntrega(false)}
+        entregaId={id}
+        entregaCodigo={entrega.codigo}
+        clienteNome={entrega.cliente?.razaoSocial || entrega.razaoSocial}
+        clienteTelefone={entrega.cliente?.telefone}
+        dataEntrega={entrega.dataEntrega}
+        notaNumero={entrega.notas?.[0]?.numero}
+        isAdmin={isAdmin}
       />
 
       <SugestaoVeiculoModal

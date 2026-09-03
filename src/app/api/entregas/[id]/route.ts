@@ -325,6 +325,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         rota: true,
         notas: { orderBy: { createdAt: "asc" } },
         ocorrencias: { orderBy: { createdAt: "desc" } },
+        // Igual ao GET: sem isso o front perde `entrega.cliente` (e o telefone
+        // usado no aviso por WhatsApp) até o próximo refresh.
+        cliente: true,
       },
     });
 
