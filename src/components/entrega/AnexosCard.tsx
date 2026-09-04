@@ -14,6 +14,7 @@ interface Anexo {
   createdAt: string;
   uploadadoPor?: { id: string; name: string | null } | null;
   visivelPortal?: boolean;
+  visivelRastreio?: boolean;
   liberadoPor?: { id: string; name: string | null } | null;
   liberadoEm?: string | null;
 }
@@ -53,6 +54,8 @@ interface AnexosCardProps {
   readOnly?: boolean;
   /** Mostra o botão de liberar/ocultar cada arquivo no portal do cliente (só anexos de avaria) */
   portalToggle?: boolean;
+  /** Idem, mas para a página PÚBLICA de rastreamento — usado nos anexos da entrega (canhoto) */
+  rastreioToggle?: boolean;
 }
 
 export function AnexosCard({
@@ -63,8 +66,17 @@ export function AnexosCard({
   titulo = "Canhotos & Anexos",
   readOnly = false,
   portalToggle = false,
+  rastreioToggle = false,
 }: AnexosCardProps) {
   const apiBase = apiBaseProp || (entregaId ? `/api/entregas/${entregaId}/anexos` : "");
+
+  // Os dois modos usam o mesmo botão, mas gravam em campos diferentes e expõem
+  // para públicos diferentes: portal = cliente logado, rastreio = qualquer um
+  // com o número da NF.
+  const temToggle = portalToggle || rastreioToggle;
+  const campoVisib = rastreioToggle ? "visivelRastreio" : "visivelPortal";
+  const destinoLabel = rastreioToggle ? "rastreamento público" : "portal do cliente";
+  const badgeLabel = rastreioToggle ? "Visível no rastreio" : "Visível ao cliente";
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -156,13 +168,16 @@ export function AnexosCard({
   }
 
   async function handleTogglePortal(a: Anexo) {
-    const liberar = !a.visivelPortal;
-    if (liberar && !window.confirm("Liberar este arquivo para o cliente ver no portal?")) return;
+    const liberar = !(rastreioToggle ? a.visivelRastreio : a.visivelPortal);
+    const aviso = rastreioToggle
+      ? "Liberar este arquivo na página pública de rastreamento? Qualquer pessoa com o número da NF vai conseguir ver."
+      : "Liberar este arquivo para o cliente ver no portal?";
+    if (liberar && !window.confirm(aviso)) return;
     try {
       const res = await fetch(`${apiBase}/${a.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visivelPortal: liberar }),
+        body: JSON.stringify({ [campoVisib]: liberar }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -170,7 +185,7 @@ export function AnexosCard({
       }
       const atualizado = await res.json();
       setAnexos((prev) => prev.map((x) => (x.id === a.id ? { ...x, ...atualizado } : x)));
-      toast.success(liberar ? "Liberado para o cliente" : "Oculto para o cliente");
+      toast.success(liberar ? `Liberado no ${destinoLabel}` : `Oculto do ${destinoLabel}`);
     } catch (e: any) {
       toast.error(e.message || "Erro ao alterar visibilidade");
     }
@@ -270,13 +285,13 @@ export function AnexosCard({
                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: "rgba(249,115,22,.15)", color: "var(--accent)" }}>
                       {TIPO_LABEL[a.tipo] || a.tipo}
                     </span>
-                    {portalToggle && a.visivelPortal && (
+                    {temToggle && (rastreioToggle ? a.visivelRastreio : a.visivelPortal) && (
                       <span
                         className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded flex items-center gap-1"
                         style={{ background: "rgba(16,185,129,.15)", color: "#10b981" }}
                         title={`Liberado${a.liberadoPor?.name ? ` por ${a.liberadoPor.name}` : ""}${a.liberadoEm ? ` em ${new Date(a.liberadoEm).toLocaleString("pt-BR")}` : ""}`}
                       >
-                        <Eye size={9} /> Visível ao cliente
+                        <Eye size={9} /> {badgeLabel}
                       </span>
                     )}
                   </div>
@@ -284,16 +299,19 @@ export function AnexosCard({
                   <div className="text-[9px] mt-0.5 flex items-center justify-between" style={{ color: "var(--text3)" }}>
                     <span>{fmtSize(a.size)}</span>
                     <div className="flex items-center gap-1">
-                      {portalToggle && !readOnly && (
-                        <button
-                          onClick={() => handleTogglePortal(a)}
-                          className="p-1 rounded hover:opacity-70"
-                          style={{ color: a.visivelPortal ? "#10b981" : "var(--text3)" }}
-                          title={a.visivelPortal ? "Ocultar do portal do cliente" : "Liberar no portal do cliente"}
-                        >
-                          {a.visivelPortal ? <Eye size={11} /> : <EyeOff size={11} />}
-                        </button>
-                      )}
+                      {temToggle && !readOnly && (() => {
+                        const visivel = rastreioToggle ? a.visivelRastreio : a.visivelPortal;
+                        return (
+                          <button
+                            onClick={() => handleTogglePortal(a)}
+                            className="p-1 rounded hover:opacity-70"
+                            style={{ color: visivel ? "#10b981" : "var(--text3)" }}
+                            title={visivel ? `Ocultar do ${destinoLabel}` : `Liberar no ${destinoLabel}`}
+                          >
+                            {visivel ? <Eye size={11} /> : <EyeOff size={11} />}
+                          </button>
+                        );
+                      })()}
                       <a href={a.url} download={a.filename} onClick={(e) => e.stopPropagation()} className="p-1 rounded hover:opacity-70" title="Baixar">
                         <Download size={11} />
                       </a>

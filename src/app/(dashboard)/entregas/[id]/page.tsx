@@ -1140,7 +1140,7 @@ export default function EntregaDetailPage() {
         )}
 
         {tab === "canhotos" && (
-          <AnexosCard entregaId={id} readOnly={isReadOnly} />
+          <AnexosCard entregaId={id} readOnly={isReadOnly} rastreioToggle={isAdmin} />
         )}
 
         {tab === "qualidade" && isAdmin && QUALIDADE_ENABLED && (

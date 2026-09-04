@@ -11,6 +11,15 @@ const STATUS_STEPS = [
   { key: "ENTREGUE",     label: "Entregue",      icon: "✅", desc: "Entrega realizada com sucesso" },
 ];
 
+const ANEXO_LABEL: Record<string, string> = {
+  CANHOTO: "Canhoto assinado",
+  CANHOTO_DESCARGA: "Canhoto + Descarga",
+  DESCARGA: "Comprovante de descarga",
+  FOTO: "Foto da entrega",
+  DECLARACAO: "Declaração / Ressalva",
+  DOCUMENTO: "Documento",
+};
+
 const STATUS_COLORS: Record<string, string> = {
   PROGRAMADO: "#f59e0b", EM_SEPARACAO: "#3b82f6", CARREGADO: "#8b5cf6",
   EM_ROTA: "#6366f1", ENTREGUE: "#10b981", FINALIZADO: "#10b981", OCORRENCIA: "#ef4444",
@@ -230,6 +239,42 @@ export default function EntregaTrackingPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Comprovantes liberados pelo administrador */}
+            {entrega.anexos?.length > 0 && (
+              <div className="rounded-2xl p-6 mt-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <div className="text-[10px] font-mono uppercase tracking-widest mb-4" style={{ color: "var(--text3)" }}>
+                  Comprovante de Entrega ({entrega.anexos.length})
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {entrega.anexos.map((a: any) => {
+                    const isImagem = String(a.mimeType || "").startsWith("image/");
+                    return (
+                      <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer"
+                        className="rounded-xl overflow-hidden block hover:opacity-80 transition-opacity"
+                        style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                        <div className="aspect-[4/3] flex items-center justify-center" style={{ background: "var(--bg)" }}>
+                          {isImagem ? (
+                            <img src={a.url} alt={ANEXO_LABEL[a.tipo] || a.filename} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="flex flex-col items-center gap-1" style={{ color: "var(--text3)" }}>
+                              <span className="text-3xl">📄</span>
+                              <span className="text-[10px] font-mono uppercase">PDF</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-2.5">
+                          <div className="text-xs font-semibold">{ANEXO_LABEL[a.tipo] || "Documento"}</div>
+                          <div className="text-[10px] mt-0.5" style={{ color: "var(--text3)" }}>
+                            {fmtDate(a.createdAt)} · toque para abrir
+                          </div>
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}

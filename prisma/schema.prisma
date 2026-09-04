@@ -75,6 +75,7 @@ model User {
   orcamentos              Orcamento[]            @relation("OrcamentoCriado")
   notasCanceladas         NotaFiscal[]           @relation("NotaCancelada")
   solicitacoesTicket      SolicitacaoTicket[]    @relation("TicketCriadoPor")
+  anexosEntregaLiberados  AnexoEntrega[]         @relation("AnexoEntregaLiberador")
   mensagensWhats          MensagemWhats[]        @relation("MensagemWhatsEnviadaPor")
 }
 
@@ -105,6 +106,8 @@ enum TipoEventoAuditoria {
   OCORRENCIA_RESOLVIDA
   ANEXO_LIBERADO_PORTAL
   ANEXO_OCULTADO_PORTAL
+  ANEXO_LIBERADO_RASTREIO
+  ANEXO_OCULTADO_RASTREIO
   USUARIO_CRIADO
   USUARIO_EDITADO
   USUARIO_APAGADO
@@ -429,8 +432,18 @@ model AnexoEntrega {
   uploadadoPor   User?     @relation(fields: [uploadadoPorId], references: [id])
   createdAt      DateTime  @default(now())
 
+  // Liberação para a página PÚBLICA de rastreamento (/entrega/[nf]).
+  // Nasce sempre privado; liberar é ação manual e auditada. Não confundir com
+  // Anexo.visivelPortal, que é o portal do cliente logado — aqui não há login,
+  // basta ter o número da NF.
+  visivelRastreio Boolean   @default(false)
+  liberadoPorId   String?
+  liberadoPor     User?     @relation("AnexoEntregaLiberador", fields: [liberadoPorId], references: [id])
+  liberadoEm      DateTime?
+
   @@index([entregaId])
   @@index([tipo])
+  @@index([entregaId, visivelRastreio])
 }
 
 model NotaFiscal {

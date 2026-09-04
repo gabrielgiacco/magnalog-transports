@@ -17,7 +17,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const anexos = await prisma.anexoEntrega.findMany({
     where: { entregaId: params.id },
     orderBy: { createdAt: "desc" },
-    include: { uploadadoPor: { select: { id: true, name: true } } },
+    include: {
+      uploadadoPor: { select: { id: true, name: true } },
+      liberadoPor: { select: { id: true, name: true } },
+    },
   });
 
   const comUrls = await Promise.all(

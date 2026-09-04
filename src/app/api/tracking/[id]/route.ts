@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logFromRequest } from "@/lib/audit";
+import { presignGet } from "@/lib/r2";
 
 // Public endpoint — no auth required
 // Returns limited data for tracking page
@@ -47,6 +48,11 @@ export async function GET(
           orderBy: { createdAt: "desc" },
           take: 3,
         },
+        anexos: {
+          where: { visivelRastreio: true },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, tipo: true, filename: true, mimeType: true, objectKey: true, createdAt: true },
+        },
         _count: { select: { notas: true } },
       },
     });
@@ -71,7 +77,17 @@ export async function GET(
       detalhes: { busca: params.id, status: entrega.status, cliente: entrega.razaoSocial },
     });
 
-    return NextResponse.json(entrega);
+    // Endpoint público: o objectKey do R2 nunca sai daqui. Cada arquivo liberado
+    // vira uma URL presignada de 1h — some sozinha se o link vazar.
+    const { anexos, ...resto } = entrega;
+    const anexosPublicos = await Promise.all(
+      anexos.map(async (a) => {
+        const { objectKey, ...campos } = a;
+        return { ...campos, url: await presignGet(objectKey, 3600) };
+      })
+    );
+
+    return NextResponse.json({ ...resto, anexos: anexosPublicos });
   } catch {
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
