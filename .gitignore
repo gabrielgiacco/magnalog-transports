@@ -38,3 +38,9 @@ next-env.d.ts
 prisma/migrations/
 
 .vercel
+
+# agent skills
+# O conteudo real fica em .agents/skills (versionado). Aqui so moram symlinks
+# ABSOLUTOS gerados pelo `npx skills add`, que apontam para o caminho desta
+# maquina e quebrariam em qualquer outro clone.
+.claude/skills/
