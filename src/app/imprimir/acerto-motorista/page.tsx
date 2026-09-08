@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireSessaoImpressao } from "@/lib/imprimir-auth";
 import { notFound } from "next/navigation";
 
 // Formatter helpers
@@ -13,6 +14,7 @@ const formatDate = (date: any) => {
 };
 
 export default async function AcertoMotoristaPage({ searchParams }: { searchParams: { motoristaId?: string; inicio?: string; fim?: string } }) {
+  await requireSessaoImpressao(["ADMIN", "FINANCEIRO"]);
   const { motoristaId, inicio, fim } = searchParams;
 
   if (!motoristaId || !inicio || !fim) {

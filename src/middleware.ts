@@ -28,7 +28,7 @@ export default withAuth(
     }
 
     // Conferente — só pode acessar kanban, agendamentos, avarias e entregas (somente leitura)
-    if (token?.role === "CONFERENTE" && !pathname.startsWith("/kanban") && !pathname.startsWith("/agendamentos") && !pathname.startsWith("/avarias") && !pathname.startsWith("/entregas")) {
+    if (token?.role === "CONFERENTE" && !pathname.startsWith("/kanban") && !pathname.startsWith("/agendamentos") && !pathname.startsWith("/avarias") && !pathname.startsWith("/entregas") && !pathname.startsWith("/imprimir")) {
       return NextResponse.redirect(new URL("/kanban", req.url));
     }
 
@@ -72,5 +72,8 @@ export const config = {
     "/usuarios/:path*",
     "/portal/:path*",
     "/avarias/:path*",
+    // Fora do grupo (dashboard): sem esta entrada as paginas de impressao nao
+    // tinham NENHUM gate. Cada pagina tambem checa a sessao por conta propria.
+    "/imprimir/:path*",
   ],
 };

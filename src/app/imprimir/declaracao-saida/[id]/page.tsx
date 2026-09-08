@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireSessaoImpressao } from "@/lib/imprimir-auth";
 import { notFound } from "next/navigation";
 
 const formatCPF = (cpf: string | null | undefined) => {
@@ -19,6 +20,7 @@ const SECOES = [
 ] as const;
 
 export default async function DeclaracaoSaidaPage({ params }: { params: { id: string } }) {
+  await requireSessaoImpressao();
   const decl = await prisma.declaracaoSaida.findUnique({
     where: { id: params.id },
     include: {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireSessaoImpressao } from "@/lib/imprimir-auth";
 import { notFound } from "next/navigation";
 
 const formatCurrency = (val: number) =>
@@ -18,6 +19,7 @@ export default async function CartaFretePage({
   params: { tipo: string; id: string };
   searchParams?: { motorista?: string };
 }) {
+  await requireSessaoImpressao();
   const { tipo, id } = params;
   const isCompl = searchParams?.motorista === "complementar";
   let data: any = null;

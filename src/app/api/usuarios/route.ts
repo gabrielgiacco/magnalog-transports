@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+// Custo do bcrypt. 12 e o piso recomendado hoje; hashes antigos (custo 10)
+// continuam validando normalmente e sobem para 12 quando a senha for trocada.
+const BCRYPT_ROUNDS = 12;
+
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
@@ -31,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (user.role !== "ADMIN") return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
   const body = await req.json();
-  const hash = await bcrypt.hash(body.password || "Magnalog@2025", 10);
+  const hash = await bcrypt.hash(body.password || "Magnalog@2025", BCRYPT_ROUNDS);
 
   const novo = await prisma.user.create({
     data: {
@@ -73,7 +77,7 @@ export async function PATCH(req: NextRequest) {
     } else if (user.role !== "ADMIN") {
       return NextResponse.json({ error: "Senha atual é obrigatória" }, { status: 400 });
     }
-    data.password = await bcrypt.hash(data.password, 10);
+    data.password = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
   }
 
   const updated = await prisma.user.update({ where: { id }, data });

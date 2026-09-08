@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireSessaoImpressao } from "@/lib/imprimir-auth";
 import { notFound } from "next/navigation";
 
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -8,6 +9,7 @@ const qtdFmt = (q: number) => (q % 1 === 0 ? String(q) : q.toFixed(2));
 const monthPtBr = (d: Date) => d.toLocaleDateString("pt-BR", { month: "long" }).toUpperCase();
 
 export default async function OrcamentoPage({ params }: { params: { id: string } }) {
+  await requireSessaoImpressao();
   const orc = await prisma.orcamento.findUnique({
     where: { id: params.id },
     include: {

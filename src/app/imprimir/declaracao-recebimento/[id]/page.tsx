@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireSessaoImpressao } from "@/lib/imprimir-auth";
 import { notFound } from "next/navigation";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -21,6 +22,7 @@ const monthPtBr = (d: Date) =>
   d.toLocaleDateString("pt-BR", { month: "long" }).toUpperCase();
 
 export default async function DeclaracaoRecebimentoPage({ params }: { params: { id: string } }) {
+  await requireSessaoImpressao();
   const avaria = await prisma.avaria.findUnique({
     where: { id: params.id },
     include: {

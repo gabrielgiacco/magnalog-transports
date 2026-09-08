@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { logAudit } from "@/lib/audit";
+import { extrairIp, verificarLimiteLogin, MENSAGEM_BLOQUEIO } from "@/lib/login-rate-limit";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -19,26 +20,40 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Senha", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
         const inputEmail = credentials.email.toLowerCase().trim();
+        const ip = extrairIp(req?.headers as any);
+
+        // Freio antes de qualquer comparação de senha: sem isto, bcrypt custo 12
+        // vira só um atraso por tentativa, não um limite.
+        const limite = await verificarLimiteLogin(inputEmail, ip);
+        if (limite.bloqueado) {
+          await logAudit({
+            tipo: "LOGIN_FAIL", sucesso: false, ip,
+            user: { email: inputEmail },
+            detalhes: { motivo: "bloqueado_rate_limit", regra: limite.motivo, falhas: limite.falhas },
+          });
+          throw new Error(MENSAGEM_BLOQUEIO);
+        }
+
         const user = await prisma.user.findFirst({
           where: { email: { equals: inputEmail, mode: "insensitive" } },
         });
         if (!user || !user.password) {
-          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, user: { email: inputEmail }, detalhes: { motivo: "usuario_nao_encontrado" } });
+          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, user: { email: inputEmail }, detalhes: { motivo: "usuario_nao_encontrado" } });
           return null;
         }
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) {
-          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { motivo: "senha_invalida" } });
+          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { motivo: "senha_invalida" } });
           return null;
         }
         if (!user.ativo) {
-          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { motivo: "usuario_inativo" } });
+          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { motivo: "usuario_inativo" } });
           throw new Error("Usuário inativo");
         }
-        await logAudit({ tipo: "LOGIN", user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { provider: "credentials" } });
+        await logAudit({ tipo: "LOGIN", ip, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { provider: "credentials" } });
         return { id: user.id, email: user.email, name: user.name, role: user.role, aprovado: user.aprovado };
       },
     }),

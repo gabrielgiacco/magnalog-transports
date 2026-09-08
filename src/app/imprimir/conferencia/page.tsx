@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireSessaoImpressao } from "@/lib/imprimir-auth";
 import { agregarProdutosParaConferencia, carregarNormasPorDestinatario, LinhaConferencia } from "@/lib/nf-produtos";
 import { notFound } from "next/navigation";
 
@@ -50,6 +51,7 @@ type Grupo = {
 };
 
 export default async function ConferenciaPage({ searchParams }: { searchParams: { nfIds?: string } }) {
+  await requireSessaoImpressao();
   const raw = (searchParams?.nfIds || "").trim();
   const ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
   if (ids.length === 0) return notFound();
