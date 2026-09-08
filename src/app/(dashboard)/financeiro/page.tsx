@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Topbar } from "@/components/layout/Topbar";
 import { AcertoMotoristasTab } from "./AcertoMotoristasTab";
@@ -7,11 +8,29 @@ import { PainelTab } from "./PainelTab";
 import { LancamentosTab } from "./LancamentosTab";
 import { ContasPagarTab } from "./ContasPagarTab";
 import { ContasReceberTab } from "./ContasReceberTab";
-import { FluxoCaixaTab } from "./FluxoCaixaTab";
-import { DreTab } from "./DreTab";
 import { ConciliacaoTab } from "./ConciliacaoTab";
 import { TicketsTab } from "./TicketsTab";
 import { LayoutDashboard, HandCoins, ArrowDownToLine, ArrowUpFromLine, FilePlus, LineChart, FileBarChart2, Landmark, Receipt } from "lucide-react";
+
+// Únicas abas que usam recharts. Importadas estaticamente, elas colocavam a
+// biblioteca de gráficos (chunk de 373 kB) no bundle inicial de TODA visita ao
+// Financeiro — inclusive de quem abre no Painel e nunca clica aqui. Agora o
+// download só acontece ao abrir a aba. ssr:false porque recharts precisa do DOM.
+const CarregandoGraficos = () => (
+  <div className="py-20 text-center text-sm" style={{ color: "var(--text3)" }}>
+    Carregando gráficos...
+  </div>
+);
+
+const FluxoCaixaTab = dynamic(() => import("./FluxoCaixaTab").then((m) => m.FluxoCaixaTab), {
+  loading: CarregandoGraficos,
+  ssr: false,
+});
+
+const DreTab = dynamic(() => import("./DreTab").then((m) => m.DreTab), {
+  loading: CarregandoGraficos,
+  ssr: false,
+});
 
 type Tab = "painel" | "acertos" | "lancamentos" | "contas-pagar" | "contas-receber" | "conciliacao" | "fluxo-caixa" | "dre" | "tickets";
 

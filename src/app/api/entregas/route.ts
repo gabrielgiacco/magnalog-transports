@@ -86,7 +86,11 @@ export async function GET(req: NextRequest) {
         { notas: { some: { numero: { contains: cliente } } } },
         { notas: { some: { emitenteRazao: { contains: cliente, mode: "insensitive" } } } },
         { notas: { some: { chaveAcesso: { contains: cliente } } } },
-        { notas: { some: { xmlOriginal: { contains: cliente, mode: "insensitive" } } } },
+        // O XML fica FORA da busca rápida de propósito: ela dispara a cada tecla e
+        // varrer ~10 MB de xmlOriginal com LIKE dobrava o custo (153ms -> 264ms),
+        // piorando a cada NF-e importada. Quem precisa procurar dentro do XML usa
+        // os filtros dedicados "Dados Adicionais da NF" e "Código do Produto",
+        // que só rodam quando o filtro é aplicado.
         { motorista: { nome: { contains: cliente, mode: "insensitive" } } },
         { rota: { codigo: { contains: cliente, mode: "insensitive" } } },
       ];
