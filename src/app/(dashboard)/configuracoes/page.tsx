@@ -35,7 +35,7 @@ const CAMPOS_ALIQUOTA: { key: keyof typeof TCK_VAZIO; label: string }[] = [
 
 function Section({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) {
   return (
-    <Card>
+    <Card className="break-inside-avoid mb-5">
       <div className="flex items-center gap-3 mb-5" style={{ borderBottom: "1px solid var(--border)", paddingBottom: "14px" }}>
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -309,7 +309,7 @@ export default function ConfiguracoesPage() {
     <>
       <Topbar title="Configurações" subtitle="Preferências do sistema" />
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-2xl space-y-5">
+        <div className="max-w-[1700px] columns-1 xl:columns-2 gap-5">
           {/* Perfil */}
           <Section icon={User} title="Perfil do Usuário">
             <div className="flex items-center gap-4 mb-5">
