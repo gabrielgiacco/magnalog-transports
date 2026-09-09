@@ -63,7 +63,14 @@ export function credenciaisConfiguradas(): boolean {
  * mensagem que o Pingo já cobrou, gastando cota em dobro. Falhou, quem decide
  * se tenta de novo é o usuário.
  */
-export async function enviarTexto(to: string, text: string): Promise<{ providerId: string | null }> {
+export async function enviarTexto(
+  to: string,
+  text: string,
+  // O padrão é o de sempre, para o envio manual pelo modal não mudar. Quem
+  // responde dentro de um webhook passa um valor menor: o provedor desiste da
+  // entrega em 10s e retenta, então o orçamento de tempo ali é apertado.
+  timeoutMs: number = TIMEOUT_MS
+): Promise<{ providerId: string | null }> {
   const { key, connectionId } = credenciais();
 
   let res: Response;
@@ -72,7 +79,7 @@ export async function enviarTexto(to: string, text: string): Promise<{ providerI
       method: "POST",
       headers: { apikey: key, "Content-Type": "application/json" },
       body: JSON.stringify({ to, text }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (e: any) {
     const timeout = e?.name === "TimeoutError" || e?.name === "AbortError";
