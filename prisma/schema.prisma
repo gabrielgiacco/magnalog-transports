@@ -1580,3 +1580,40 @@ model MensagemWhats {
   @@index([entregaId])
   @@index([createdAt(sort: Desc)])
 }
+
+enum TipoMensagemWhats {
+  TEXTO
+  LOCALIZACAO
+  OUTRO
+}
+
+// Mensagens RECEBIDAS pelo WhatsApp. Tabela separada da MensagemWhats de
+// propósito: aquela é o contador da cota mensal (consultarCota() conta linhas
+// dela com status ENVIADA), então qualquer entrada ali corromperia a cota em
+// silêncio. Aqui é só entrada; a resposta que o sistema der continua sendo uma
+// linha de saída na MensagemWhats, como qualquer outra.
+//
+// `bruto` guarda o payload como veio, intocado. O formato exato do webhook do
+// provedor não é documentado, então o campo é a especificação do parser — e a
+// rede quando algo chegar diferente do esperado.
+model MensagemWhatsRecebida {
+  id         String            @id @default(cuid())
+  provedor   String            @default("PINGO") // PINGO | META | SIMULADO
+  providerId String // id da mensagem no provedor
+  telefone   String // E.164 sem "+", "" quando não foi possível derivar
+  nomePerfil String?
+  tipo       TipoMensagemWhats @default(OUTRO)
+  texto      String?           @db.Text
+  latitude   Float?
+  longitude  Float?
+  bruto      String            @db.Text
+  recebidaEm DateTime
+  createdAt  DateTime          @default(now())
+
+  // É ESTA constraint que deduplica a retentativa do provedor, não código:
+  // a segunda entrega do mesmo evento estoura P2002 e vira no-op. Em função
+  // serverless não existe estado em memória para fazer isso.
+  @@unique([provedor, providerId])
+  @@index([telefone, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+}
