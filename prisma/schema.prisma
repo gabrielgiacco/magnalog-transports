@@ -205,6 +205,13 @@ model Motorista {
   cnh           String?
   categoriaCnh  String?
   telefone      String?
+  // Derivado de `telefone`, em E.164 sem "+". Existe como coluna indexada
+  // porque o telefone e digitado em formato livre — "(62) 99999-9999",
+  // "62999999999", "+55 62..." — e o atendimento por WhatsApp precisa achar o
+  // motorista PELO numero a cada mensagem. Sem indice seria varredura da
+  // tabela inteira; normalizar em memoria a cada webhook vira bomba silenciosa
+  // quando a base crescer.
+  telefoneNorm  String?
   pix           String?
   ativo         Boolean       @default(true)
   tipo          TipoMotorista @default(TERCEIRO)
@@ -217,6 +224,8 @@ model Motorista {
   entregasCompl Entrega[]     @relation("MotoristaComplementar")
   rotas         Rota[]
   avarias       Avaria[]
+
+  @@index([telefoneNorm])
 }
 
 model Cliente {
@@ -828,6 +837,11 @@ model TabelaTicket {
 
   // Contato de WhatsApp do embarcador, usado no aviso de entrega concluída
   whatsapp String?
+  // Derivado de `whatsapp`, em E.164 sem "+". Mesmo motivo do
+  // Motorista.telefoneNorm: e por este campo que o atendimento descobre de
+  // qual embarcador e o numero que mandou mensagem, e so as notas com esse
+  // emitenteCnpj podem ser mostradas a ele.
+  whatsappNorm String?
 
   // Cabeçalho do e-mail
   emailsPara      String? @db.Text
@@ -861,6 +875,8 @@ model TabelaTicket {
   observacoes String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([whatsappNorm])
 }
 
 enum TipoTicket {

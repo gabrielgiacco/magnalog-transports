@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { normalizarTelefoneBR } from "@/lib/telefone";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,9 @@ export async function POST(req: NextRequest) {
   const dados = {
     nomeEmbarcador: String(body.nomeEmbarcador),
     whatsapp: body.whatsapp || null,
+    // Derivado, nunca vindo do cliente: é por ele que o atendimento por
+    // WhatsApp descobre de qual embarcador é o número que mandou mensagem.
+    whatsappNorm: normalizarTelefoneBR(body.whatsapp),
     emailsPara: body.emailsPara || null,
     emailsCopia: body.emailsCopia || null,
     assuntoModelo: body.assuntoModelo || null,
