@@ -1564,6 +1564,18 @@ model WhatsAppConfig {
   cotaMensal    Int      @default(100) // teto do plano gratuito
   limiteReserva Int      @default(90) // trava aqui; o resto é reserva de ADMIN
   maxCaracteres Int      @default(600) // limite de texto do plano gratuito
+
+  // Atendimento automatico de ENTRADA. Nasce desligado: com ele false o
+  // sistema recebe e registra tudo, e nao responde nada — o modo em que da
+  // para observar a operacao real sem gastar uma mensagem sequer.
+  atendimentoAtivo Boolean @default(false)
+  // Teto diario de respostas automaticas, em cima do teto mensal. Existe para
+  // um dia ruim nao consumir o mes inteiro.
+  maxRespostasDia  Int     @default(10)
+  // Avisar o motorista que a localizacao chegou. Desligado porque cada
+  // "recebido!" e uma consulta de embarcador que deixa de caber nas 100.
+  confirmarLocalizacao Boolean @default(false)
+
   updatedAt     DateTime @updatedAt
 }
 
@@ -1588,6 +1600,12 @@ model MensagemWhats {
   competencia  String // "2026-09", calculado em America/Sao_Paulo
   enviadoPorId String?
   createdAt    DateTime            @default(now())
+
+  // Qual mensagem recebida causou esta saida. Nulo quando o envio foi manual,
+  // pelo modal. Esta tabela continua sendo SO saida — e por isso que
+  // consultarCota() segue correto sem mudar uma linha.
+  recebidaId String?                @unique
+  recebida   MensagemWhatsRecebida? @relation(fields: [recebidaId], references: [id], onDelete: SetNull)
 
   entrega    Entrega? @relation(fields: [entregaId], references: [id], onDelete: SetNull)
   enviadoPor User?    @relation("MensagemWhatsEnviadaPor", fields: [enviadoPorId], references: [id], onDelete: SetNull)
@@ -1629,6 +1647,8 @@ model MensagemWhatsRecebida {
   // É ESTA constraint que deduplica a retentativa do provedor, não código:
   // a segunda entrega do mesmo evento estoura P2002 e vira no-op. Em função
   // serverless não existe estado em memória para fazer isso.
+  resposta MensagemWhats?
+
   @@unique([provedor, providerId])
   @@index([telefone, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
