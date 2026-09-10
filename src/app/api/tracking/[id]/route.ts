@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logFromRequest } from "@/lib/audit";
 import { presignGet } from "@/lib/r2";
+import { whereBusca } from "@/lib/rastreio";
 
 // Public endpoint — no auth required
 // Returns limited data for tracking page
@@ -11,13 +12,9 @@ export async function GET(
 ) {
   try {
     const entrega = await prisma.entrega.findFirst({
-      where: {
-        OR: [
-          { notas: { some: { numero: params.id } } }, // principal (Número da NF)
-          { codigo: params.id }, // backup (Código Magnalog)
-          { id: params.id }, // backup (ID do banco)
-        ]
-      },
+      // A regra de busca mora em @/lib/rastreio para esta página e o
+      // atendimento por WhatsApp nunca divergirem sobre o que é uma NF.
+      where: whereBusca(params.id),
       select: {
         id: true,
         codigo: true,
