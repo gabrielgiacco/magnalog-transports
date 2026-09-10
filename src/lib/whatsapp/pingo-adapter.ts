@@ -133,10 +133,12 @@ export class PingoAdapter implements ProvedorWhats {
   /**
    * Confere o HMAC do corpo CRU.
    *
-   * A Pingo não documenta se assina o corpo puro ou `timestamp.corpo`, então as
-   * duas convenções são testadas e a que fechar é registrada. Conhecer o
-   * segredo é obrigatório nas duas — a tolerância é sobre o formato, não sobre
-   * a segurança.
+   * A Pingo assina `timestamp.corpo` — medido em 10/09/2026 com uma mensagem
+   * real e o segredo de produção. Antes o código aceitava também o HMAC do
+   * corpo puro, porque a convenção não é documentada; agora que se sabe, exige
+   * só esta. Ganho concreto: o header de timestamp passa a ser obrigatório, e
+   * com ele a janela contra reenvio de requisição legítima vale SEMPRE — no
+   * caminho antigo, uma requisição sem timestamp escapava dessa checagem.
    */
   verificarAssinatura(raw: string, headers: Headers): ResultadoAssinatura {
     const segredo = process.env.PINGO_WEBHOOK_SECRET;
@@ -149,18 +151,15 @@ export class PingoAdapter implements ProvedorWhats {
     if (!recebida) return { ok: false, motivo: "sem header de assinatura", conferida: true };
 
     const ts = headers.get(HEADER_TIMESTAMP);
-    if (ts) {
-      const idade = Math.abs(Math.floor(Date.now() / 1000) - Number(ts));
-      if (!Number.isFinite(idade) || idade > TOLERANCIA_TIMESTAMP_S) {
-        return { ok: false, motivo: "timestamp fora da tolerância", conferida: true };
-      }
-      if (bate(hmacHex(segredo, `${ts}.${raw}`), recebida)) {
-        return { ok: true, conferida: true, convencao: "timestamp.corpo" };
-      }
+    if (!ts) return { ok: false, motivo: "sem header de timestamp", conferida: true };
+
+    const idade = Math.abs(Math.floor(Date.now() / 1000) - Number(ts));
+    if (!Number.isFinite(idade) || idade > TOLERANCIA_TIMESTAMP_S) {
+      return { ok: false, motivo: "timestamp fora da tolerância", conferida: true };
     }
 
-    if (bate(hmacHex(segredo, raw), recebida)) {
-      return { ok: true, conferida: true, convencao: "corpo" };
+    if (bate(hmacHex(segredo, `${ts}.${raw}`), recebida)) {
+      return { ok: true, conferida: true, convencao: "timestamp.corpo" };
     }
 
     return { ok: false, motivo: "assinatura não confere", conferida: true };
