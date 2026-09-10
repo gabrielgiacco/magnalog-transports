@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Card, Button, Input, Select } from "@/components/ui";
+import { WhatsAppAtendimentoSection } from "@/components/config/WhatsAppAtendimentoSection";
 import toast from "react-hot-toast";
 import { Settings, User, Shield, Bell, Globe, Palette, Save, Warehouse, Plus, Trash2, Edit2, PackageOpen, Receipt, MessageCircle } from "lucide-react";
 
@@ -773,6 +774,17 @@ export default function ConfiguracoesPage() {
               </div>
             )}
           </Section>
+
+          {/* Atendimento automático de entrada */}
+          {whats && (
+            <WhatsAppAtendimentoSection
+              config={whats.config}
+              recebidas={whats.recebidas ?? []}
+              isAdmin={user?.role === "ADMIN"}
+              salvando={savingWhats}
+              onSalvar={handleSaveWhats}
+            />
+          )}
 
           {/* Sistema */}
           <Section icon={Settings} title="Sistema">

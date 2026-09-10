@@ -187,11 +187,21 @@ async function processar(
   const recebidaId = await gravar(msg, bruto, provedor);
   if (!recebidaId) return { gravou: false, respondeu: false };
 
+  const semResposta = async (motivo: string) => {
+    await prisma.mensagemWhatsRecebida.update({
+      where: { id: recebidaId },
+      data: { motivoSemResposta: motivo },
+    });
+    return { gravou: true, respondeu: false };
+  };
+
   // Sem telefone (grupo, @lid) não há a quem responder.
-  if (!msg.telefone) return { gravou: true, respondeu: false };
+  if (!msg.telefone) return semResposta("sem telefone identificável (grupo ou @lid)");
 
   const atendimento = await atender(msg, baseUrl(headers));
-  if (!atendimento.resposta) return { gravou: true, respondeu: false };
+  if (!atendimento.resposta) {
+    return semResposta(atendimento.motivoSemResposta ?? "nada a responder");
+  }
 
   const r = await responder({
     telefone: msg.telefone,
@@ -201,8 +211,11 @@ async function processar(
     entregaId: atendimento.entregaId,
   });
 
-  if (!r.enviada) console.log(`[whatsapp] sem resposta para ${msg.telefone}: ${r.motivo}`);
-  return { gravou: true, respondeu: r.enviada };
+  if (!r.enviada) {
+    console.log(`[whatsapp] sem resposta para ${msg.telefone}: ${r.motivo}`);
+    return semResposta(r.motivo ?? "falha ao enviar");
+  }
+  return { gravou: true, respondeu: true };
 }
 
 /**

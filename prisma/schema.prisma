@@ -1644,6 +1644,11 @@ model MensagemWhatsRecebida {
   recebidaEm DateTime
   createdAt  DateTime          @default(now())
 
+  // Por que nao respondemos. Nulo quando respondemos. E o campo que responde
+  // "por que o Fulano nao recebeu resposta" sem ninguem precisar abrir log de
+  // servidor — a pergunta que o dono faz quando o atendimento parece mudo.
+  motivoSemResposta String?
+
   // É ESTA constraint que deduplica a retentativa do provedor, não código:
   // a segunda entrega do mesmo evento estoura P2002 e vira no-op. Em função
   // serverless não existe estado em memória para fazer isso.

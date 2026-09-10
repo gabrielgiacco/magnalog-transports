@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const [config, cota, mensagens] = await Promise.all([
+  const [config, cota, mensagens, recebidas] = await Promise.all([
     getConfig(),
     consultarCota(),
     prisma.mensagemWhats.findMany({
@@ -28,12 +28,29 @@ export async function GET(_req: NextRequest) {
         entrega: { select: { id: true, codigo: true } },
       },
     }),
+    // Entrada do atendimento. É aqui que se descobre "por que o Fulano não
+    // recebeu resposta": o motivo fica gravado na própria linha.
+    prisma.mensagemWhatsRecebida.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      select: {
+        id: true,
+        telefone: true,
+        nomePerfil: true,
+        tipo: true,
+        texto: true,
+        motivoSemResposta: true,
+        createdAt: true,
+        resposta: { select: { id: true, status: true, texto: true } },
+      },
+    }),
   ]);
 
   return NextResponse.json({
     config,
     cota,
     mensagens,
+    recebidas,
     credenciaisConfiguradas: credenciaisConfiguradas(),
   });
 }
@@ -49,16 +66,30 @@ export async function PUT(req: NextRequest) {
 
   const body = await req.json();
 
-  const cotaMensal = Math.max(0, Math.floor(Number(body.cotaMensal ?? 100)) || 0);
+  // Campo ausente mantém o valor atual, em vez de voltar ao default. A tela
+  // manda o config inteiro, mas um chamador que mande só `{ativo: true}`
+  // desligaria o atendimento e zeraria a cota sem pedir — e ninguém veria.
+  const atual = await getConfig();
+  const numero = (v: unknown, padrao: number) =>
+    v === undefined || v === null ? padrao : Math.max(0, Math.floor(Number(v)) || 0);
+  const booleano = (v: unknown, padrao: boolean) =>
+    v === undefined || v === null ? padrao : Boolean(v);
+
+  const cotaMensal = numero(body.cotaMensal, atual.cotaMensal);
   // A reserva nunca pode passar da cota, senão nunca haveria estado "reserva".
-  const limiteReserva = Math.min(cotaMensal, Math.max(0, Math.floor(Number(body.limiteReserva ?? 90)) || 0));
-  const maxCaracteres = Math.max(1, Math.floor(Number(body.maxCaracteres ?? 600)) || 600);
+  const limiteReserva = Math.min(cotaMensal, numero(body.limiteReserva, atual.limiteReserva));
+  const maxCaracteres = Math.max(1, numero(body.maxCaracteres, atual.maxCaracteres));
 
   const dados = {
-    ativo: Boolean(body.ativo),
+    ativo: booleano(body.ativo, atual.ativo),
     cotaMensal,
     limiteReserva,
     maxCaracteres,
+    atendimentoAtivo: booleano(body.atendimentoAtivo, atual.atendimentoAtivo),
+    confirmarLocalizacao: booleano(body.confirmarLocalizacao, atual.confirmarLocalizacao),
+    // Teto diário do robô. Zero é válido e significa "não responde hoje" — é o
+    // freio de mão sem precisar desligar o atendimento inteiro.
+    maxRespostasDia: numero(body.maxRespostasDia, atual.maxRespostasDia),
   };
 
   const config = await prisma.whatsAppConfig.upsert({
