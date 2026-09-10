@@ -16,7 +16,7 @@ async function validarToken(token: string) {
       id: true, codigo: true, razaoSocial: true, cidade: true, uf: true,
       dataAgendada: true, uploadTokenExpira: true, statusCanhoto: true,
       notas: { select: { numero: true, emitenteRazao: true } },
-      motorista: { select: { nome: true } },
+      motorista: { select: { id: true, nome: true } },
     },
   });
   if (!entrega) return null;
@@ -105,4 +105,51 @@ export async function PUT(req: NextRequest, { params }: { params: { token: strin
   const url = await presignGet(anexo.objectKey, 3600);
   const { objectKey: _ok, ...rest } = anexo;
   return NextResponse.json({ ...rest, url }, { status: 201 });
+}
+
+/**
+ * PATCH — registra onde o motorista estava ao enviar o canhoto.
+ *
+ * Autorizado pelo mesmo token do link, que aponta para UMA entrega: a posição
+ * amarra na entrega certa por construção, sem depender de casar telefone com
+ * cadastro.
+ *
+ * O navegador só entrega coordenada depois que a pessoa aceita o pedido de
+ * permissão — não existe leitura silenciosa, e é por isso que a página explica
+ * para que serve antes de pedir.
+ *
+ * Append-only, e NUNCA toca Entrega.latitude/longitude: aqueles são o destino
+ * geocodificado, que alimenta o planejador de rotas e o mapa.
+ */
+export async function PATCH(req: NextRequest, { params }: { params: { token: string } }) {
+  const entrega = await validarToken(params.token);
+  if (!entrega) return NextResponse.json({ error: "Link inválido ou expirado" }, { status: 404 });
+
+  const body = await req.json();
+  const latitude = Number(body.latitude);
+  const longitude = Number(body.longitude);
+
+  // Zero não é coordenada de entrega no Brasil: é o Golfo da Guiné, e é o que
+  // sai quando o valor vem vazio de algum lugar.
+  const valida =
+    Number.isFinite(latitude) && Number.isFinite(longitude) &&
+    latitude !== 0 && longitude !== 0 &&
+    Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
+
+  if (!valida) return NextResponse.json({ error: "Coordenada inválida" }, { status: 400 });
+
+  const precisao = Number(body.precisaoM);
+
+  const posicao = await prisma.posicaoEntrega.create({
+    data: {
+      entregaId: entrega.id,
+      motoristaId: entrega.motorista?.id ?? null,
+      latitude,
+      longitude,
+      precisaoM: Number.isFinite(precisao) && precisao > 0 ? precisao : null,
+      origem: "UPLOAD_CANHOTO",
+    },
+  });
+
+  return NextResponse.json({ id: posicao.id, registradaEm: posicao.registradaEm }, { status: 201 });
 }

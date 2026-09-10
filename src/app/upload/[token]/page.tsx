@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { ConfirmarLocal } from "@/components/upload/ConfirmarLocal";
 
 interface Info {
   entrega: {
@@ -208,6 +209,10 @@ export default function UploadPublicPage() {
             onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
           />
         </div>
+
+        {/* Só depois da primeira foto: é aí que o pedido faz sentido para o
+            motorista, e é o que ele acabou de fazer que a coordenada comprova. */}
+        {info.anexos.length > 0 && <ConfirmarLocal token={token} />}
 
         {progress && (
           <div style={{ background: "#1e293b", padding: "12px 16px", borderRadius: 8, marginBottom: 16, fontSize: 14, textAlign: "center" }}>

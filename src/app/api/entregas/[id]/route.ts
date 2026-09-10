@@ -13,6 +13,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const entrega = await prisma.entrega.findUnique({
     where: { id: params.id },
     include: {
+      // Onde o motorista estava ao mandar o canhoto. Ordenado do mais recente,
+      // e limitado: e prova de presenca, nao historico de rastreamento.
+      posicoes: { orderBy: { registradaEm: "desc" }, take: 5 },
       motorista: true,
       veiculo: { include: { dono: { select: { id: true, nome: true, telefone: true } } } },
       motoristaCompl: true,

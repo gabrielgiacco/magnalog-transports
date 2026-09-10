@@ -13,6 +13,7 @@ import { parseDanfeXML } from "@/lib/danfe-parser";
 import { baixarDanfeOficial, ROTULO_FORMATO, type FormatoDanfe } from "@/lib/danfe-pdf";
 import { QUALIDADE_ENABLED } from "@/lib/features";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
+import { LocalDaEntrega } from "@/components/entrega/LocalDaEntrega";
 import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import { AvisoEntregaModal } from "@/components/entrega/AvisoEntregaModal";
 import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
@@ -1140,7 +1141,12 @@ export default function EntregaDetailPage() {
         )}
 
         {tab === "canhotos" && (
-          <AnexosCard entregaId={id} readOnly={isReadOnly} rastreioToggle={isAdmin} />
+          <div className="space-y-4">
+            {/* Onde o motorista estava ao mandar o canhoto — junto do canhoto,
+                que é onde a pergunta "ele esteve mesmo lá?" aparece. */}
+            <LocalDaEntrega posicoes={entrega?.posicoes ?? []} />
+            <AnexosCard entregaId={id} readOnly={isReadOnly} rastreioToggle={isAdmin} />
+          </div>
         )}
 
         {tab === "qualidade" && isAdmin && QUALIDADE_ENABLED && (

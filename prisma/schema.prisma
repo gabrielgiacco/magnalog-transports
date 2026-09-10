@@ -376,6 +376,7 @@ model Entrega {
   // Token para upload público via link (motorista sobe canhoto pelo celular)
   uploadToken       String?   @unique
   uploadTokenExpira DateTime?
+  posicoes          PosicaoEntrega[]
 
   @@index([cnpj])
   @@index([status])
@@ -1550,6 +1551,40 @@ model NormaPaletizacao {
   @@unique([clienteCnpj, fornecedorCnpj, codigoProduto])
   @@index([clienteCnpj])
   @@index([fornecedorCnpj])
+}
+
+// ---------------------------------------------------------------------------
+// Onde a entrega aconteceu
+// ---------------------------------------------------------------------------
+
+// Posicao registrada durante a entrega. Append-only: nunca sobrescreve nada,
+// e em particular NAO toca Entrega.latitude/longitude, que sao o destino
+// geocodificado na importacao e alimentam o planejador de rotas e o mapa.
+//
+// Chama-se PosicaoEntrega e nao PosicaoMotorista porque quem identifica a
+// origem e o token do link do canhoto, que aponta para a ENTREGA. O motorista
+// e registrado quando se sabe qual e, e fica nulo quando nao se sabe.
+//
+// A via do WhatsApp nao existe: medido em 09/09/2026, a Pingo entrega
+// messageType "locationMessage" com o conteudo VAZIO no plano gratuito. Por
+// isso a coleta acontece na pagina que o motorista ja abre para fotografar o
+// canhoto, onde o GPS do proprio navegador da uma coordenada melhor.
+model PosicaoEntrega {
+  id          String   @id @default(cuid())
+  entregaId   String
+  entrega     Entrega  @relation(fields: [entregaId], references: [id], onDelete: Cascade)
+  motoristaId String?
+
+  latitude  Float
+  longitude Float
+  // Raio de incerteza em metros, como o navegador informa. Guardado porque
+  // uma posicao com 2 km de erro nao prova presenca no local.
+  precisaoM Float?
+
+  origem       String   @default("UPLOAD_CANHOTO")
+  registradaEm DateTime @default(now())
+
+  @@index([entregaId, registradaEm(sort: Desc)])
 }
 
 // ---------------------------------------------------------------------------

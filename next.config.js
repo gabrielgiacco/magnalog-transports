@@ -32,7 +32,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // camera=(self) porque /upload/[token] usa capture="environment" para o
   // motorista fotografar o canhoto. Bloquear aqui quebraria isso.
-  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(), payment=(), usb=()" },
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(self), payment=(), usb=()" },
   { key: "Content-Security-Policy-Report-Only", value: csp },
 ];
 
