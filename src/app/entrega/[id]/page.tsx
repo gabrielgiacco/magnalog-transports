@@ -17,6 +17,7 @@ const ANEXO_LABEL: Record<string, string> = {
   DESCARGA: "Comprovante de descarga",
   FOTO: "Foto da entrega",
   DECLARACAO: "Declaração / Ressalva",
+  ASSINATURA: "Assinatura do recebedor",
   DOCUMENTO: "Documento",
 };
 

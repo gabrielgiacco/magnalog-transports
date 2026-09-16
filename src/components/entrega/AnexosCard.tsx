@@ -31,6 +31,7 @@ const TIPO_LABEL: Record<string, string> = {
   DESCARGA: "Descarga",
   CANHOTO_DESCARGA: "Canhoto + Descarga",
   DECLARACAO: "Declaração / Ressalva",
+  ASSINATURA: "Assinatura do recebedor",
   OUTRO: "Outro",
 };
 

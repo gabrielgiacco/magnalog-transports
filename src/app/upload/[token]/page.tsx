@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { ConfirmarLocal } from "@/components/upload/ConfirmarLocal";
+import { AvancarStatus } from "@/components/upload/AvancarStatus";
 
 interface Info {
   entrega: {
@@ -12,10 +13,12 @@ interface Info {
     uf: string | null;
     dataAgendada: string | null;
     statusCanhoto: string;
+    status: string;
+    dataEntrega: string | null;
     notas: { numero: string; emitenteRazao: string }[];
     motorista: { nome: string } | null;
   };
-  anexos: { id: string; filename: string; mimeType: string; size: number; url: string; createdAt: string }[];
+  anexos: { id: string; tipo: string; filename: string; mimeType: string; size: number; url: string; createdAt: string }[];
   expira: string;
 }
 
@@ -130,7 +133,8 @@ export default function UploadPublicPage() {
     );
   }
 
-  const { entrega, anexos, expira } = info;
+  const { entrega, expira } = info;
+  const anexos = info.anexos.filter((a) => a.tipo !== "ASSINATURA");
   const nfs = entrega.notas.map((n) => n.numero).join(", ");
   const emitentes = Array.from(new Set(entrega.notas.map((n) => n.emitenteRazao))).join(" · ");
   const expiraDate = new Date(expira);
@@ -141,7 +145,7 @@ export default function UploadPublicPage() {
       {/* Header */}
       <div style={{ background: "#f97316", padding: "16px 20px", textAlign: "center" }}>
         <div style={{ fontSize: 12, opacity: 0.9, fontWeight: 700, letterSpacing: 1 }}>MAGNA LOG</div>
-        <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>Enviar Canhoto</div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginTop: 4 }}>Minha Entrega</div>
       </div>
 
       <div style={{ maxWidth: 500, margin: "0 auto", padding: "20px 16px 60px" }}>
@@ -166,6 +170,15 @@ export default function UploadPublicPage() {
             ⏱ Link válido por mais {horasRestantes > 0 ? `${horasRestantes}h` : "menos de 1h"}
           </div>
         </div>
+
+        <AvancarStatus
+          token={token}
+          status={entrega.status}
+          codigo={entrega.codigo}
+          temCanhoto={anexos.length > 0}
+          dataEntrega={entrega.dataEntrega}
+          onAtualizado={fetchInfo}
+        />
 
         {/* Botões de upload */}
         <div style={{ display: "grid", gap: 12, marginBottom: 20 }}>
@@ -212,7 +225,7 @@ export default function UploadPublicPage() {
 
         {/* Só depois da primeira foto: é aí que o pedido faz sentido para o
             motorista, e é o que ele acabou de fazer que a coordenada comprova. */}
-        {info.anexos.length > 0 && <ConfirmarLocal token={token} />}
+        {anexos.length > 0 && <ConfirmarLocal token={token} />}
 
         {progress && (
           <div style={{ background: "#1e293b", padding: "12px 16px", borderRadius: 8, marginBottom: 16, fontSize: 14, textAlign: "center" }}>

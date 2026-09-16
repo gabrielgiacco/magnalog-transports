@@ -112,6 +112,7 @@ enum TipoEventoAuditoria {
   USUARIO_EDITADO
   USUARIO_APAGADO
   WHATSAPP_ENVIADO
+  ENTREGA_STATUS_MOTORISTA // status avancado pelo motorista via link publico
   OUTRO
 }
 
@@ -397,6 +398,7 @@ enum TipoAnexo {
   DESCARGA
   CANHOTO_DESCARGA
   DECLARACAO
+  ASSINATURA // assinatura de quem recebeu, capturada na tela do motorista
   OUTRO
 }
 

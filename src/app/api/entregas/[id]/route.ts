@@ -120,7 +120,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  return NextResponse.json({ ...entrega, notas: notasComProdutos, armazenagemCalc, totalPaletesEstimados: totalPaletesEstimadosEntrega });
+  // Trilha do que o motorista fez pelo link. So este tipo de evento: e o que
+  // distingue "o motorista confirmou" de "a equipe mudou o status".
+  const eventosMotorista = await prisma.auditLog.findMany({
+    where: { recursoTipo: "entrega", recursoId: params.id, tipo: "ENTREGA_STATUS_MOTORISTA" },
+    orderBy: { timestamp: "asc" },
+    select: { id: true, timestamp: true, ip: true, detalhes: true },
+  });
+
+  return NextResponse.json({ ...entrega, notas: notasComProdutos, armazenagemCalc, totalPaletesEstimados: totalPaletesEstimadosEntrega, eventosMotorista });
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {

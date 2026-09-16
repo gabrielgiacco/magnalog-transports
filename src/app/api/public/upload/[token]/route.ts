@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildObjectKey, presignPut, presignGet } from "@/lib/r2";
+import { validarToken } from "@/lib/upload-token";
 
 const MAX_SIZE = 15 * 1024 * 1024;
 const ALLOWED_MIME = new Set([
@@ -8,31 +9,15 @@ const ALLOWED_MIME = new Set([
   "application/pdf",
 ]);
 
-async function validarToken(token: string) {
-  if (!token) return null;
-  const entrega = await prisma.entrega.findUnique({
-    where: { uploadToken: token },
-    select: {
-      id: true, codigo: true, razaoSocial: true, cidade: true, uf: true,
-      dataAgendada: true, uploadTokenExpira: true, statusCanhoto: true,
-      notas: { select: { numero: true, emitenteRazao: true } },
-      motorista: { select: { id: true, nome: true } },
-    },
-  });
-  if (!entrega) return null;
-  if (!entrega.uploadTokenExpira || entrega.uploadTokenExpira < new Date()) return null;
-  return entrega;
-}
-
 // GET — mostra info da entrega + anexos já enviados (usada pelo /upload/[token] page)
 export async function GET(_req: NextRequest, { params }: { params: { token: string } }) {
   const entrega = await validarToken(params.token);
   if (!entrega) return NextResponse.json({ error: "Link inválido ou expirado" }, { status: 404 });
 
   const anexos = await prisma.anexoEntrega.findMany({
-    where: { entregaId: entrega.id, tipo: "CANHOTO" },
+    where: { entregaId: entrega.id, tipo: { in: ["CANHOTO", "ASSINATURA"] } },
     orderBy: { createdAt: "desc" },
-    select: { id: true, filename: true, mimeType: true, size: true, createdAt: true, objectKey: true },
+    select: { id: true, tipo: true, filename: true, mimeType: true, size: true, createdAt: true, objectKey: true },
   });
   const comUrls = await Promise.all(
     anexos.map(async (a) => {
@@ -85,22 +70,31 @@ export async function PUT(req: NextRequest, { params }: { params: { token: strin
     return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
   }
 
+  // Whitelist, nunca o valor cru do body: o token não pode gravar qualquer
+  // tipo de anexo. A assinatura é um PNG desenhado na tela, não o canhoto
+  // físico — por isso tipo próprio e sem tocar em statusCanhoto.
+  const tipo = body.tipo === "ASSINATURA" ? "ASSINATURA" : "CANHOTO";
+
   const anexo = await prisma.anexoEntrega.create({
     data: {
       entregaId: entrega.id,
-      tipo: "CANHOTO",
+      tipo,
       objectKey,
       filename,
       mimeType,
       size: size || 0,
-      descricao: "Enviado pelo motorista via link mobile",
+      descricao: tipo === "ASSINATURA"
+        ? "Assinatura do recebedor, capturada na tela do motorista"
+        : "Enviado pelo motorista via link mobile",
     },
   });
 
-  await prisma.entrega.update({
-    where: { id: entrega.id },
-    data: { statusCanhoto: "RECEBIDO" },
-  });
+  if (tipo === "CANHOTO") {
+    await prisma.entrega.update({
+      where: { id: entrega.id },
+      data: { statusCanhoto: "RECEBIDO" },
+    });
+  }
 
   const url = await presignGet(anexo.objectKey, 3600);
   const { objectKey: _ok, ...rest } = anexo;

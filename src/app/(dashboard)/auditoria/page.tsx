@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Input, Select, Loading, Empty, Modal, Table, Th, Td, Tr } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
-import { Shield, Search, Trash2, RefreshCw, ChevronDown, ChevronRight, Eye, EyeOff, AlertTriangle, LogIn, LogOut, ShoppingBag, MapPin, FileEdit } from "lucide-react";
+import { Shield, Search, Trash2, RefreshCw, ChevronDown, ChevronRight, Eye, EyeOff, AlertTriangle, LogIn, LogOut, ShoppingBag, MapPin, FileEdit, Smartphone } from "lucide-react";
 
 interface AuditLog {
   id: string;
@@ -57,6 +57,7 @@ const TIPOS_EVENTO = [
   { group: "Entregas", items: [
     { value: "ENTREGA_CRIADA", label: "Entrega criada" },
     { value: "ENTREGA_EDITADA", label: "Entrega editada" },
+    { value: "ENTREGA_STATUS_MOTORISTA", label: "Status pelo motorista (link)" },
     { value: "ENTREGA_APAGADA", label: "Entrega apagada" },
   ] },
   { group: "Ocorrências", items: [
@@ -89,6 +90,7 @@ const TIPO_LABEL: Record<string, { label: string; icon: any; color: string }> = 
   RASTREIO_PUBLICO: { label: "Rastreio público", icon: MapPin, color: "#0891b2" },
   ENTREGA_CRIADA: { label: "Entrega criada", icon: FileEdit, color: "#059669" },
   ENTREGA_EDITADA: { label: "Entrega editada", icon: FileEdit, color: "#ea580c" },
+  ENTREGA_STATUS_MOTORISTA: { label: "Status pelo motorista", icon: Smartphone, color: "#7c3aed" },
   ENTREGA_APAGADA: { label: "Entrega apagada", icon: FileEdit, color: "#dc2626" },
   OCORRENCIA_CRIADA: { label: "Ocorrência criada", icon: AlertTriangle, color: "#d97706" },
   OCORRENCIA_RESOLVIDA: { label: "Ocorrência resolvida", icon: AlertTriangle, color: "#059669" },

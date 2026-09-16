@@ -22,6 +22,8 @@ export interface Posicao {
 
 const ORIGEM: Record<string, string> = {
   UPLOAD_CANHOTO: "confirmado pelo motorista ao enviar o canhoto",
+  STATUS_EM_ROTA: "registrado pelo motorista ao iniciar a rota",
+  STATUS_ENTREGUE: "registrado pelo motorista ao confirmar a entrega",
 };
 
 export function LocalDaEntrega({ posicoes }: { posicoes: Posicao[] }) {

@@ -18,6 +18,7 @@ import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import { AvisoEntregaModal } from "@/components/entrega/AvisoEntregaModal";
 import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
 import { TicketModal } from "@/components/entrega/TicketModal";
+import { EventosMotorista } from "@/components/entrega/EventosMotorista";
 import { Smartphone, Receipt, MessageCircle } from "lucide-react";
 
 const STATUS_FLOW = [
@@ -990,6 +991,8 @@ export default function EntregaDetailPage() {
                   </div>
                 )}
              </Card>
+
+             <EventosMotorista eventos={entrega.eventosMotorista || []} />
 
              {/* CT-e da transportadora — mostra os CT-es únicos das notas desta entrega */}
              {(() => {

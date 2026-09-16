@@ -102,7 +102,10 @@ export async function cleanupAuditLogs(dias = 90): Promise<number> {
   const limite = new Date();
   limite.setDate(limite.getDate() - dias);
   const result = await prisma.auditLog.deleteMany({
-    where: { timestamp: { lt: limite } },
+    // A confirmacao do proprio motorista (de, para, IP, GPS) e o que vale numa
+    // disputa de entrega; a assinatura e a posicao sobrevivem, este registro
+    // tambem precisa. Nao purgar.
+    where: { timestamp: { lt: limite }, tipo: { not: "ENTREGA_STATUS_MOTORISTA" } },
   });
   return result.count;
 }
