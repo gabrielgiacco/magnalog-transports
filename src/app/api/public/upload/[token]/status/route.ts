@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validarToken, type EntregaDoToken } from "@/lib/upload-token";
 import { logFromRequest } from "@/lib/audit";
+import { lerPosicao, lerGps, type Posicao } from "@/lib/posicao-motorista";
 
 export const dynamic = "force-dynamic";
 
@@ -14,26 +15,6 @@ export const dynamic = "force-dynamic";
 const ANTERIOR = { EM_ROTA: "CARREGADO", ENTREGUE: "EM_ROTA" } as const;
 type Para = keyof typeof ANTERIOR;
 type De = (typeof ANTERIOR)[Para];
-
-const GPS_VALIDOS = new Set(["ok", "negado", "indisponivel", "timeout"]);
-
-type Posicao = { latitude: number; longitude: number; precisaoM: number | null };
-
-// Mesma regra do PATCH de posição: zero é o Golfo da Guiné, não uma entrega.
-function coordenadaValida(lat: number, lng: number) {
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
-  if (lat === 0 || lng === 0) return false;
-  return Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
-}
-
-function lerPosicao(bruta: unknown): Posicao | null {
-  const p = (bruta ?? {}) as Record<string, unknown>;
-  const latitude = Number(p.latitude);
-  const longitude = Number(p.longitude);
-  if (!coordenadaValida(latitude, longitude)) return null;
-  const precisao = Number(p.precisaoM);
-  return { latitude, longitude, precisaoM: Number.isFinite(precisao) && precisao > 0 ? precisao : null };
-}
 
 const erro = (status: number, error: string, message?: string, extra?: object) =>
   NextResponse.json({ error, message, ...extra }, { status });
@@ -129,7 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     return erro(409, "STATUS_INCOMPATIVEL", undefined, { status: atual?.status });
   }
 
-  const gps = GPS_VALIDOS.has(String(body.gps)) ? String(body.gps) : "indisponivel";
+  const gps = lerGps(body.gps);
   const posicaoRegistrada = await registrar(req, { entrega, de, para, gps, posicao: lerPosicao(body.posicao) });
 
   return NextResponse.json({ ok: true, status: para, avancou: true, posicaoRegistrada });

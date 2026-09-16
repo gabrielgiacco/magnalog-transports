@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { ORDEM_PARADAS } from "@/lib/upload-token";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -16,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         include: {
           notas: { select: { id: true, numero: true, valorNota: true } },
         },
-        orderBy: { cidade: "asc" },
+        orderBy: [...ORDEM_PARADAS],
       },
       qualidade: { select: { id: true } },
     },
@@ -125,6 +126,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     });
   }
   if (body.addEntregaIds && Array.isArray(body.addEntregaIds)) {
+    // Entrega adicionada depois vai para o fim da sequencia.
+    const ultima = await prisma.entrega.aggregate({ where: { rotaId: params.id }, _max: { ordemRota: true } });
+    let proxima = (ultima._max.ordemRota ?? 0) + 1;
+    await prisma.$transaction(
+      (body.addEntregaIds as string[]).map((id) =>
+        prisma.entrega.update({ where: { id }, data: { ordemRota: proxima++ } })
+      )
+    );
     await prisma.entrega.updateMany({
       where: { id: { in: body.addEntregaIds } },
       data: { 
@@ -139,8 +148,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (body.removeEntregaId) {
     await prisma.entrega.update({
       where: { id: body.removeEntregaId },
-      data: { 
+      data: {
         rotaId: null,
+        // Sai da sequencia e do link da rota: o motorista nao pode agir numa
+        // parada que a equipe tirou.
+        ordemRota: null,
+        uploadToken: null,
+        uploadTokenExpira: null,
         motoristaId: null,
         veiculoId: null,
         valorMotorista: 0,

@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     if (body.entregaIds?.length) {
       await prisma.entrega.updateMany({
         where: { id: { in: body.entregaIds } },
-        data: { 
+        data: {
           rotaId: rota.id,
           motoristaId: rota.motoristaId,
           veiculoId: rota.veiculoId,
@@ -120,6 +120,14 @@ export async function POST(req: NextRequest) {
           status: "CARREGADO"
         },
       });
+      // O updateMany nao preserva a ordem de entregaIds, e essa ordem e a do
+      // planejador (possivelmente otimizada). Sem gravar aqui, toda leitura
+      // caia em "cidade asc" e a otimizacao virava so um numero no card.
+      await prisma.$transaction(
+        (body.entregaIds as string[]).map((id, i) =>
+          prisma.entrega.update({ where: { id }, data: { ordemRota: i + 1 } })
+        )
+      );
     }
 
     return NextResponse.json(rota, { status: 201 });

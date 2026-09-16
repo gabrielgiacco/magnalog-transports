@@ -267,6 +267,11 @@ model Rota {
   statusCanhoto         String                 @default("PENDENTE")
   status                StatusRota             @default(PLANEJADA)
   observacoes           String?
+  // Link do motorista para a rota inteira. Mesma mecanica de Entrega.uploadToken:
+  // 48h, revogavel, um por rota. Gerar aqui tambem gera/estende o token de cada
+  // entrega da rota, porque a pagina da parada reaproveita o link por entrega.
+  uploadToken           String?                @unique
+  uploadTokenExpira     DateTime?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   motorista             Motorista?             @relation(fields: [motoristaId], references: [id])
@@ -373,6 +378,11 @@ model Entrega {
   anexos         AnexoEntrega[]
   solicitacoesTicket SolicitacaoTicket[]
   mensagensWhats     MensagemWhats[]
+
+  // Posicao na rota, gravada ao criar a rota na ordem do planejador (que pode
+  // ter sido otimizada). Sem isto a ordem se perdia no updateMany e todas as
+  // leituras caiam em "cidade asc". Nula fora de rota.
+  ordemRota         Int?
 
   // Token para upload público via link (motorista sobe canhoto pelo celular)
   uploadToken       String?   @unique

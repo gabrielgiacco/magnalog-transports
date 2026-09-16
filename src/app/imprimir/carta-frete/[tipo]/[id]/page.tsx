@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireSessaoImpressao } from "@/lib/imprimir-auth";
+import { ORDEM_PARADAS } from "@/lib/upload-token";
 import { notFound } from "next/navigation";
 
 const formatCurrency = (val: number) =>
@@ -38,7 +39,7 @@ export default async function CartaFretePage({
   } else if (tipo === "rota") {
     data = await prisma.rota.findUnique({
       where: { id },
-      include: { motorista: true, veiculo: true, entregas: { include: { notas: true } } },
+      include: { motorista: true, veiculo: true, entregas: { orderBy: [...ORDEM_PARADAS], include: { notas: true } } },
     });
   }
 
