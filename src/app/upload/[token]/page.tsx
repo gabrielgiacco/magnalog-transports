@@ -1,8 +1,19 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ConfirmarLocal } from "@/components/upload/ConfirmarLocal";
 import { AvancarStatus } from "@/components/upload/AvancarStatus";
+import { OcorrenciaMotorista } from "@/components/upload/OcorrenciaMotorista";
+
+// Token da rota vem por query so para montar o "Voltar". Validado por forma
+// e nunca enviado a API: quem tem o link de UMA entrega nao ganha a rota.
+const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
+
+const VoltarRota = ({ token }: { token: string }) => (
+  <a href={`/rota/${token}`} style={{ display: "block", color: "#f97316", fontWeight: 700, fontSize: 14, textDecoration: "none", marginBottom: 16 }}>
+    ← Voltar para a rota
+  </a>
+);
 
 interface Info {
   entrega: {
@@ -33,6 +44,8 @@ function fmtSize(n: number) {
 export default function UploadPublicPage() {
   const params = useParams();
   const token = params!.token as string;
+  const rotaParam = useSearchParams().get("rota");
+  const rotaToken = rotaParam && TOKEN_RE.test(rotaParam) ? rotaParam : null;
   const [info, setInfo] = useState<Info | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,6 +162,8 @@ export default function UploadPublicPage() {
       </div>
 
       <div style={{ maxWidth: 500, margin: "0 auto", padding: "20px 16px 60px" }}>
+        {rotaToken && <VoltarRota token={rotaToken} />}
+
         {/* Dados da entrega */}
         <div style={{ background: "#111", border: "1px solid #222", borderRadius: 12, padding: 16, marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>
@@ -179,6 +194,13 @@ export default function UploadPublicPage() {
           dataEntrega={entrega.dataEntrega}
           onAtualizado={fetchInfo}
         />
+
+        {/* Ocorrencia sem bloquear: vale para entrega direta e para parada de rota */}
+        {(entrega.status === "CARREGADO" || entrega.status === "EM_ROTA") && (
+          <div style={{ marginBottom: 20 }}>
+            <OcorrenciaMotorista token={token} onRegistrada={fetchInfo} />
+          </div>
+        )}
 
         {/* Botões de upload */}
         <div style={{ display: "grid", gap: 12, marginBottom: 20 }}>
@@ -269,6 +291,9 @@ export default function UploadPublicPage() {
             Nenhum canhoto enviado ainda. Toque em "Tirar foto do canhoto" acima.
           </div>
         )}
+
+        {/* De novo no rodape: o motorista termina aqui embaixo, depois da assinatura */}
+        {rotaToken && <div style={{ marginTop: 24 }}><VoltarRota token={rotaToken} /></div>}
       </div>
     </div>
   );
