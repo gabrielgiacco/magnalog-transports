@@ -43,14 +43,21 @@ function ordemIcon(n: number) {
   });
 }
 
-// Componente para ajustar o zoom do mapa automaticamente baseado nos marcadores
-function ChangeView({ bounds }: { bounds: L.LatLngBounds | null }) {
+/**
+ * Enquadra o mapa nos marcadores — mas só quando o CONJUNTO de entregas
+ * visíveis muda (filtro, busca, carga inicial). `chave` é a lista ordenada de
+ * ids; clicar num pino muda a seleção e recria o array `entregas`, mas a chave
+ * continua igual, então o mapa fica onde o usuário deixou. Sem isto, cada
+ * clique dava zoom out para enquadrar tudo de novo.
+ */
+function ChangeView({ bounds, chave }: { bounds: L.LatLngBounds | null; chave: string }) {
   const map = useMap();
+  const ultimaChave = useRef<string | null>(null);
   useEffect(() => {
-    if (bounds && bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
-    }
-  }, [bounds, map]);
+    if (!bounds || !bounds.isValid() || chave === ultimaChave.current) return;
+    ultimaChave.current = chave;
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+  }, [bounds, chave, map]);
   return null;
 }
 
@@ -100,6 +107,8 @@ interface RouteMapProps {
 export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focusId, trajeto, trajetoAproximado, deposito }: RouteMapProps) {
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
+  // Identidade do conjunto visível, independente da ordem e da seleção.
+  const chaveConjunto = useMemo(() => entregas.map(e => e.id).sort().join(","), [entregas]);
 
   useEffect(() => {
     if (entregas.length > 0) {
@@ -133,7 +142,7 @@ export default function RouteMap({ entregas, selectedIds, onToggleEntrega, focus
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
       
-      <ChangeView bounds={bounds} />
+      <ChangeView bounds={bounds} chave={chaveConjunto} />
       <FocusController focusId={focusId} markerRefs={markerRefs} />
 
       {/* Desenhado antes dos marcadores para a linha passar por baixo deles */}
