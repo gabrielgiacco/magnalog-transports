@@ -7,8 +7,9 @@ import { Button, Card, Loading, StatusBadge, Modal, Select, Table, Th, Td, Tr } 
 import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
 import {
   ArrowLeft, Truck, User, Calendar, Package, Weight,
-  Plus, Trash2, CheckCircle2, PlayCircle, AlertTriangle, Search, ShieldCheck, FileText, History, Printer
+  Plus, Trash2, CheckCircle2, PlayCircle, AlertTriangle, Search, ShieldCheck, FileText, History, Printer, Smartphone
 } from "lucide-react";
+import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
 import { QUALIDADE_ENABLED } from "@/lib/features";
@@ -30,6 +31,7 @@ export default function RotaDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAddEntrega, setShowAddEntrega] = useState(false);
+  const [showLink, setShowLink] = useState(false);
   const [entregasDisp, setEntregasDisp] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchEntrega, setSearchEntrega] = useState("");
@@ -200,6 +202,11 @@ export default function RotaDetailPage() {
             <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/rota/${id}`, '_blank')}>
               <Printer size={14} /> Carta Frete
             </Button>
+            {rota.status !== "CANCELADA" && (
+              <Button variant="ghost" size="sm" onClick={() => setShowLink(true)}>
+                <Smartphone size={14} /> Link Motorista
+              </Button>
+            )}
           </div>
         }
       />
@@ -408,6 +415,16 @@ export default function RotaDetailPage() {
              </div>
           </div>
       </Modal>
+
+      <LinkMotoristaModal
+        modo="rota"
+        open={showLink}
+        onClose={() => setShowLink(false)}
+        id={id}
+        codigo={rota.codigo}
+        motoristaTelefone={rota.motorista?.telefone}
+        motoristaNome={rota.motorista?.nome}
+      />
     </>
   );
 }

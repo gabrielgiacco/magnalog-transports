@@ -1697,8 +1697,8 @@ export default function EntregaDetailPage() {
       <LinkMotoristaModal
         open={showLinkMotorista}
         onClose={() => setShowLinkMotorista(false)}
-        entregaId={id}
-        entregaCodigo={entrega.codigo}
+        id={id}
+        codigo={entrega.codigo}
         motoristaTelefone={entrega.motorista?.telefone}
         motoristaNome={entrega.motorista?.nome}
       />
