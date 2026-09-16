@@ -5,9 +5,9 @@ import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Input, Select, ComboboxMotorista } from "@/components/ui";
-import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation, Navigation2, Plus, AlertCircle, Filter, X, Package } from "lucide-react";
+import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation, Navigation2, Plus, AlertCircle, Filter, X, Package, Route, ChevronUp, ChevronDown } from "lucide-react";
 import { formatWeight, formatCurrency } from "@/lib/utils";
-import { DEPOSITO } from "@/lib/rota-trajeto";
+import { DEPOSITO, MAX_PARADAS_OTIMIZAR } from "@/lib/rota-trajeto";
 import type { MapEntrega } from "@/components/map/RouteMap";
 
 interface Trajeto {
@@ -28,6 +28,31 @@ const RouteMap = dynamic(() => import("@/components/map/RouteMap"), {
   ),
 });
 
+/**
+ * Nova lista de ids a partir da ordem que o roteador devolveu. Quem não tem
+ * coordenada não foi ao roteador e fica no fim, na ordem em que já estava.
+ * Devolve null quando nada muda, para a tela avisar em vez de "otimizar" à toa.
+ */
+function aplicarOrdem(atual: string[], comCoord: { id: string }[], ordem: number[]): string[] | null {
+  const otimizados = ordem.map(i => comCoord[i].id);
+  const nova = [...otimizados, ...atual.filter(id => !otimizados.includes(id))];
+  return nova.every((id, i) => id === atual[i]) ? null : nova;
+}
+
+const kmFmt = (km: number) => km.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+
+/** Lança com a mensagem da API em qualquer falha — o chamador só trata sucesso. */
+async function pedirOrdemOtimizada(paradas: { lat: number; lng: number }[], retornarDeposito: boolean): Promise<{ ordem: number[]; distanciaKm: number }> {
+  const res = await fetch("/api/rotas/otimizar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paradas, retornarDeposito }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Roteador indisponível — ordem mantida");
+  return data;
+}
+
 export default function PlanejadorRotasPage() {
   const router = useRouter();
   const [entregas, setEntregas] = useState<MapEntrega[]>([]);
@@ -45,6 +70,7 @@ export default function PlanejadorRotasPage() {
   const [selectedFornecedores, setSelectedFornecedores] = useState<string[]>([]);
   const [trajeto, setTrajeto] = useState<Trajeto | null>(null);
   const [calculandoTrajeto, setCalculandoTrajeto] = useState(false);
+  const [otimizando, setOtimizando] = useState(false);
   const [retornarDeposito, setRetornarDeposito] = useState(true);
 
   useEffect(() => {
@@ -224,6 +250,49 @@ export default function PlanejadorRotasPage() {
 
     return () => { cancelado = true; clearTimeout(timer); };
   }, [selectedEntregas, retornarDeposito]);
+
+  // Troca a ordem de clique pela ordem mais curta. Só mexe em selectedIds: o
+  // useEffect acima recalcula km/tempo e o mapa renumera os pinos sozinho.
+  async function handleOtimizar() {
+    const comCoord = selectedEntregas.filter(e => e.latitude != null && e.longitude != null);
+    const bloqueio =
+      comCoord.length < 2 ? "Selecione pelo menos 2 paradas com coordenada"
+      : comCoord.length > MAX_PARADAS_OTIMIZAR ? `O roteador aceita até ${MAX_PARADAS_OTIMIZAR} paradas por rota. Divida a seleção.`
+      : null;
+    if (bloqueio) { toast.error(bloqueio); return; }
+
+    // "antes" só vale se for distância por estrada; comparar com linha reta enganaria.
+    const antes = trajeto && !trajeto.aproximado ? trajeto.distanciaKm : null;
+
+    setOtimizando(true);
+    const id = toast.loading("Calculando a ordem mais curta…");
+    try {
+      const r = await pedirOrdemOtimizada(comCoord.map(e => ({ lat: e.latitude, lng: e.longitude })), retornarDeposito);
+      const nova = aplicarOrdem(selectedIds, comCoord, r.ordem);
+      if (!nova) { toast.success("A ordem atual já é a mais curta", { id }); return; }
+
+      setSelectedIds(nova);
+      toast.success(
+        antes != null ? `Ordem otimizada: ${kmFmt(antes)} km → ${kmFmt(r.distanciaKm)} km` : `Ordem otimizada: ${kmFmt(r.distanciaKm)} km por estrada`,
+        { id, duration: 6000 },
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Roteador indisponível — ordem mantida", { id });
+    } finally {
+      setOtimizando(false);
+    }
+  }
+
+  // Ajuste fino depois de otimizar: sobe/desce uma parada na lista.
+  function mover(i: number, delta: -1 | 1) {
+    const j = i + delta;
+    if (j < 0 || j >= selectedIds.length) return;
+    setSelectedIds(prev => {
+      const nova = [...prev];
+      [nova[i], nova[j]] = [nova[j], nova[i]];
+      return nova;
+    });
+  }
 
   const disponiveis = entregas.filter(e => !selectedIds.includes(e.id) && matchFornecedor(e));
   const filteredDisponiveis = disponiveis.filter(matchBusca);
@@ -405,15 +474,27 @@ export default function PlanejadorRotasPage() {
                       </div>
                     )}
 
-                    <label className="mt-2 flex cursor-pointer items-center gap-2 border-t border-blue-100 pt-2 text-[11px] text-blue-700">
-                      <input
-                        type="checkbox"
-                        checked={retornarDeposito}
-                        onChange={e => setRetornarDeposito(e.target.checked)}
-                        className="accent-blue-600"
-                      />
-                      Incluir retorno ao depósito
-                    </label>
+                    <div className="mt-2 flex items-center justify-between gap-2 border-t border-blue-100 pt-2">
+                      <label className="flex cursor-pointer items-center gap-2 text-[11px] text-blue-700">
+                        <input
+                          type="checkbox"
+                          checked={retornarDeposito}
+                          onChange={e => setRetornarDeposito(e.target.checked)}
+                          className="accent-blue-600"
+                        />
+                        Incluir retorno ao depósito
+                      </label>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleOtimizar}
+                        disabled={selectedIds.length < 2 || otimizando || calculandoTrajeto}
+                        loading={otimizando}
+                        title="Reordena as paradas para a rota mais curta"
+                      >
+                        <Route size={13} /> Otimizar ordem
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -479,10 +560,20 @@ export default function PlanejadorRotasPage() {
                     Nenhuma selecionada.
                   </div>
                 ) : (
-                  selectedEntregas.map(e => (
+                  selectedEntregas.map((e, i) => (
                     <div key={e.id} className="bg-white p-2.5 rounded border border-orange-200 shadow-sm flex items-center justify-between gap-2 group">
+                      <div className="flex flex-col -my-1">
+                        <button onClick={() => mover(i, -1)} disabled={i === 0} className="text-slate-300 hover:text-orange-500 disabled:opacity-20 p-0.5" title="Subir">
+                          <ChevronUp size={12} />
+                        </button>
+                        <button onClick={() => mover(i, 1)} disabled={i === selectedEntregas.length - 1} className="text-slate-300 hover:text-orange-500 disabled:opacity-20 p-0.5" title="Descer">
+                          <ChevronDown size={12} />
+                        </button>
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-slate-800 truncate">{e.razaoSocial}</div>
+                        <div className="text-xs font-bold text-slate-800 truncate">
+                          <span className="font-mono text-orange-500 mr-1">#{i + 1}</span>{e.razaoSocial}
+                        </div>
                         <div className="text-[10px] font-mono text-slate-500 truncate">{e.cidade} - {e.notas?.map((n:any)=>n.numero).join(", ") || e.codigo}</div>
                       </div>
                       <button onClick={() => toggleEntrega(e.id)} className="text-slate-300 hover:text-rose-500 transition-colors p-1">
