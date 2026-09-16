@@ -1,28 +1,7 @@
 "use client";
 import { useState } from "react";
 import { AssinaturaPad } from "@/components/upload/AssinaturaPad";
-
-type Posicao = { latitude: number; longitude: number; precisaoM?: number };
-type Gps = "ok" | "negado" | "indisponivel" | "timeout";
-
-/**
- * Nunca rejeita: GPS negado ou indisponível não pode impedir o motorista de
- * confirmar a entrega. O resultado vai junto no POST, para a equipe saber
- * por que não há coordenada.
- */
-function obterPosicao(): Promise<{ posicao?: Posicao; gps: Gps }> {
-  return new Promise((resolve) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) return resolve({ gps: "indisponivel" });
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({
-        posicao: { latitude: pos.coords.latitude, longitude: pos.coords.longitude, precisaoM: pos.coords.accuracy },
-        gps: "ok",
-      }),
-      (err) => resolve({ gps: err.code === 1 ? "negado" : err.code === 3 ? "timeout" : "indisponivel" }),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
-  });
-}
+import { obterPosicao } from "@/components/upload/gps";
 
 const card = (cor: string, borda: string) => ({
   background: cor, border: `1px solid ${borda}`, borderRadius: 12, padding: 16, marginBottom: 16,
