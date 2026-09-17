@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { ensureCategoriasFinanceiras } from "@/lib/financeiro";
 
 async function requireFinanceiro() {
-  const session = await getServerSession(authOptions);
-  if (!session) return { error: "Não autorizado", status: 401 };
+  const auth = await requireApi();
+  if (!auth.ok) return { error: "Não autorizado", status: 401 };
+  const session = auth.session;
   const role = (session.user as any).role;
   if (!["ADMIN", "FINANCEIRO"].includes(role)) return { error: "Acesso negado", status: 403 };
   return { session };

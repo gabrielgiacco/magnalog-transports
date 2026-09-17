@@ -40,6 +40,13 @@ export default withAuth(
 
     if (pathname.startsWith("/api/")) return gateApi(token, pathname);
 
+    // Conta desativada — vale para página também, senão desativar um usuário
+    // fecha a API e deixa a tela de impressão (carta-frete, acerto de
+    // motorista, declaração) abrindo até o token expirar.
+    if ((token as any)?.ativo === false) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
     // Cliente não aprovado
     if (token?.role === "CLIENTE" && !(token as any).aprovado) {
       return NextResponse.redirect(new URL("/aguardando-aprovacao", req.url));

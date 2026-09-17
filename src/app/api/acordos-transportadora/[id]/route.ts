@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     const acordo = await prisma.acordoTransportadora.findUnique({ where: { id: params.id } });
     if (!acordo) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
     return NextResponse.json(acordo);
@@ -19,8 +18,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     const body = await req.json();
     const data: any = {};
     if (body.transportadoraNome !== undefined) data.transportadoraNome = body.transportadoraNome;
@@ -37,8 +36,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const session = auth.session;
     const role = (session.user as any)?.role;
     if (role !== "ADMIN") return NextResponse.json({ error: "Apenas ADMIN" }, { status: 403 });
     await prisma.acordoTransportadora.delete({ where: { id: params.id } });
