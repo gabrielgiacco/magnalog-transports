@@ -17,9 +17,11 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
 
   return (
     <header
-      className="h-[64px] flex items-center justify-between px-4 lg:px-6 flex-shrink-0 sticky top-0 z-30 shadow-sm"
+      className="h-[66px] flex items-center justify-between px-4 lg:px-5 flex-shrink-0 sticky top-0 z-30"
       style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}
     >
+      {/* Filete laranja→ciano do design, puramente decorativo. */}
+      <div className="ml-rule" />
       <div className="flex items-center gap-3">
         <button 
           onClick={toggleSidebar}
@@ -29,9 +31,9 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
           <Menu size={22} />
         </button>
         <div>
-          <h1 className="font-head text-[16px] lg:text-[18px] font-bold tracking-tight leading-tight">{title}</h1>
+          <h1 className="font-head text-[16px] lg:text-[17px] font-extrabold tracking-tight leading-tight">{title}</h1>
           {subtitle && (
-            <p className="hidden xs:block text-[10px] lg:text-xs mt-0.5" style={{ color: "var(--text3)" }}>
+            <p className="hidden xs:block font-mono text-[10px] tracking-[.1em] mt-0.5 uppercase" style={{ color: "var(--text3)" }}>
               {subtitle}
             </p>
           )}
@@ -46,7 +48,7 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
         <NotificationBell />
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all hover:opacity-80"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] text-xs transition-all hover:opacity-80"
           style={{ background: "var(--surface2)", color: "var(--text2)", border: "1px solid var(--border)" }}
         >
           <LogOut size={13} />

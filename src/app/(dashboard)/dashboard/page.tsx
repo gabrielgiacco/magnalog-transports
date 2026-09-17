@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
+import {
+  HeroBanner, KpiTile, AlertPill, Panel, StatusBar, TH, TD, StatusChip,
+} from "@/components/dashboard/DashboardWidgets";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { AlertTriangle, ArrowUpRight, Truck, DollarSign, Weight } from "lucide-react";
 
@@ -23,6 +26,22 @@ const fmtKG = (v: number) =>
   new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(v || 0) + " kg";
 const fmtDate = (iso: string) =>
   iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—";
+
+const saudacao = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
+};
+
+/** Frase do banner montada so com o que a API ja devolve. */
+function resumoDoDia(k: any) {
+  const partes = [`${k?.emAndamento ?? 0} entrega${k?.emAndamento === 1 ? "" : "s"} ativa${k?.emAndamento === 1 ? "" : "s"}`];
+  if (k?.atrasadas > 0) partes.push(`${k.atrasadas} com prazo vencido`);
+  if (k?.ocorrenciasAbertas > 0) partes.push(`${k.ocorrenciasAbertas} ocorrência${k.ocorrenciasAbertas === 1 ? "" : "s"} em aberto`);
+  if (partes.length === 1) return `${partes[0]} — nenhum atraso nem ocorrência em aberto.`;
+  return `${partes.slice(0, -1).join(", ")} e ${partes[partes.length - 1]}.`;
+}
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -53,21 +72,35 @@ export default function DashboardPage() {
 
   const totalStatus = porStatus?.reduce((s: number, x: any) => s + x._count, 0) || 0;
 
+  const ativas = kpis?.emAndamento ?? 0;
+  const noPrazo = Math.max(ativas - (kpis?.atrasadas ?? 0), 0);
+  const pctNoPrazo = ativas ? Math.round((noPrazo / ativas) * 100) : 100;
+  const primeiroNome = session?.user?.name?.split(" ")[0] || "";
+
   return (
     <>
       <Topbar title="Dashboard" subtitle={new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })} />
-      <div className="flex-1 overflow-y-auto">
-        <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-8">
+      <div className="flex-1 overflow-y-auto ml-glow">
+        <main className="max-w-[1320px] mx-auto px-4 sm:px-6 py-5 sm:py-6 pb-11 space-y-4 animate-fadeIn">
           {loading ? (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: "var(--surface)" }} />
+                <div key={i} className="h-24 rounded-[13px] animate-pulse" style={{ background: "var(--surface)" }} />
               ))}
             </div>
           ) : (
             <>
+              <HeroBanner
+                greeting={`${saudacao()}${primeiroNome ? `, ${primeiroNome}` : ""}.`}
+                resumo={resumoDoDia(kpis)}
+                destaques={[
+                  { label: "NO PRAZO", value: `${pctNoPrazo}%`, hint: `${noPrazo} de ${ativas} ativas`, tone: "accent" },
+                  { label: "ENTREGUES HOJE", value: String(kpis?.entreguesHoje ?? 0), hint: "no dia de hoje", tone: "cyan" },
+                ]}
+              />
+
               <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <KpiTile label="Em andamento" value={String(kpis?.emAndamento ?? 0)} hint="entregas ativas" icon={<Truck size={14} />} />
+                <KpiTile label="Em andamento" value={String(ativas)} hint="entregas ativas" icon={<Truck size={14} />} tone="cyan" />
                 <KpiTile
                   label="Atrasadas"
                   value={String(kpis?.atrasadas ?? 0)}
@@ -101,7 +134,7 @@ export default function DashboardPage() {
               )}
 
               <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <Panel className="lg:col-span-2" title="Entregas por dia" subtitle="Últimos 7 dias">
+                <Panel className="lg:col-span-2 min-w-0" title="Entregas por dia" subtitle="Últimos 7 dias">
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={barData} barSize={28}>
                       <XAxis
@@ -122,50 +155,41 @@ export default function DashboardPage() {
                         }}
                         cursor={{ fill: "rgba(249,115,22,.06)" }}
                       />
-                      <Bar dataKey="entregas" radius={[4, 4, 0, 0]}>
+                      <Bar dataKey="entregas" radius={[5, 5, 0, 0]}>
                         {barData.map((_: any, i: number) => (
-                          <Cell key={i} fill={i === barData.length - 1 ? "var(--accent)" : "var(--border)"} />
+                          <Cell key={i} fill={i === barData.length - 1 ? "var(--accent)" : "var(--border2)"} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </Panel>
 
-                <Panel title="Por status" subtitle={`${totalStatus} entregas ativas`}>
+                <Panel className="min-w-0" title="Por status" subtitle={`${totalStatus} ativas`}>
                   <div className="space-y-3">
-                    {porStatus?.map((s: any) => {
-                      const pct = totalStatus ? Math.round((s._count / totalStatus) * 100) : 0;
-                      const color = STATUS_COLORS[s.status] || "#737373";
-                      return (
-                        <div key={s.status}>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs" style={{ color: "var(--text2)" }}>{STATUS_LABELS[s.status] || s.status}</span>
-                            <span className="text-xs font-mono" style={{ color }}>
-                              {s._count}
-                              <span className="ml-1.5" style={{ color: "var(--text3)" }}>{pct}%</span>
-                            </span>
-                          </div>
-                          <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
-                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {porStatus?.map((s: any) => (
+                      <StatusBar
+                        key={s.status}
+                        label={STATUS_LABELS[s.status] || s.status}
+                        count={s._count}
+                        pct={totalStatus ? Math.round((s._count / totalStatus) * 100) : 0}
+                        color={STATUS_COLORS[s.status] || "#737373"}
+                      />
+                    ))}
                   </div>
                 </Panel>
               </section>
 
               <Panel title="Últimas entregas" subtitle={`${ultimasEntregas?.length || 0} recentes`}>
                 <div className="overflow-x-auto -mx-5 sm:mx-0">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-[13px]">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                      <tr>
                         <TH>NF</TH>
                         <TH>Cliente</TH>
                         <TH className="hidden md:table-cell">Cidade</TH>
                         <TH className="hidden lg:table-cell">Motorista</TH>
                         <TH>Status</TH>
-                        <TH className="hidden md:table-cell text-right">Agendado</TH>
+                        <TH className="hidden md:table-cell !text-right">Agendado</TH>
                         <TH className="w-8"></TH>
                       </tr>
                     </thead>
@@ -198,10 +222,13 @@ export default function DashboardPage() {
                             </span>
                           </TD>
                           <TD>
-                            <StatusChip status={e.status} />
+                            <StatusChip
+                              label={STATUS_LABELS[e.status] || e.status}
+                              color={STATUS_COLORS[e.status] || "#737373"}
+                            />
                           </TD>
                           <TD className="hidden md:table-cell text-right">
-                            <span className="text-xs font-mono" style={{ color: "var(--text3)" }}>
+                            <span className="text-[11.5px] font-mono" style={{ color: "var(--text3)" }}>
                               {fmtDate(e.dataAgendada)}
                             </span>
                           </TD>
@@ -223,84 +250,5 @@ export default function DashboardPage() {
         </main>
       </div>
     </>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Locals — self-contained, sem depender de src/components/ui
-   ═══════════════════════════════════════════════════════════════════════════════ */
-
-function KpiTile({
-  label, value, hint, icon, tone = "neutral",
-}: {
-  label: string; value: string; hint?: string; icon?: React.ReactNode;
-  tone?: "neutral" | "accent" | "danger" | "warning";
-}) {
-  const toneColor =
-    tone === "accent" ? "var(--accent)"
-      : tone === "danger" ? "#ff4d4f"
-      : tone === "warning" ? "#f5a524"
-      : "var(--text)";
-
-  return (
-    <div className="p-4 rounded-lg transition-colors hover:border-neutral-700"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] uppercase tracking-wider font-medium" style={{ color: "var(--text3)" }}>{label}</span>
-        {icon && <span style={{ color: "var(--text3)" }}>{icon}</span>}
-      </div>
-      <div className="text-2xl font-semibold tracking-tight tabular-nums" style={{ color: toneColor }}>{value}</div>
-      {hint && <div className="text-[11px] mt-1" style={{ color: "var(--text3)" }}>{hint}</div>}
-    </div>
-  );
-}
-
-function AlertPill({ tone, icon, children }: { tone: "danger" | "warning"; icon: React.ReactNode; children: React.ReactNode }) {
-  const bg = tone === "danger" ? "rgba(255,77,79,.08)" : "rgba(245,165,36,.08)";
-  const border = tone === "danger" ? "rgba(255,77,79,.25)" : "rgba(245,165,36,.25)";
-  const color = tone === "danger" ? "#ff4d4f" : "#f5a524";
-  return (
-    <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg text-sm" style={{ background: bg, border: `1px solid ${border}`, color }}>
-      {icon}
-      <span>{children}</span>
-    </div>
-  );
-}
-
-function Panel({ title, subtitle, className = "", children }: { title: string; subtitle?: string; className?: string; children: React.ReactNode }) {
-  return (
-    <div className={`rounded-lg p-5 ${className}`} style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-      <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-        {subtitle && <span className="text-xs" style={{ color: "var(--text3)" }}>{subtitle}</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function TH({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return (
-    <th className={`text-left text-[10px] uppercase tracking-wider font-semibold py-2.5 px-3 ${className}`} style={{ color: "var(--text3)" }}>
-      {children}
-    </th>
-  );
-}
-
-function TD({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
-  return <td className={`py-3 px-3 ${className}`} style={{ color: "var(--text)" }}>{children}</td>;
-}
-
-function StatusChip({ status }: { status: string }) {
-  const color = STATUS_COLORS[status] || "#737373";
-  const label = STATUS_LABELS[status] || status;
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold"
-      style={{ background: `${color}15`, color, border: `1px solid ${color}30` }}
-    >
-      <span className="w-1 h-1 rounded-full" style={{ background: color }} />
-      {label.toUpperCase()}
-    </span>
   );
 }
