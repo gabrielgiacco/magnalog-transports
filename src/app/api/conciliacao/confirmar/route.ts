@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { logFromRequest } from "@/lib/audit";
 
@@ -25,8 +24,9 @@ interface Acao {
  * pela metade deixaria o financeiro num estado que ninguém consegue auditar.
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+  const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+  if (!auth.ok) return auth.response;
+  const session = auth.session;
   const sessionUser = session.user as any;
 
   const body = await req.json().catch(() => ({}));

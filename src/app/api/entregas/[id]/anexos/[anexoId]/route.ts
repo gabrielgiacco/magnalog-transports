@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { deleteObject, presignGet } from "@/lib/r2";
 import { logFromRequest } from "@/lib/audit";
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string; anexoId: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const anexo = await prisma.anexoEntrega.findUnique({ where: { id: params.anexoId } });
   if (!anexo || anexo.entregaId !== params.id) {
@@ -45,8 +44,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 // separado: lá existe login e vínculo de fornecedor; aqui basta ter o número
 // da NF. Por isso a ação é restrita a ADMIN e auditada com evento próprio.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string; anexoId: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const session = auth.session;
 
   const sessionUser = session.user as any;
   if (sessionUser?.role !== "ADMIN") {

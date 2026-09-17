@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -8,8 +7,8 @@ export const dynamic = "force-dynamic";
 const STATUS_VALIDOS = ["ENVIADA", "APROVADA", "RECUSADA", "CANCELADA"];
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const solicitacao = await prisma.solicitacaoTicket.findUnique({
     where: { id: params.id },
@@ -25,8 +24,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const session = auth.session;
   const role = (session.user as any)?.role;
   if (!["ADMIN", "FINANCEIRO", "OPERACIONAL"].includes(role)) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
@@ -59,8 +59,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const session = auth.session;
   if ((session.user as any)?.role !== "ADMIN") {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }

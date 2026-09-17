@@ -40,6 +40,9 @@ const nextConfig = {
   output: "standalone",
   experimental: {
     serverComponentsExternalPackages: ["@prisma/client", "bcryptjs"],
+    // Liga src/instrumentation.ts, que confere os segredos na subida do
+    // servidor. Roda no start, nao no build.
+    instrumentationHook: true,
   },
   images: {
     domains: ["lh3.googleusercontent.com", "avatars.githubusercontent.com"],

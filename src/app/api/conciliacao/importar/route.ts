@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { parseOfx, ehArquivoOfx } from "@/lib/extrato/ofx";
 import { parseMinhasFinancas, ehCsvMinhasFinancas } from "@/lib/extrato/minhas-financas";
@@ -26,8 +25,8 @@ interface LinhaImportada {
  * perderia a rastreabilidade e impediria deduplicar reimportação.
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+  const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+  if (!auth.ok) return auth.response;
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;

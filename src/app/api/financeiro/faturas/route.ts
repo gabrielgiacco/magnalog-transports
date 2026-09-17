@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { upsertLancamentoAutomatico, removeLancamentoAutomatico } from "@/lib/financeiro";
 import { logFromRequest } from "@/lib/audit";
@@ -9,8 +8,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return auth.response;
+    const session = auth.session;
 
     const faturas = await prisma.fatura.findMany({
       orderBy: { createdAt: "desc" },
@@ -28,8 +28,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return auth.response;
+    const session = auth.session;
 
     const body = await req.json();
     const { cnpj, nomeCliente, cteIds, dataVencimento } = body;
@@ -80,8 +81,9 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return auth.response;
+    const session = auth.session;
 
     const body = await req.json();
     const data: any = {};

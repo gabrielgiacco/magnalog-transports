@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { parseNotaFiscalXML } from "@/lib/xml-parser";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
+    const session = auth.session;
 
     const user = session.user as any;
     const userId = user.id || user.userId;
@@ -116,8 +116,8 @@ export async function POST(req: NextRequest) {
 // Mesclar avarias existentes que têm mesmo emitente CNPJ
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
 
     // Buscar todas as avarias do tipo DEVOLUCAO com suas NFDs
     const avarias = await prisma.avaria.findMany({

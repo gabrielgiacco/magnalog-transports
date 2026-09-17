@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { buildObjectKey, presignPut, presignGet } from "@/lib/r2";
 
@@ -11,8 +10,8 @@ const ALLOWED_MIME = new Set([
 ]);
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const anexos = await prisma.anexoEntrega.findMany({
     where: { entregaId: params.id },
@@ -35,8 +34,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 // Passo 1: cliente pede uma URL presignada pra fazer upload direto ao R2
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const body = await req.json();
   const { filename, mimeType, size, tipo, descricao } = body;
@@ -69,8 +68,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
 // Passo 2: cliente confirma o upload — cria o registro no DB
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
+  const session = auth.session;
   const userId = (session.user as any).id || (session.user as any).userId;
 
   const body = await req.json();

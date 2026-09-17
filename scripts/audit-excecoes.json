@@ -1,0 +1,40 @@
+{
+  "_leia": "Advisories de critica/alta que ficam ABERTAS de proposito, cada uma com o motivo de nao ser alcancavel neste app. Qualquer critica/alta fora desta lista reprova o CI. Rever a cada atualizacao de dependencia: se o motivo deixar de valer, a excecao sai.",
+  "excecoes": [
+    {
+      "pacote": "xlsx",
+      "severidade": "high",
+      "advisories": ["Prototype Pollution in sheetJS", "SheetJS ReDoS"],
+      "motivo": "As duas exigem PARSEAR planilha de terceiro. O app so escreve: json_to_sheet, book_new e write em paletes/export e faturamento/transportadora/[id]/export. Nao ha nenhuma chamada a XLSX.read ou readFile.",
+      "confirmar_com": "grep -rn 'XLSX.read' src  (tem de voltar vazio)",
+      "correcao_quando": "O npm nao publica correcao: a partir de 0.19.3 a SheetJS so distribui pelo CDN propria. Migrar a origem do pacote se algum dia o app passar a ler planilha."
+    },
+    {
+      "pacote": "next",
+      "severidade": "critical",
+      "advisories": [
+        "Unauthenticated RCE on windows-hosted servers",
+        "Unauthenticated RCE in Image Optimization API when AVIF files are used"
+      ],
+      "motivo": "A primeira e so para servidor Windows; o deploy e Vercel (Linux). A segunda exige o Image Optimizer, e o app nao importa next/image em lugar nenhum. As demais da lista dependem de Server Actions, Pages Router com i18n ou rewrites, e o app nao usa nada disso: e App Router puro, sem 'use server' e sem rewrites.",
+      "confirmar_com": "grep -rn 'next/image\\|use server' src  e  grep -n 'rewrites\\|i18n' next.config.js  (todos vazios)",
+      "correcao_quando": "Toda advisory restante do Next so e corrigida em >=15.5.x. Sair do 14.x e migracao de major do framework e precisa de trabalho proprio, planejado."
+    },
+    {
+      "pacote": "postcss",
+      "severidade": "high",
+      "advisories": ["Path traversal via sourceMappingURL em comentario de CSS"],
+      "motivo": "Entra como dependencia de build do Next e roda sobre o CSS do proprio projeto. Exige CSS de origem hostil, que nao existe aqui: nao ha CSS de terceiro entrando no build.",
+      "confirmar_com": "npm ls postcss  (so aparece sob next)",
+      "correcao_quando": "Sai junto com a atualizacao do Next para >=15.5.x."
+    },
+    {
+      "pacote": "fast-xml-parser",
+      "severidade": "moderate",
+      "advisories": ["XMLBuilder: XML Comment and CDATA Injection via Unescaped Delimiters"],
+      "motivo": "E do XMLBuilder, que constroi XML. O app so le, com XMLParser. Nao ha import de XMLBuilder.",
+      "confirmar_com": "grep -rn 'XMLBuilder' src  (tem de voltar vazio)",
+      "correcao_quando": "Corrigido em 5.7.0, que e major. As ALTAS ja sairam com a subida para 4.5.7; sobrou so esta moderada."
+    }
+  ]
+}

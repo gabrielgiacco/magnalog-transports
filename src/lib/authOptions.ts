@@ -58,7 +58,13 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    // 12h cobre um turno inteiro sem relogin e evita o padrao de 30 dias, em
+    // que um token roubado valia um mes. Revogar acesso nao depende disto: o
+    // callback `jwt` abaixo rele `ativo` do banco a cada requisicao.
+    maxAge: 12 * 60 * 60,
+  },
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "google") {
@@ -86,7 +92,14 @@ export const authOptions: NextAuthOptions = {
       if (dbUser) {
         token.role = dbUser.role;
         token.aprovado = dbUser.aprovado;
+        // Sem reler `ativo` aqui, desativar um usuario so barrava login novo: o
+        // JWT ja emitido (maxAge padrao de 30 dias) seguia abrindo a API.
+        token.ativo = dbUser.ativo;
         token.userId = dbUser.id;
+      } else {
+        // Usuario apagado do banco: o token que ele ainda tem na mao nao pode
+        // continuar valendo.
+        token.ativo = false;
       }
       return token;
     },
@@ -94,6 +107,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).aprovado = token.aprovado;
+        (session.user as any).ativo = token.ativo;
         (session.user as any).id = token.userId;
       }
       return session;
