@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
-    "lint:quality": "eslint src eslint-rules"
+    "lint:quality": "eslint src eslint-rules",
+    "audit:seguranca": "node scripts/audit-seguranca.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1095.0",
@@ -35,7 +36,7 @@
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.344.0",
-    "next": "14.1.0",
+    "next": "14.2.35",
     "next-auth": "^4.24.7",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
