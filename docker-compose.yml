@@ -7,7 +7,9 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: tms
-      POSTGRES_PASSWORD: tms123
+      # Sem default de proposito: `${VAR:?}` faz o compose abortar com a
+      # mensagem se a variavel nao estiver no ambiente ou no .env.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
       POSTGRES_DB: tms_magnalog
     ports:
       - "5432:5432"
@@ -27,9 +29,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://tms:tms123@postgres:5432/tms_magnalog
+      DATABASE_URL: postgresql://tms:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@postgres:5432/tms_magnalog
       NEXTAUTH_URL: http://localhost:3000
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-changeme-in-production}
+      # Um default aqui virava segredo real de producao: com um valor publico
+      # do repositorio qualquer um forja um JWT de sessao ADMIN.
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?gere com openssl rand -base64 32}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     ports:
