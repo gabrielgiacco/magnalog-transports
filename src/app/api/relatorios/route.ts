@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -17,8 +16,8 @@ function dateFilter(inicio: Date, fim: Date) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+  if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(req.url);
   const tipo = searchParams.get("tipo") || "mensal";

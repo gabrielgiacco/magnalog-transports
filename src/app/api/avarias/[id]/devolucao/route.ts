@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { parseNotaFiscalXML } from "@/lib/xml-parser";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
 
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
@@ -63,8 +62,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
 
     const { searchParams } = new URL(req.url);
     const devolucaoId = searchParams.get("devolucaoId");
@@ -79,8 +78,8 @@ export async function DELETE(req: NextRequest) {
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
 
     const body = await req.json();
     const { devolucaoId, status, responsavel, observacoes } = body;

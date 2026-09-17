@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 /** Detalhe: inclui quais documentos manifestados ja existem no TMS. */
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const mdfe = await prisma.mdfe.findUnique({
     where: { id: params.id },
@@ -40,8 +39,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 /** Encerrar manualmente ou vincular/desvincular rota. */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const body = await req.json().catch(() => ({}));
   const data: any = {};

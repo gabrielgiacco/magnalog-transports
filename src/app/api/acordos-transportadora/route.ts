@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return auth.response;
     const acordos = await prisma.acordoTransportadora.findMany({ orderBy: { transportadoraNome: "asc" } });
     return NextResponse.json({ acordos });
   } catch (error: any) {
@@ -18,8 +17,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return auth.response;
     const body = await req.json();
     const cnpj = String(body.transportadoraCnpj || "").replace(/\D/g, "");
     if (!cnpj || !body.transportadoraNome) {

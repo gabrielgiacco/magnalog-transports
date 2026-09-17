@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { buildObjectKey, presignPut, presignGet, deleteObject } from "@/lib/r2";
 import { logFromRequest } from "@/lib/audit";
@@ -20,8 +19,8 @@ interface Ctx {
 
 /** GET — lista anexos com URLs presignadas */
 export async function anexosList({ ownerType, ownerId }: Ctx) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const anexos = await prisma.anexo.findMany({
     where: { ownerType, ownerId },
@@ -39,8 +38,8 @@ export async function anexosList({ ownerType, ownerId }: Ctx) {
 
 /** POST — gera URL presignada de upload */
 export async function anexosPresign(req: NextRequest, { ownerType, ownerId }: Ctx) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const body = await req.json();
   const { filename, mimeType, size } = body;
@@ -67,8 +66,9 @@ export async function anexosPresign(req: NextRequest, { ownerType, ownerId }: Ct
 
 /** PUT — confirma upload e persiste no DB */
 export async function anexosConfirm(req: NextRequest, { ownerType, ownerId }: Ctx) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
+  const session = auth.session;
   const userId = (session.user as any).id || (session.user as any).userId;
 
   const body = await req.json();
@@ -101,8 +101,9 @@ export async function anexosConfirm(req: NextRequest, { ownerType, ownerId }: Ct
  * Só faz sentido para anexos de avaria: documento de motorista/veículo nunca vai ao portal.
  */
 export async function anexosSetVisibilidade(req: NextRequest, anexoId: string, { ownerType, ownerId }: Ctx) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
+  const session = auth.session;
   const sessionUser = session.user as any;
   const userId = sessionUser.id || sessionUser.userId;
 
@@ -148,8 +149,8 @@ export async function anexosSetVisibilidade(req: NextRequest, anexoId: string, {
 
 /** DELETE /[anexoId] — remove do R2 e DB */
 export async function anexosDelete(anexoId: string, { ownerType, ownerId }: Ctx) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const anexo = await prisma.anexo.findUnique({ where: { id: anexoId } });
   if (!anexo || anexo.ownerType !== ownerType || anexo.ownerId !== ownerId) {

@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
 
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q") || "";
@@ -47,8 +46,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
 
     const body = await req.json();
     const { action, items, clienteCnpj, fornecedorCnpj, codigoProduto, descricao, embalagem, lastro, altura, quantidadeCaixasPalete } = body;
@@ -145,8 +144,8 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
 
     const body = await req.json();
     const { id, clienteCnpj, fornecedorCnpj, codigoProduto, lastro, altura, quantidadeCaixasPalete, descricao, embalagem } = body;
@@ -202,8 +201,8 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return auth.response;
 
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

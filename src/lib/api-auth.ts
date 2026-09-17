@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, type Session } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 
@@ -34,7 +34,12 @@ export type UsuarioApi = {
   role: Papel;
 };
 
-type Autorizado = { ok: true; user: UsuarioApi };
+/**
+ * `session` vem junto porque muito handler usa `session.user` adiante. Assim a
+ * migracao nao precisa de um segundo getServerSession — que custaria outra
+ * consulta ao banco, ja que o callback `jwt` le o usuario a cada chamada.
+ */
+type Autorizado = { ok: true; user: UsuarioApi; session: Session };
 type Negado = { ok: false; response: NextResponse };
 export type ResultadoApi = Autorizado | Negado;
 
@@ -73,6 +78,7 @@ export async function requireApi(papeis: Papel[] = PAPEIS_INTERNOS): Promise<Res
   return {
     ok: true,
     user: { id: u.id, email: u.email, nome: u.name ?? null, role },
+    session,
   };
 }
 
