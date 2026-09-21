@@ -55,21 +55,22 @@ export function PresencaPanel() {
   const [agora, setAgora] = useState(Date.now());
   const [dia, setDia] = useState(diaLocal());
   const [visitas, setVisitas] = useState<Visita[] | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erroAgora, setErroAgora] = useState<string | null>(null);
+  const [erroDia, setErroDia] = useState<string | null>(null);
   const seqDia = useRef(0);
 
   const carregarOnline = useCallback(async () => {
     try {
       const res = await fetch("/api/presenca");
       if (!res.ok) {
-        setErro("Não foi possível carregar a presença");
+        setErroAgora("Não foi possível carregar a presença");
         return;
       }
       setOnline((await res.json()).online);
       setAgora(Date.now());
-      setErro(null);
+      setErroAgora(null);
     } catch {
-      setErro("Não foi possível carregar a presença");
+      setErroAgora("Não foi possível carregar a presença");
     }
   }, []);
 
@@ -83,14 +84,14 @@ export function PresencaPanel() {
       const res = await fetch(`/api/presenca?inicio=${inicio}&fim=${fim}`);
       if (meu !== seqDia.current) return;
       if (!res.ok) {
-        setErro("Não foi possível carregar a presença");
+        setErroDia("Não foi possível carregar a presença");
         return;
       }
       setVisitas((await res.json()).visitas);
-      setErro(null);
+      setErroDia(null);
     } catch {
       if (meu !== seqDia.current) return;
-      setErro("Não foi possível carregar a presença");
+      setErroDia("Não foi possível carregar a presença");
     }
   }, [dia]);
 
@@ -128,7 +129,9 @@ export function PresencaPanel() {
         </div>
       </div>
 
-      {erro && <p className="text-xs mb-2" style={{ color: "#f87171" }}>{erro}</p>}
+      {(aba === "agora" ? erroAgora : erroDia) && (
+        <p className="text-xs mb-2" style={{ color: "#f87171" }}>{aba === "agora" ? erroAgora : erroDia}</p>
+      )}
 
       {aba === "agora" ? (
         <ListaAgora online={online} agora={agora} />
