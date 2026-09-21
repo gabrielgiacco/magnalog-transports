@@ -68,6 +68,7 @@ model User {
   avariasRegistradas      Avaria[]               @relation("AvariaRegistrada")
   avariasResolvidas       Avaria[]               @relation("AvariaResolvida")
   auditLogs               AuditLog[]
+  presencas               PresencaVisita[]
   anexosEnviados          AnexoEntrega[]
   anexosGenericos         Anexo[]                @relation("AnexoUploader")
   anexosLiberados         Anexo[]                @relation("AnexoLiberador")
@@ -149,6 +150,24 @@ model AuditLog {
   @@index([tipo])
   @@index([ip])
   @@index([recursoTipo, recursoId])
+}
+
+// Presenca online: uma linha por VISITA, nao por sinal. O beacon do navegador
+// atualiza a visita aberta; visita sem sinal ha mais de VISITA_ABERTA_ATE_MS
+// (src/lib/presenca.ts) conta como encerrada e o proximo sinal abre outra.
+model PresencaVisita {
+  id          String   @id @default(cuid())
+  userId      String
+  inicio      DateTime @default(now())
+  ultimoSinal DateTime @default(now())
+  tela        String   // pathname da ultima tela vista
+  ip          String?
+  userAgent   String?  @db.Text
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ultimoSinal])
+  @@index([userId, ultimoSinal])
 }
 
 model FornecedorAutorizado {
