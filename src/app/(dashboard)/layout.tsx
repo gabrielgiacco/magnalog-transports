@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { PresencaBeacon } from "@/components/layout/PresencaBeacon";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -12,6 +13,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex h-screen w-full overflow-hidden" style={{ background: "var(--bg)" }}>
+      <PresencaBeacon />
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
         {children}
