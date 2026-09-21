@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Input, Select, Loading, Empty, Modal, Table, Th, Td, Tr } from "@/components/ui";
+import { PresencaPanel } from "@/components/auditoria/PresencaPanel";
 import { formatDate } from "@/lib/utils";
 import { Shield, Search, Trash2, RefreshCw, ChevronDown, ChevronRight, Eye, EyeOff, AlertTriangle, LogIn, LogOut, ShoppingBag, MapPin, FileEdit, Smartphone } from "lucide-react";
 
@@ -166,6 +167,8 @@ export default function AuditoriaPage() {
     <>
       <Topbar title="Auditoria" subtitle="Registro de acessos e ações do sistema" />
       <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
+        <PresencaPanel />
+
         {/* KPIs */}
         {data && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
