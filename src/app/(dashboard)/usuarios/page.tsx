@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, StatusBadge, Modal, Input, Select, Table, Th, Td, Tr } from "@/components/ui";
-import { Plus, Edit2, Shield, UserCheck, UserX } from "lucide-react";
+import { Plus, Edit2, Shield, UserCheck, UserX, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export default function UsuariosPage() {
@@ -13,6 +13,8 @@ export default function UsuariosPage() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", email: "", role: "OPERACIONAL", password: "", fornecedores: "" });
   const [saving, setSaving] = useState(false);
+  const [excluindo, setExcluindo] = useState<any>(null);   // usuario aguardando confirmacao
+  const [bloqueio, setBloqueio] = useState<string | null>(null); // 409: historico segura a exclusao
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -48,12 +50,12 @@ export default function UsuariosPage() {
       } else {
         const res = await fetch("/api/usuarios", { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...form, fornecedoresAutorizados: cnpjs }) });
-        if (!res.ok) throw new Error();
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error);
       }
       toast.success(editing ? "Usuário atualizado" : "Usuário criado!");
       setShowModal(false);
       fetch_();
-    } catch { toast.error("Erro ao salvar"); }
+    } catch (e: any) { toast.error(e?.message || "Erro ao salvar"); }
     finally { setSaving(false); }
   }
 
@@ -68,6 +70,32 @@ export default function UsuariosPage() {
     await fetch("/api/usuarios", { method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: u.id, ativo: !u.ativo }) });
     fetch_();
+  }
+
+  function openExcluir(u: any) {
+    setBloqueio(null);
+    setExcluindo(u);
+  }
+
+  async function handleExcluir() {
+    if (!excluindo) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/usuarios?id=${encodeURIComponent(excluindo.id)}`, { method: "DELETE" });
+      const r = await res.json().catch(() => ({}));
+      if (res.status === 409) { setBloqueio(r.error || "Usuário tem histórico. Desative em vez de excluir."); return; }
+      if (!res.ok) throw new Error(r.error);
+      toast.success("Usuário excluído");
+      setExcluindo(null);
+      fetch_();
+    } catch (e: any) { toast.error(e?.message || "Erro ao excluir"); }
+    finally { setSaving(false); }
+  }
+
+  async function desativarEmVez() {
+    if (excluindo?.ativo) await toggleAtivo(excluindo);
+    toast.success("Usuário desativado");
+    setExcluindo(null);
   }
 
   const getInitials = (name: string) => (name || "?").split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -139,10 +167,16 @@ export default function UsuariosPage() {
                       </div>
                     </Td>
                     <Td>
-                      <button onClick={() => openEdit(u)} className="p-1.5 rounded-lg transition-all hover:opacity-70"
-                        style={{ background: "var(--surface2)", color: "var(--text2)" }}>
-                        <Edit2 size={13} />
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => openEdit(u)} title="Editar" className="p-1.5 rounded-lg transition-all hover:opacity-70"
+                          style={{ background: "var(--surface2)", color: "var(--text2)" }}>
+                          <Edit2 size={13} />
+                        </button>
+                        <button onClick={() => openExcluir(u)} title="Excluir" className="p-1.5 rounded-lg transition-all hover:opacity-70"
+                          style={{ background: "rgba(255,77,79,.1)", color: "#f87171" }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </Td>
                   </Tr>
                 ))}
@@ -180,6 +214,29 @@ export default function UsuariosPage() {
           <Button variant="ghost" onClick={() => setShowModal(false)}>Cancelar</Button>
           <Button onClick={handleSave} loading={saving}>{editing ? "Salvar" : "Criar"}</Button>
         </div>
+      </Modal>
+
+      <Modal open={!!excluindo} onClose={() => setExcluindo(null)} title="Excluir usuário" size="sm">
+        {bloqueio ? (
+          <div className="space-y-4">
+            <p className="text-sm" style={{ color: "var(--text2)" }}>{bloqueio}</p>
+            <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+              <Button variant="ghost" onClick={() => setExcluindo(null)}>Fechar</Button>
+              {excluindo?.ativo && <Button onClick={desativarEmVez}>Desativar em vez disso</Button>}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm" style={{ color: "var(--text2)" }}>
+              Excluir <b>{excluindo?.name || excluindo?.email}</b>? Ele some da lista, o e-mail fica livre e ele não entra mais.
+              Isso não pode ser desfeito.
+            </p>
+            <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+              <Button variant="ghost" onClick={() => setExcluindo(null)}>Cancelar</Button>
+              <Button variant="danger" onClick={handleExcluir} loading={saving}>Excluir</Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );
