@@ -92,9 +92,11 @@ export async function DELETE(req: NextRequest) {
   const limite = new Date();
   limite.setDate(limite.getDate() - dias);
 
-  const result = await prisma.auditLog.deleteMany({
-    where: { timestamp: { lt: limite } },
-  });
+  // Visitas de presenca envelhecem junto com os logs — mesma janela, mesmo botao.
+  const [logs, visitas] = await Promise.all([
+    prisma.auditLog.deleteMany({ where: { timestamp: { lt: limite } } }),
+    prisma.presencaVisita.deleteMany({ where: { ultimoSinal: { lt: limite } } }),
+  ]);
 
-  return NextResponse.json({ apagados: result.count, dias });
+  return NextResponse.json({ apagados: logs.count, visitasApagadas: visitas.count, dias });
 }
