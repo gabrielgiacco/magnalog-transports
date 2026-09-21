@@ -89,7 +89,10 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token }) {
       // Always fetch latest role/aprovado from DB so admin changes take effect immediately
       const dbUser = await prisma.user.findUnique({ where: { email: token.email! } });
-      if (dbUser) {
+      // O e-mail pode ser reaproveitado depois de uma exclusao: o token do
+      // usuario antigo nao pode virar sessao da conta nova. Sem userId ainda
+      // (primeira passagem apos o login) aceita; depois, so o mesmo id.
+      if (dbUser && (!token.userId || token.userId === dbUser.id)) {
         token.role = dbUser.role;
         token.aprovado = dbUser.aprovado;
         // Sem reler `ativo` aqui, desativar um usuario so barrava login novo: o
