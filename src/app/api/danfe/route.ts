@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import {
   baixarPdf, enviarXml, chaveValida, MeuDanfeError,
@@ -21,8 +20,8 @@ const FORMATOS: FormatoDanfe[] = ["completo", "simplificado", "etiqueta", "cupom
  * envio só acontece após um 404 e nunca em laço.
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const body = await req.json().catch(() => ({}));
   const chave = String(body.chave || "").trim();

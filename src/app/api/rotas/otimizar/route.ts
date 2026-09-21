@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { otimizarOrdem, MAX_PARADAS_OTIMIZAR, type Ponto } from "@/lib/rota-trajeto";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +13,8 @@ export const maxDuration = 30;
  * ele sempre degrada para linha reta, aqui a degradação é "mantém a ordem".
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const body = await req.json().catch(() => ({}));
   const paradas: Ponto[] = Array.isArray(body.paradas) ? body.paradas : [];

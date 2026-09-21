@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { ORDEM_PARADAS } from "@/lib/upload-token";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const rota = await prisma.rota.findUnique({
     where: { id: params.id },
@@ -28,8 +27,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const body = await req.json();
   const data: any = {};
@@ -167,10 +166,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user as any)?.role !== "ADMIN") {
-    return NextResponse.json({ error: "Não autorizado (Apenas Admins)" }, { status: 403 });
-  }
+  const auth = await requireApi(["ADMIN"]);
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado (Apenas Admins)" }, { status: 403 });
 
   try {
     // 1. Desvincular todas as entregas e resetar seus campos

@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     const fatura = await prisma.faturaTransportadora.findUnique({
       where: { id: params.id },
       include: { itens: { orderBy: { createdAt: "asc" } } },
@@ -22,8 +21,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     const body = await req.json();
     const data: any = {};
     if (body.status !== undefined) data.status = body.status;
@@ -37,8 +36,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const session = auth.session;
     const role = (session.user as any)?.role;
     if (role !== "ADMIN") return NextResponse.json({ error: "Apenas ADMIN" }, { status: 403 });
     await prisma.faturaTransportadora.delete({ where: { id: params.id } });

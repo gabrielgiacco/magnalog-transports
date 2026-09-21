@@ -4,6 +4,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Card, Loading, Button, Modal } from "@/components/ui";
 import toast from "react-hot-toast";
 import { formatCurrency, formatWeight, formatDate } from "@/lib/utils";
+import { escapeHtml } from "@/lib/escape-html";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, Legend, PieChart, Pie, Cell,
@@ -880,10 +881,10 @@ function FornecedorTab() {
     const rows = itensFiltrados.map((i) => `
       <tr>
         <td class="badge" style="background:${TIPO_META[i.tipo].bg};color:${TIPO_META[i.tipo].color}">${TIPO_META[i.tipo].label}</td>
-        <td class="mono">${i.numero}${i.serie ? "/" + i.serie : ""}</td>
+        <td class="mono">${escapeHtml(i.numero)}${i.serie ? "/" + escapeHtml(i.serie) : ""}</td>
         <td class="mono">${fmtDt(i.dataEmissao)}</td>
-        <td class="trunc">${i.destinatario.razaoSocial}</td>
-        <td class="trunc">${i.destinatario.cidade || ""}${i.destinatario.uf ? "-" + i.destinatario.uf : ""}</td>
+        <td class="trunc">${escapeHtml(i.destinatario.razaoSocial)}</td>
+        <td class="trunc">${escapeHtml(i.destinatario.cidade || "")}${i.destinatario.uf ? "-" + escapeHtml(i.destinatario.uf) : ""}</td>
         <td class="mono">${fmtDt(i.entrega?.dataChegada)}</td>
         <td class="mono">${fmtDt(i.entrega?.dataEntrega)}</td>
         <td class="mono center">${i.diasArmazenados ?? "—"}</td>
@@ -894,7 +895,7 @@ function FornecedorTab() {
       </tr>
     `).join("");
     const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-      <title>Relatório ${data.fornecedor.nome}</title>
+      <title>Relatório ${escapeHtml(data.fornecedor.nome)}</title>
       <style>
         @page { size: A4 landscape; margin: 8mm; }
         * { box-sizing: border-box; }
@@ -920,8 +921,8 @@ function FornecedorTab() {
       </style></head><body>
       <button class="print-btn" onclick="window.print()">Imprimir</button>
       <h1>Relatório por Fornecedor${data.modo === "armazem" ? " — Cargas em Armazém" : ""}</h1>
-      <div class="sub">${data.fornecedor.nome}</div>
-      <div class="periodo">${data.modo === "armazem" ? `Situação atual do CD (snapshot em ${new Date().toLocaleDateString("pt-BR")})` : `Período: ${data.periodo.inicio || ""} a ${data.periodo.fim || ""} · Emitido em ${new Date().toLocaleDateString("pt-BR")}`}</div>
+      <div class="sub">${escapeHtml(data.fornecedor.nome)}</div>
+      <div class="periodo">${data.modo === "armazem" ? `Situação atual do CD (snapshot em ${new Date().toLocaleDateString("pt-BR")})` : `Período: ${escapeHtml(data.periodo.inicio || "")} a ${escapeHtml(data.periodo.fim || "")} · Emitido em ${new Date().toLocaleDateString("pt-BR")}`}</div>
       <div class="kpis">
         <div class="kpi"><div class="v">${data.kpis.totalNotas}</div><div class="l">Total NFs</div></div>
         <div class="kpi"><div class="v" style="color:#059669">${data.kpis.entregues}</div><div class="l">Entregues</div></div>

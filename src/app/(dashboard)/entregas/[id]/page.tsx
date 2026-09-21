@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, StatusBadge, Modal, Input, Select, Textarea, ComboboxMotorista, Table, Th, Td, Tr } from "@/components/ui";
 import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/utils";
+import { escapeHtml } from "@/lib/escape-html";
 import { Copy, FileText, History, Package, MapPin, Truck, ChevronLeft, Calendar, User, Clock, CheckCircle2, AlertCircle, Trash2, ShieldCheck, DollarSign, Scissors, ChevronDown, ChevronUp, Box, Info, Weight, Layers, AlertTriangle, Printer, Maximize2, Minimize2, Plus, Search, ExternalLink, Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
@@ -2165,9 +2166,9 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
 
       return `
         <tr>
-          <td class="font-mono text-center">${p.nfNumero}</td>
-          <td class="font-mono text-center">${p.codigo}</td>
-          <td>${p.descricao || "—"}</td>
+          <td class="font-mono text-center">${escapeHtml(p.nfNumero)}</td>
+          <td class="font-mono text-center">${escapeHtml(p.codigo)}</td>
+          <td>${escapeHtml(p.descricao || "—")}</td>
           <td class="text-center font-mono">${p.quantidade}</td>
           <td class="text-center font-mono">${normaText}</td>
           <td class="text-center font-mono font-bold">${paletesText}<br/><span style="font-size: 9px; color: #64748b; font-weight: normal;">${detalheText}</span></td>
@@ -2180,7 +2181,7 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Ficha de Conferência de Paletização - Carga ${entrega.codigo}</title>
+          <title>Ficha de Conferência de Paletização - Carga ${escapeHtml(entrega.codigo)}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
             body { font-family: 'Inter', sans-serif; color: #1e293b; padding: 20px; line-height: 1.4; }
@@ -2224,21 +2225,21 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
               <p>Instruções físicas de empilhamento de produtos por norma do cliente</p>
             </div>
             <div class="meta-carga">
-              <h2>${entrega.codigo}</h2>
+              <h2>${escapeHtml(entrega.codigo)}</h2>
               <p>Código da Carga</p>
             </div>
           </div>
 
           <div class="info-grid">
             <div class="info-col">
-              <div class="info-item"><span class="info-label">Destinatário (Cliente):</span> ${entrega.razaoSocial} (${formatCNPJ(entrega.cnpj)})</div>
-              <div class="info-item"><span class="info-label">Endereço de Entrega:</span> ${entrega.endereco || "—"}, ${entrega.cidade || "—"}/${entrega.uf || "—"}</div>
-              <div class="info-item"><span class="info-label">Data Agendada:</span> ${dataEntregaFormatada}</div>
+              <div class="info-item"><span class="info-label">Destinatário (Cliente):</span> ${escapeHtml(entrega.razaoSocial)} (${escapeHtml(formatCNPJ(entrega.cnpj))})</div>
+              <div class="info-item"><span class="info-label">Endereço de Entrega:</span> ${escapeHtml(entrega.endereco || "—")}, ${escapeHtml(entrega.cidade || "—")}/${escapeHtml(entrega.uf || "—")}</div>
+              <div class="info-item"><span class="info-label">Data Agendada:</span> ${escapeHtml(dataEntregaFormatada)}</div>
             </div>
             <div class="info-col">
-              <div class="info-item"><span class="info-label">Motorista:</span> ${entrega.motorista?.nome || "Não escalado"}</div>
-              <div class="info-item"><span class="info-label">Veículo / Placa:</span> ${entrega.veiculo?.placa || "Não escalado"} (${entrega.veiculo?.tipo || ""})</div>
-              <div class="info-item"><span class="info-label">Notas Fiscais:</span> ${entrega.notas?.map((n: any) => n.numero).join(", ") || "—"}</div>
+              <div class="info-item"><span class="info-label">Motorista:</span> ${escapeHtml(entrega.motorista?.nome || "Não escalado")}</div>
+              <div class="info-item"><span class="info-label">Veículo / Placa:</span> ${escapeHtml(entrega.veiculo?.placa || "Não escalado")} (${escapeHtml(entrega.veiculo?.tipo || "")})</div>
+              <div class="info-item"><span class="info-label">Notas Fiscais:</span> ${escapeHtml(entrega.notas?.map((n: any) => n.numero).join(", ") || "—")}</div>
             </div>
           </div>
 

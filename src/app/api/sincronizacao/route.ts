@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { listarChaves, MeuDanfeError } from "@/lib/meudanfe";
 
@@ -17,8 +16,8 @@ export const maxDuration = 60;
  * paginas ja lidas nao mudam quando entram documentos novos.
  */
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(req.url);
   const tipo = (searchParams.get("tipo") || "NFE").toUpperCase() as "NFE" | "CTE";

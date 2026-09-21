@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { consultarCota, getConfig, competenciaAtual } from "@/lib/whatsapp-cota";
 import { enviarTexto, PingoError } from "@/lib/pingo";
@@ -12,8 +11,9 @@ export const dynamic = "force-dynamic";
 const ROLES_PERMITIDAS = ["ADMIN", "OPERACIONAL", "FINANCEIRO"];
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const auth = await requireApi();
+  if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const session = auth.session;
 
   const user = session.user as any;
   if (!ROLES_PERMITIDAS.includes(user?.role)) {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { XMLParser } from "fast-xml-parser";
 
@@ -72,8 +71,8 @@ function parseNFXml(xmlContent: string | null) {
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
     const avaria = await prisma.avaria.findUnique({
       where: { id: params.id },
@@ -125,8 +124,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const session = auth.session;
 
     const user = session.user as any;
     const userId = user.id || user.userId;
@@ -172,8 +172,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const session = auth.session;
 
     const user = session.user as any;
     if (user.role !== "ADMIN") return NextResponse.json({ error: "Sem permissão" }, { status: 403 });

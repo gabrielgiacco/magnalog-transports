@@ -1,0 +1,38 @@
+name: CI
+
+# Nao substitui o deploy: quem publica e a integracao GitHub -> Vercel no push
+# da main. Isto aqui so avisa antes, e roda tambem em PR.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` roda o postinstall, que e `prisma generate`.
+      - run: npm ci
+
+      # Os quality gates fecham com 0 erros e ~1625 avisos. Erro novo e
+      # regressao; aviso e divida ja medida em eslint.config.mjs.
+      - name: Lint (0 erros)
+        run: npm run lint:quality
+
+      # `npm audit` com triagem por alcancabilidade: reprova critica e alta que
+      # nao esteja justificada em scripts/audit-excecoes.json.
+      - name: Audit de seguranca
+        run: npm run audit:seguranca
+
+      # Sem DATABASE_URL: o build nao consulta o banco, so precisa do client
+      # gerado. NEXTAUTH_SECRET tambem nao entra — a conferencia de segredo
+      # roda na subida do servidor, nao no build.
+      - name: Build
+        run: npm run build

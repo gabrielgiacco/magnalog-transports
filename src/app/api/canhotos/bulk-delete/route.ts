@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { deleteObject } from "@/lib/r2";
 
@@ -11,8 +10,9 @@ const TIPOS_DESCARGA = ["DESCARGA", "CANHOTO_DESCARGA"] as const;
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi();
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const session = auth.session;
 
     const role = (session.user as any)?.role;
     if (role !== "ADMIN") return NextResponse.json({ error: "Apenas ADMIN" }, { status: 403 });

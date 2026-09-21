@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { upsertLancamentoAutomatico, removeLancamentoAutomatico } from "@/lib/financeiro";
 
@@ -10,8 +9,8 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
     const faturas = await prisma.faturaArmazenagem.findMany({
       orderBy: { createdAt: "desc" },
@@ -29,8 +28,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
     const body = await req.json();
     const { fornecedorCnpj, entregaIds, dataVencimento, observacoes } = body;
@@ -124,8 +123,8 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
     const body = await req.json();
     const data: any = {};
@@ -164,8 +163,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const auth = await requireApi(["ADMIN", "FINANCEIRO"]);
+    if (!auth.ok) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    const session = auth.session;
 
     const user = (session.user as any);
     if (user.role !== "ADMIN") return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
