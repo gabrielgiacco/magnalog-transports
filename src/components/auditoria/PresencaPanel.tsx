@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Card, Empty, Input } from "@/components/ui";
 import { navGroups } from "@/components/layout/nav-items";
 import type { StatusPresenca } from "@/lib/presenca";
@@ -55,20 +55,43 @@ export function PresencaPanel() {
   const [agora, setAgora] = useState(Date.now());
   const [dia, setDia] = useState(diaLocal());
   const [visitas, setVisitas] = useState<Visita[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const seqDia = useRef(0);
 
   const carregarOnline = useCallback(async () => {
-    const res = await fetch("/api/presenca");
-    if (!res.ok) return;
-    setOnline((await res.json()).online);
-    setAgora(Date.now());
+    try {
+      const res = await fetch("/api/presenca");
+      if (!res.ok) {
+        setErro("Não foi possível carregar a presença");
+        return;
+      }
+      setOnline((await res.json()).online);
+      setAgora(Date.now());
+      setErro(null);
+    } catch {
+      setErro("Não foi possível carregar a presença");
+    }
   }, []);
 
   const carregarDia = useCallback(async () => {
     // Limites do dia no fuso do navegador — o servidor roda em UTC e nao sabe onde o dia comeca.
     const inicio = new Date(`${dia}T00:00:00`).toISOString();
     const fim = new Date(`${dia}T23:59:59.999`).toISOString();
-    const res = await fetch(`/api/presenca?inicio=${inicio}&fim=${fim}`);
-    if (res.ok) setVisitas((await res.json()).visitas);
+    // Resposta atrasada de um dia anterior nao pode sobrescrever a do dia atual.
+    const meu = ++seqDia.current;
+    try {
+      const res = await fetch(`/api/presenca?inicio=${inicio}&fim=${fim}`);
+      if (meu !== seqDia.current) return;
+      if (!res.ok) {
+        setErro("Não foi possível carregar a presença");
+        return;
+      }
+      setVisitas((await res.json()).visitas);
+      setErro(null);
+    } catch {
+      if (meu !== seqDia.current) return;
+      setErro("Não foi possível carregar a presença");
+    }
   }, [dia]);
 
   useEffect(() => {
@@ -104,6 +127,8 @@ export function PresencaPanel() {
           </Button>
         </div>
       </div>
+
+      {erro && <p className="text-xs mb-2" style={{ color: "#f87171" }}>{erro}</p>}
 
       {aba === "agora" ? (
         <ListaAgora online={online} agora={agora} />

@@ -171,6 +171,7 @@ html.dark .ml-glow {
 .badge-ADMIN         { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
 .badge-FINANCEIRO    { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
 .badge-OPERACIONAL   { background: #fdf6e3; color: #d97706; border: 1px solid #fde68a; }
+.badge-CONFERENTE    { background: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc; }
 .badge-CLIENTE       { background: #f3e8ff; color: #9333ea; border: 1px solid #e9d5ff; }
 
 /* Badges — DARK override: bg com alpha + texto vívido */
@@ -188,6 +189,7 @@ html.dark .badge-CANCELADA     { background: rgba(255,77,79,.12); color: #f87171
 html.dark .badge-ADMIN         { background: rgba(59,130,246,.12); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
 html.dark .badge-FINANCEIRO    { background: rgba(0,208,132,.12); color: #34d399; border: 1px solid rgba(0,208,132,.25); }
 html.dark .badge-OPERACIONAL   { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+html.dark .badge-CONFERENTE    { background: rgba(34,211,238,.12); color: #22d3ee; border: 1px solid rgba(34,211,238,.25); }
 html.dark .badge-CLIENTE       { background: rgba(168,85,247,.12); color: #c084fc; border: 1px solid rgba(168,85,247,.25); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
