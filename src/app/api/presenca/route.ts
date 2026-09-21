@@ -52,6 +52,12 @@ export async function GET(req: NextRequest) {
   const fimParam = searchParams.get("fim");
   const limiteAberta = new Date(Date.now() - VISITA_ABERTA_ATE_MS);
 
+  if (inicioParam || fimParam) {
+    if (!inicioParam || !fimParam) {
+      return NextResponse.json({ error: "informe inicio e fim juntos" }, { status: 400 });
+    }
+  }
+
   if (inicioParam && fimParam) {
     const inicio = new Date(inicioParam);
     const fim = new Date(fimParam);
@@ -69,11 +75,15 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const online = await prisma.presencaVisita.findMany({
+  const abertas = await prisma.presencaVisita.findMany({
     where: { ultimoSinal: { gte: limiteAberta } },
     orderBy: { ultimoSinal: "desc" },
     include: { user: usuario },
   });
+  const vistos = new Set<string>();
+  // Duas abas abertas no mesmo instante podem criar duas visitas; na lista de
+  // "agora" vale a mais recente de cada usuario.
+  const online = abertas.filter((v) => (vistos.has(v.userId) ? false : (vistos.add(v.userId), true)));
   return NextResponse.json({
     online: online.map((v) => ({ ...v, status: statusDoSinal(v.ultimoSinal) })),
   });
