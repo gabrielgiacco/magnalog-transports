@@ -151,13 +151,13 @@ export default function AuditoriaPage() {
   useEffect(() => { load(); }, [load]);
 
   async function handleCleanup() {
-    if (!confirm("Apagar TODOS os logs com mais de 90 dias? Esta ação é irreversível.")) return;
+    if (!confirm("Apagar TODOS os logs e visitas de presença com mais de 90 dias? Esta ação é irreversível.")) return;
     setCleaning(true);
     try {
       const res = await fetch("/api/auditoria?dias=90", { method: "DELETE" });
       if (res.ok) {
         const r = await res.json();
-        toast.success(`${r.apagados} logs apagados`);
+        toast.success(`${r.apagados} logs e ${r.visitasApagadas} visitas apagados`);
         load();
       } else toast.error("Erro ao limpar logs");
     } finally { setCleaning(false); }

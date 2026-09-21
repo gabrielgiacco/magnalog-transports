@@ -60,6 +60,7 @@ export function PresencaPanel() {
   const seqDia = useRef(0);
 
   const carregarOnline = useCallback(async () => {
+    if (document.visibilityState !== "visible") return;
     try {
       const res = await fetch("/api/presenca");
       if (!res.ok) {
@@ -75,6 +76,8 @@ export function PresencaPanel() {
   }, []);
 
   const carregarDia = useCallback(async () => {
+    // Campo de data limpo ou incompleto emite ""; sem isso o toISOString() abaixo lanca.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return;
     // Limites do dia no fuso do navegador — o servidor roda em UTC e nao sabe onde o dia comeca.
     const inicio = new Date(`${dia}T00:00:00`).toISOString();
     const fim = new Date(`${dia}T23:59:59.999`).toISOString();

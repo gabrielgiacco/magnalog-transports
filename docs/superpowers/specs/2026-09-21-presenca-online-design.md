@@ -138,6 +138,11 @@ Componentes de `@/components/ui` (Card, Button, Input, Empty) e os tokens
 - Duas abas do mesmo usuário aparecem como uma visita; a última tela pingada
   vence.
 - Duração de visita tem precisão de ~60 s (o intervalo do sinal).
+- Duas abas abertas no mesmo instante (ou o StrictMode do Next em dev) podem
+  criar duas visitas; "Agora" mostra só a mais recente por usuário, e o
+  histórico fica com uma visita-fantasma de ~1 min.
+- `tela` é informada pelo próprio navegador: serve de conveniência, não de
+  prova.
 
 ## Verificação
 
