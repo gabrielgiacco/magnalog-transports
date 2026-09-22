@@ -41,14 +41,15 @@ Sem essas relações, o `delete` do Prisma:
     orientação.
   - `logAudit` `USUARIO_APAGADO` com o ADMIN como ator e o excluído em
     `recursoId`/`recursoDesc`.
-- `POST /api/usuarios` — antes de criar, `findUnique` por e-mail: se existe,
+- `POST /api/usuarios` — antes de criar, busca por e-mail **sem diferenciar
+  maiúsculas** (é assim que o login compara): se existe,
   409 "E-mail já cadastrado" (com "em um usuário inativo — exclua-o ou
   reative-o" quando for o caso). Hoje estoura o unique com 500.
 
 ## Sessão — `src/lib/authOptions.ts`
 
 O callback `jwt` acha o usuário pelo **e-mail** do token. Com e-mail
-reaproveitado, o token do excluído (30 dias) viraria sessão da conta nova.
+reaproveitado, o token do excluído (até 12 h) viraria sessão da conta nova.
 Passa a valer só se `token.userId` está vazio (primeiro sinal) ou é igual ao
 `id` encontrado; caso contrário, `ativo = false`.
 

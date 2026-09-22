@@ -5,7 +5,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Input, Select, Loading, Empty, Modal, Table, Th, Td, Tr } from "@/components/ui";
 import { PresencaPanel } from "@/components/auditoria/PresencaPanel";
 import { formatDate } from "@/lib/utils";
-import { Shield, Search, Trash2, RefreshCw, ChevronDown, ChevronRight, Eye, EyeOff, AlertTriangle, LogIn, LogOut, ShoppingBag, MapPin, FileEdit, Smartphone } from "lucide-react";
+import { Shield, Search, Trash2, RefreshCw, ChevronDown, ChevronRight, Eye, EyeOff, AlertTriangle, LogIn, LogOut, ShoppingBag, MapPin, FileEdit, Smartphone, UserX } from "lucide-react";
 
 interface AuditLog {
   id: string;
@@ -106,6 +106,7 @@ const TIPO_LABEL: Record<string, { label: string; icon: any; color: string }> = 
   CONTA_PAGAR_CRIADA: { label: "Conta a pagar criada", icon: FileEdit, color: "#059669" },
   CONTA_PAGAR_PAGA: { label: "Conta paga", icon: FileEdit, color: "#059669" },
   CONTA_PAGAR_APAGADA: { label: "Conta apagada", icon: FileEdit, color: "#dc2626" },
+  USUARIO_APAGADO: { label: "Usuário excluído", icon: UserX, color: "#dc2626" },
   OUTRO: { label: "Outro", icon: FileEdit, color: "#6b7280" },
 };
 

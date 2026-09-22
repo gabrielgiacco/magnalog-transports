@@ -67,9 +67,10 @@ export default function UsuariosPage() {
   }
 
   async function toggleAtivo(u: any) {
-    await fetch("/api/usuarios", { method: "PATCH", headers: { "Content-Type": "application/json" },
+    const res = await fetch("/api/usuarios", { method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: u.id, ativo: !u.ativo }) });
     fetch_();
+    return res.ok;
   }
 
   function openExcluir(u: any) {
@@ -93,8 +94,8 @@ export default function UsuariosPage() {
   }
 
   async function desativarEmVez() {
-    if (excluindo?.ativo) await toggleAtivo(excluindo);
-    toast.success("Usuário desativado");
+    const ok = excluindo?.ativo ? await toggleAtivo(excluindo) : true;
+    if (ok) toast.success("Usuário desativado"); else toast.error("Erro ao desativar");
     setExcluindo(null);
   }
 

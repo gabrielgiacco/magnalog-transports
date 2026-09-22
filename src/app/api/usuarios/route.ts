@@ -41,7 +41,11 @@ export async function POST(req: NextRequest) {
   if (!email) return NextResponse.json({ error: "E-mail obrigatório" }, { status: 400 });
 
   // Inativo ainda segura o e-mail (unique): avisar em vez de estourar com 500.
-  const existente = await prisma.user.findUnique({ where: { email }, select: { ativo: true } });
+  // O login compara sem diferenciar maiusculas; a checagem precisa fazer o mesmo.
+  const existente = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { ativo: true },
+  });
   if (existente) {
     return NextResponse.json(
       { error: existente.ativo ? "E-mail já cadastrado" : "E-mail já cadastrado em um usuário inativo — exclua-o ou reative-o" },
@@ -110,8 +114,8 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json(updated);
 }
 
-// Relacoes obrigatorias: apagar o usuario levaria o historico junto (ou
-// falharia no banco). Quem tem qualquer uma delas so pode ser desativado.
+// Relacoes obrigatorias (Restrict no banco): o delete seria recusado. Quem
+// tem qualquer uma delas so pode ser desativado.
 const TRAVAS = {
   avariasRegistradas: "avaria(s) registrada(s)",
   orcamentos: "orçamento(s) criado(s)",
@@ -153,6 +157,7 @@ export async function DELETE(req: NextRequest) {
   try {
     await prisma.user.delete({ where: { id } });
   } catch (e: any) {
+    if (e?.code === "P2025") return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
     // P2003 = chave estrangeira segurando: alguma relacao obrigatoria fora da lista acima.
     if (e?.code === "P2003") {
       return NextResponse.json({ error: `Usuário tem histórico vinculado. ${HISTORICO_MSG}`, travas: [] }, { status: 409 });
