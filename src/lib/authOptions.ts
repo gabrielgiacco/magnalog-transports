@@ -7,6 +7,19 @@ import bcrypt from "bcryptjs";
 import { logAudit } from "@/lib/audit";
 import { extrairIp, verificarLimiteLogin, MENSAGEM_BLOQUEIO } from "@/lib/login-rate-limit";
 
+/**
+ * Navegador/aparelho de quem tentou entrar.
+ *
+ * Sem isto, falha de login era o unico evento da auditoria sem User-Agent — e
+ * na hora de saber se o cliente errou a senha no PC ou no celular nao dava pra
+ * responder. Leitura direta porque o `req` do authorize entrega os headers
+ * como objeto simples, e nao como um Request com headers.get().
+ */
+function extrairUserAgent(headers: Record<string, any> | undefined): string {
+  const v = headers?.["user-agent"] ?? headers?.["User-Agent"];
+  return String((Array.isArray(v) ? v[0] : v) || "");
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -24,13 +37,14 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
         const inputEmail = credentials.email.toLowerCase().trim();
         const ip = extrairIp(req?.headers as any);
+        const userAgent = extrairUserAgent(req?.headers as any);
 
         // Freio antes de qualquer comparação de senha: sem isto, bcrypt custo 12
         // vira só um atraso por tentativa, não um limite.
         const limite = await verificarLimiteLogin(inputEmail, ip);
         if (limite.bloqueado) {
           await logAudit({
-            tipo: "LOGIN_FAIL", sucesso: false, ip,
+            tipo: "LOGIN_FAIL", sucesso: false, ip, userAgent,
             user: { email: inputEmail },
             detalhes: { motivo: "bloqueado_rate_limit", regra: limite.motivo, falhas: limite.falhas },
           });
@@ -41,19 +55,19 @@ export const authOptions: NextAuthOptions = {
           where: { email: { equals: inputEmail, mode: "insensitive" } },
         });
         if (!user || !user.password) {
-          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, user: { email: inputEmail }, detalhes: { motivo: "usuario_nao_encontrado" } });
+          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, userAgent, user: { email: inputEmail }, detalhes: { motivo: "usuario_nao_encontrado" } });
           return null;
         }
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) {
-          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { motivo: "senha_invalida" } });
+          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, userAgent, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { motivo: "senha_invalida" } });
           return null;
         }
         if (!user.ativo) {
-          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { motivo: "usuario_inativo" } });
+          await logAudit({ tipo: "LOGIN_FAIL", sucesso: false, ip, userAgent, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { motivo: "usuario_inativo" } });
           throw new Error("Usuário inativo");
         }
-        await logAudit({ tipo: "LOGIN", ip, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { provider: "credentials" } });
+        await logAudit({ tipo: "LOGIN", ip, userAgent, user: { id: user.id, email: user.email, name: user.name, role: user.role }, detalhes: { provider: "credentials" } });
         return { id: user.id, email: user.email, name: user.name, role: user.role, aprovado: user.aprovado };
       },
     }),
