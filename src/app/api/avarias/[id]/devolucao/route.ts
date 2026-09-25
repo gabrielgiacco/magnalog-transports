@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { parseNotaFiscalXML } from "@/lib/xml-parser";
+import { sincronizarPorNotaDevolucao } from "@/lib/deposito";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -96,9 +97,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (status === "RETIRADO") data.dataRetirada = new Date();
     if (status === "DESCARTADO") data.dataDescarte = new Date();
 
-    const devolucao = await prisma.notaDevolucao.update({
-      where: { id: devolucaoId },
-      data,
+    // Numa transação: o "Dar Saída" daqui também fecha (ou reabre, se voltar
+    // para PENDENTE) o item de depósito ligado a esta NFD. Os dois têm de
+    // andar juntos, senão a tela de Avarias e a do Depósito divergem.
+    const devolucao = await prisma.$transaction(async (tx) => {
+      const atualizada = await tx.notaDevolucao.update({
+        where: { id: devolucaoId },
+        data,
+      });
+      if (status) {
+        await sincronizarPorNotaDevolucao(tx, devolucaoId, status, auth.user.id);
+      }
+      return atualizada;
     });
 
     return NextResponse.json(devolucao);

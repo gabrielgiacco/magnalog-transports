@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { baixarPorReferencias } from "@/lib/deposito";
 
 export const dynamic = "force-dynamic";
 
@@ -158,6 +159,20 @@ export async function POST(req: NextRequest) {
           },
         });
       }
+
+      // Emitir a declaração é uma das formas de dar baixa no depósito. Fecha
+      // os itens ligados a estas devoluções/avarias, dentro da MESMA transação
+      // — se falhar, a declaração também não sai, em vez de ficar meia
+      // aplicada. Item de depósito inexistente é o caso normal de tudo que é
+      // anterior a este módulo: o helper devolve 0, não lança.
+      await baixarPorReferencias(tx, {
+        notaDevolucaoIds: devolucaoIds,
+        avariaIds,
+        motivo: "RETIRADO_EMBARCADOR",
+        documento: declaracao.codigo,
+        responsavel: motoristaNome,
+        usuarioId: userId,
+      });
 
       return declaracao;
     });
