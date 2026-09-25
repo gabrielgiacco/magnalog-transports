@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest) {
   const inicioMes = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), 1));
   const inicioProximoMes = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() + 1, 1));
 
-  const [emEstoqueCount, emEstoqueRows, porEmbarcadorBruto, acima15dias, acima30dias, maisAntigo, baixadosMes, candidatosPendentes] =
+  const [emEstoqueCount, emEstoqueRows, porEmbarcadorBruto, porTransportadoraBruto, acima15dias, acima30dias, maisAntigo, baixadosMes, candidatosPendentes] =
     await Promise.all([
       prisma.depositoItem.count({ where: { status: "EM_ESTOQUE" } }),
       // Traz as linhas em vez de usar aggregate/groupBy: volumes/peso/valor
@@ -36,6 +36,16 @@ export async function GET(_req: NextRequest) {
         where: { status: "EM_ESTOQUE" },
         _count: true,
         orderBy: { _count: { embarcadorCnpj: "desc" } },
+        take: 10,
+      }),
+      // Alimenta o dropdown de filtro por transportadora na tela — top 10,
+      // nulos de fora (mercadoria sem transportadora identificada nao entra
+      // na lista de sugestao).
+      prisma.depositoItem.groupBy({
+        by: ["transportadora"],
+        where: { status: "EM_ESTOQUE", transportadora: { not: null } },
+        _count: true,
+        orderBy: { _count: { transportadora: "desc" } },
         take: 10,
       }),
       prisma.depositoItem.count({ where: { status: "EM_ESTOQUE", dataEntrada: { lte: limite15 } } }),
@@ -89,6 +99,10 @@ export async function GET(_req: NextRequest) {
       cnpj: e.embarcadorCnpj,
       razao: e.embarcadorRazao,
       count: e._count,
+    })),
+    porTransportadora: porTransportadoraBruto.map((t) => ({
+      nome: t.transportadora as string,
+      count: t._count,
     })),
     acima15dias,
     acima30dias,

@@ -26,6 +26,10 @@ export interface CandidatoDeposito {
   // avaria sem NF linkada) — os campos acima ficam vazios e a tela tem de
   // exigir o preenchimento antes de liberar a importação.
   embarcadorIncerto: boolean;
+  // Quem trouxe a mercadoria de volta ao deposito. So existe nas origens
+  // ligadas a avaria (AVARIA e NOTA_DEVOLUCAO, via a avaria-pai); ENTREGA nao
+  // tem esse dado.
+  transportadora: string | null;
   notaNumero: string | null;
   notaSerie: string | null;
   notaChave: string | null;
@@ -45,9 +49,12 @@ const SELECT_NFD = {
   id: true, numero: true, serie: true, chaveAcesso: true, valorNota: true,
   emitenteCnpj: true, emitenteRazao: true, destinatarioCnpj: true, destinatarioRazao: true,
   dataEmissao: true, createdAt: true,
-  avaria: { select: { id: true, codigo: true, tipo: true, dataChegada: true } },
+  avaria: { select: { id: true, codigo: true, tipo: true, dataChegada: true, transportadoraChegada: true } },
 };
 
+// Nota: INCLUDE_AVARIA usa "include", nao "select" — os escalares da propria
+// Avaria (como transportadoraChegada) ja vem todos por padrao, sem precisar
+// listar aqui.
 const INCLUDE_AVARIA = {
   produtos: { select: { descricao: true, quantidadeAvaria: true, valorTotal: true } },
   notaFiscal: { select: { id: true, numero: true, serie: true, chaveAcesso: true, emitenteCnpj: true, emitenteRazao: true, destinatarioCnpj: true, destinatarioRazao: true, volumes: true, pesoBruto: true, valorNota: true } },
@@ -160,6 +167,7 @@ async function montarCandidatos(
       origem: "NOTA_DEVOLUCAO", refId: d.id, referencia: `NF ${d.numero}`,
       descricao: d.avaria ? `Devolução vinculada à avaria ${d.avaria.codigo} (${d.avaria.tipo})` : "Devolução de mercadoria",
       embarcadorCnpj: emb.cnpj, embarcadorRazao: emb.razao, embarcadorIncerto: !emb.cnpj,
+      transportadora: d.avaria?.transportadoraChegada ?? null,
       notaNumero: d.numero, notaSerie: d.serie, notaChave: d.chaveAcesso,
       // NotaDevolucao nao tem linhas de produto, so valorNota — nao da para
       // deduzir volume. 1 e o minimo honesto ("voltou pelo menos um volume")
@@ -187,6 +195,7 @@ async function montarCandidatos(
       origem: "AVARIA", refId: a.id, referencia: a.codigo,
       descricao: descricaoProdutos || a.descricao,
       embarcadorCnpj: emb.cnpj, embarcadorRazao: emb.razao, embarcadorIncerto: !emb.cnpj,
+      transportadora: a.transportadoraChegada ?? null,
       notaNumero: nfCompleta?.numero ?? nfParcial?.numero ?? null,
       notaSerie: nfCompleta?.serie ?? null,
       notaChave: nfCompleta?.chaveAcesso ?? null,
@@ -207,6 +216,7 @@ async function montarCandidatos(
       origem: "ENTREGA", refId: n.id, referencia: `NF ${n.numero}`,
       descricao: oc ? `${oc.tipo} — ${oc.descricao}` : `NF ${n.numero} em entrega com ocorrência`,
       embarcadorCnpj: emb.cnpj, embarcadorRazao: emb.razao, embarcadorIncerto: !emb.cnpj,
+      transportadora: null, // ENTREGA nao tem avaria — sem transportadora de retorno
       notaNumero: n.numero, notaSerie: n.serie, notaChave: n.chaveAcesso,
       volumes: n.volumes, pesoKg: n.pesoBruto, valorMercadoria: n.valorNota,
       dataSugerida: n.entrega?.dataChegada ?? new Date(),

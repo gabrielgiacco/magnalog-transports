@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
   const dataInicio = searchParams.get("dataInicio");
   const dataFim = searchParams.get("dataFim");
   const embarcadorCnpj = searchParams.get("embarcadorCnpj");
+  const transportadora = searchParams.get("transportadora");
   const status = searchParams.get("status");
   const tipoEntrada = searchParams.get("tipoEntrada");
   const preset = searchParams.get("preset");
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
     if (tipoEntrada) whereItem.tipoEntrada = tipoEntrada;
   }
   if (embarcadorCnpj) whereItem.embarcadorCnpj = embarcadorCnpj;
+  if (transportadora) whereItem.transportadora = { contains: transportadora, mode: "insensitive" };
   if (dataInicio || dataFim) {
     whereItem.dataEntrada = {};
     if (dataInicio) whereItem.dataEntrada.gte = parseDate(dataInicio);
@@ -92,6 +94,7 @@ export async function GET(req: NextRequest) {
     "Série": it.notaSerie || "",
     "Embarcador": it.embarcadorRazao,
     "CNPJ Embarcador": it.embarcadorCnpj,
+    "Transportadora": it.transportadora || "",
     "Tipo de entrada": ROTULO_TIPO_ENTRADA[it.tipoEntrada] || it.tipoEntrada,
     "Descrição": it.descricao,
     "Volumes": it.volumes,
@@ -119,7 +122,7 @@ export async function GET(req: NextRequest) {
 
   const wsItens = XLSX.utils.json_to_sheet(linhasItens);
   wsItens["!cols"] = [
-    { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 26 }, { wch: 18 }, { wch: 16 },
+    { wch: 12 }, { wch: 12 }, { wch: 8 }, { wch: 26 }, { wch: 18 }, { wch: 22 }, { wch: 16 },
     { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 18 },
     { wch: 14 }, { wch: 12 }, { wch: 26 },
   ];

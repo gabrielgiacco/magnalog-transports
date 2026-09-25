@@ -58,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body.pesoKg !== undefined) data.pesoKg = Number(body.pesoKg);
   if (body.valorMercadoria !== undefined) data.valorMercadoria = Number(body.valorMercadoria);
   if (body.localizacao !== undefined) data.localizacao = body.localizacao || null;
+  if (body.transportadora !== undefined) data.transportadora = body.transportadora?.trim() || null;
   if (body.notaNumero !== undefined) data.notaNumero = body.notaNumero || null;
   if (body.notaSerie !== undefined) data.notaSerie = body.notaSerie || null;
   if (body.notaChave !== undefined) data.notaChave = body.notaChave || null;

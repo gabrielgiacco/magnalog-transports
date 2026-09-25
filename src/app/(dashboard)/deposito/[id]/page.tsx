@@ -36,6 +36,7 @@ export default function DepositoItemPage() {
   const [form, setForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [baixaItem, setBaixaItem] = useState<any>(null);
+  const [transportadoras, setTransportadoras] = useState<string[]>([]);
 
   const recarregar = useCallback(async () => {
     setLoading(true);
@@ -48,12 +49,20 @@ export default function DepositoItemPage() {
 
   useEffect(() => { recarregar(); }, [recarregar]);
 
+  useEffect(() => {
+    fetch("/api/deposito/transportadoras")
+      .then((r) => r.json())
+      .then((data) => setTransportadoras(data.transportadoras || []))
+      .catch(() => {});
+  }, []);
+
   function iniciarEdicao() {
     setForm({
       descricao: item.descricao, volumes: item.volumes, pesoKg: item.pesoKg,
       valorMercadoria: item.valorMercadoria, localizacao: item.localizacao || "",
       notaNumero: item.notaNumero || "", notaSerie: item.notaSerie || "", notaChave: item.notaChave || "",
       observacoes: item.observacoes || "", embarcadorCnpj: item.embarcadorCnpj, embarcadorRazao: item.embarcadorRazao,
+      transportadora: item.transportadora || "",
       tipoEntrada: item.tipoEntrada, dataEntrada: String(item.dataEntrada).slice(0, 10),
     });
     setEditando(true);
@@ -158,6 +167,12 @@ export default function DepositoItemPage() {
                 <Input label="Data de entrada" type="date" value={form.dataEntrada} onChange={(e) => set("dataEntrada", e.target.value)} />
                 <Input label="Embarcador — Razão" value={form.embarcadorRazao} onChange={(e) => set("embarcadorRazao", e.target.value)} />
                 <Input label="Embarcador — CNPJ" value={form.embarcadorCnpj} onChange={(e) => set("embarcadorCnpj", e.target.value)} />
+                <div>
+                  <Input label="Transportadora" list="dl-transp-detalhe" value={form.transportadora} onChange={(e) => set("transportadora", e.target.value)} />
+                  <datalist id="dl-transp-detalhe">
+                    {transportadoras.map((t) => <option key={t} value={t} />)}
+                  </datalist>
+                </div>
                 <Input label="Nota — Número" value={form.notaNumero} onChange={(e) => set("notaNumero", e.target.value)} />
                 <Input label="Nota — Série" value={form.notaSerie} onChange={(e) => set("notaSerie", e.target.value)} />
                 <div className="sm:col-span-2"><Input label="Nota — Chave de acesso" value={form.notaChave} onChange={(e) => set("notaChave", e.target.value)} /></div>
@@ -174,6 +189,7 @@ export default function DepositoItemPage() {
                 <Field label="Data de entrada" value={fmtData(item.dataEntrada)} mono />
                 <Field label="Data de saída" value={item.dataSaida ? fmtData(item.dataSaida) : null} mono />
                 <Field label="Embarcador" value={`${item.embarcadorRazao} — ${formatCNPJ(item.embarcadorCnpj)}`} full />
+                <Field label="Transportadora" value={item.transportadora} />
                 <Field label="Nota fiscal" value={item.notaNumero ? `NF ${item.notaNumero}${item.notaSerie ? `/${item.notaSerie}` : ""}` : null} mono />
                 <Field label="Chave de acesso" value={item.notaChave} mono />
                 <Field label="Registrado por" value={item.registradoPor?.name} />

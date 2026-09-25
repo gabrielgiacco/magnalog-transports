@@ -14,6 +14,7 @@ interface CandidatoDeposito {
   embarcadorCnpj: string;
   embarcadorRazao: string;
   embarcadorIncerto: boolean;
+  transportadora: string | null;
   notaNumero: string | null;
   notaSerie: string | null;
   notaChave: string | null;
@@ -34,6 +35,7 @@ interface EditRow {
   localizacao: string;
   embarcadorCnpj: string;
   embarcadorRazao: string;
+  transportadora: string;
 }
 
 const SECOES: { origem: OrigemCandidato; titulo: string }[] = [
@@ -57,6 +59,7 @@ export function CandidatosModal({ open, onClose, onImportado }: {
     NOTA_DEVOLUCAO: true, AVARIA: false, ENTREGA: false,
   });
   const [importando, setImportando] = useState(false);
+  const [transportadoras, setTransportadoras] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -77,12 +80,17 @@ export function CandidatosModal({ open, onClose, onImportado }: {
             localizacao: "",
             embarcadorCnpj: c.embarcadorCnpj || "",
             embarcadorRazao: c.embarcadorRazao || "",
+            transportadora: c.transportadora || "",
           };
         }
         setEdits(iniciais);
       })
       .catch(() => toast.error("Erro ao carregar candidatos"))
       .finally(() => setLoading(false));
+    fetch("/api/deposito/transportadoras")
+      .then((r) => r.json())
+      .then((data) => setTransportadoras(data.transportadoras || []))
+      .catch(() => {});
   }, [open]);
 
   function updateEdit(k: string, patch: Partial<EditRow>) {
@@ -118,6 +126,7 @@ export function CandidatosModal({ open, onClose, onImportado }: {
           localizacao: e.localizacao.trim() || undefined,
           embarcadorCnpj: c.embarcadorIncerto ? e.embarcadorCnpj.replace(/\D/g, "") : undefined,
           embarcadorRazao: c.embarcadorIncerto ? e.embarcadorRazao.trim() : undefined,
+          transportadora: e.transportadora.trim() || undefined,
         };
       });
       const res = await fetch("/api/deposito/importar", {
@@ -156,6 +165,9 @@ export function CandidatosModal({ open, onClose, onImportado }: {
           className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none"
           style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }} />
       </div>
+      <datalist id="dl-transp-candidatos">
+        {transportadoras.map((t) => <option key={t} value={t} />)}
+      </datalist>
 
       {loading ? <Loading /> : (
         <div className="space-y-2 max-h-[50vh] overflow-y-auto">
@@ -242,6 +254,13 @@ function Linha({ c, edit, motivo, onChange }: {
         ) : (
           <div className="text-[10px] mt-0.5 truncate" style={{ color: "var(--text3)" }}>{c.embarcadorRazao}</div>
         )}
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className="text-[10px] flex-shrink-0" style={{ color: "var(--text3)" }}>Transportadora:</span>
+          <input value={edit.transportadora} onChange={(e) => onChange({ transportadora: e.target.value })}
+            list="dl-transp-candidatos" placeholder="Quem trouxe de volta"
+            className="flex-1 min-w-0 px-2 py-1 rounded text-[11px] outline-none"
+            style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+        </div>
         {motivo && <div className="text-[10px] mt-1 font-bold" style={{ color: "#ef4444" }}>Não importado: {motivo}</div>}
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">

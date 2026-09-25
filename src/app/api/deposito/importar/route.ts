@@ -25,6 +25,7 @@ interface ItemBody {
   localizacao?: string;
   embarcadorCnpj?: string;
   embarcadorRazao?: string;
+  transportadora?: string;
   descricao?: string;
   dataEntrada?: string;
 }
@@ -76,6 +77,7 @@ function montarDados(it: ItemBody, cand: CandidatoDeposito, origem: OrigemCandid
     tipoEntrada,
     embarcadorCnpj: embarcador.cnpj,
     embarcadorRazao: embarcador.razao,
+    transportadora: it.transportadora?.trim() || cand.transportadora,
     notaNumero: cand.notaNumero,
     notaSerie: cand.notaSerie,
     notaChave: cand.notaChave,

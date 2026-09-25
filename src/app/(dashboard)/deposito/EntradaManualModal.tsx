@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Button, Modal, Input, Textarea } from "@/components/ui";
 import { TIPOS_ENTRADA } from "./deposito-ui";
@@ -16,6 +16,7 @@ const BLANK_FORM = {
   valorMercadoria: "",
   notaNumero: "",
   notaSerie: "",
+  transportadora: "",
   localizacao: "",
   dataEntrada: HOJE(),
   observacoes: "",
@@ -28,6 +29,15 @@ export function EntradaManualModal({ open, onClose, onSalvo }: {
 }) {
   const [form, setForm] = useState({ ...BLANK_FORM });
   const [saving, setSaving] = useState(false);
+  const [transportadoras, setTransportadoras] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/deposito/transportadoras")
+      .then((r) => r.json())
+      .then((data) => setTransportadoras(data.transportadoras || []))
+      .catch(() => {});
+  }, [open]);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -73,6 +83,7 @@ export function EntradaManualModal({ open, onClose, onSalvo }: {
           valorMercadoria: form.valorMercadoria ? Number(form.valorMercadoria) : 0,
           notaNumero: form.notaNumero || null,
           notaSerie: form.notaSerie || null,
+          transportadora: form.transportadora || null,
           localizacao: form.localizacao || null,
           dataEntrada: new Date(form.dataEntrada).toISOString(),
           observacoes: form.observacoes || null,
@@ -128,6 +139,21 @@ export function EntradaManualModal({ open, onClose, onSalvo }: {
           <div className="sm:col-span-2 -mt-2">
             <p className="text-[11px]" style={{ color: "var(--text3)" }}>
               O embarcador é quem contratou o frete (o emitente da NF), não o destinatário.
+            </p>
+          </div>
+
+          <div className="sm:col-span-2">
+            <Input
+              label="Transportadora"
+              list="dl-transp-entrada"
+              value={form.transportadora}
+              onChange={(e) => set("transportadora", e.target.value)}
+            />
+            <datalist id="dl-transp-entrada">
+              {transportadoras.map((t) => <option key={t} value={t} />)}
+            </datalist>
+            <p className="text-[11px] mt-1" style={{ color: "var(--text3)" }}>
+              Quem trouxe a mercadoria de volta. Escolha da lista quando possível, para não criar outra grafia do mesmo nome.
             </p>
           </div>
 

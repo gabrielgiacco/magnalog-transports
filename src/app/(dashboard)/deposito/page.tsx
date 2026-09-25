@@ -37,9 +37,11 @@ export default function DepositoPage() {
   const [filterTipo, setFilterTipo] = useState("");
   const [filterStatus, setFilterStatus] = useState("EM_ESTOQUE");
   const [filterEmbarcador, setFilterEmbarcador] = useState("");
+  const [filterTransportadora, setFilterTransportadora] = useState("");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [diasMin, setDiasMin] = useState("");
+  const [transportadoras, setTransportadoras] = useState<string[]>([]);
 
   // Modais
   const [showCandidatos, setShowCandidatos] = useState(false);
@@ -62,6 +64,7 @@ export default function DepositoPage() {
       params.set("status", filterStatus);
       if (filterTipo) params.set("tipoEntrada", filterTipo);
       if (filterEmbarcador) params.set("embarcadorCnpj", filterEmbarcador);
+      if (filterTransportadora) params.set("transportadora", filterTransportadora);
       if (dataInicio) params.set("dataInicio", dataInicio);
       if (dataFim) params.set("dataFim", dataFim);
       if (diasMin) params.set("diasMin", diasMin);
@@ -77,7 +80,7 @@ export default function DepositoPage() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filterStatus, filterTipo, filterEmbarcador, dataInicio, dataFim, diasMin, page]);
+  }, [debouncedSearch, filterStatus, filterTipo, filterEmbarcador, filterTransportadora, dataInicio, dataFim, diasMin, page]);
 
   const carregarResumo = useCallback(async () => {
     try {
@@ -92,12 +95,21 @@ export default function DepositoPage() {
   useEffect(() => { carregar(); }, [carregar]);
   useEffect(() => { carregarResumo(); }, [carregarResumo]);
 
+  // Sugestões de transportadora para o datalist do filtro — busca uma vez.
+  useEffect(() => {
+    fetch("/api/deposito/transportadoras")
+      .then((r) => r.json())
+      .then((data) => setTransportadoras(data.transportadoras || []))
+      .catch(() => {});
+  }, []);
+
   function clearFilters() {
     setSearch("");
     setDebouncedSearch("");
     setFilterTipo("");
     setFilterStatus("EM_ESTOQUE");
     setFilterEmbarcador("");
+    setFilterTransportadora("");
     setDataInicio("");
     setDataFim("");
     setDiasMin("");
@@ -105,7 +117,7 @@ export default function DepositoPage() {
   }
 
   const hasAnyFilter =
-    debouncedSearch || filterTipo || filterStatus !== "EM_ESTOQUE" || filterEmbarcador || dataInicio || dataFim || diasMin;
+    debouncedSearch || filterTipo || filterStatus !== "EM_ESTOQUE" || filterEmbarcador || filterTransportadora || dataInicio || dataFim || diasMin;
 
   const candidatosPendentes = resumo?.candidatosPendentes ?? 0;
 
@@ -224,6 +236,18 @@ export default function DepositoPage() {
                 <option key={e.cnpj} value={e.cnpj}>{e.razao}</option>
               ))}
             </select>
+            <input
+              value={filterTransportadora}
+              onChange={(e) => { setFilterTransportadora(e.target.value); setPage(1); }}
+              list="dl-transp-filtro"
+              placeholder="Transportadora"
+              title="Busca por parte do nome — 'porto' encontra todas as grafias."
+              className="px-3 py-2 rounded-lg text-xs outline-none w-full sm:w-auto sm:min-w-[160px]"
+              style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
+            />
+            <datalist id="dl-transp-filtro">
+              {transportadoras.map((t) => <option key={t} value={t} />)}
+            </datalist>
             <Button variant="ghost" size="sm" onClick={carregar}>
               <RefreshCw size={13} /> Atualizar
             </Button>

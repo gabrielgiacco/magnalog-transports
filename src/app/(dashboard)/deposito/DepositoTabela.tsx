@@ -80,7 +80,12 @@ export function DepositoTabela({ items, loading, onBaixa, onDetalhe }: DepositoT
                 <PillDias dias={item.diasParados} />
               </div>
             </div>
-            <div className="text-sm font-semibold truncate">{item.embarcadorRazao}</div>
+            <div className="text-sm font-semibold truncate">
+              {item.embarcadorRazao}
+              {item.transportadora && (
+                <span className="font-normal text-xs" style={{ color: "var(--text3)" }}> · {item.transportadora}</span>
+              )}
+            </div>
             <div className="text-[11px] font-mono" style={{ color: "var(--text3)" }}>{formatCNPJ(item.embarcadorCnpj)}</div>
             <div className="text-[11px] mt-1 truncate" style={{ color: "var(--text2)" }}>{item.descricao}</div>
             <div className="text-[11px] mt-1.5" style={{ color: "var(--text3)" }}>
@@ -102,6 +107,7 @@ export function DepositoTabela({ items, loading, onBaixa, onDetalhe }: DepositoT
               <Th>Código</Th>
               <Th>NF</Th>
               <Th>Embarcador</Th>
+              <Th>Transportadora</Th>
               <Th>Descrição</Th>
               <Th>Tipo</Th>
               <Th>Vol</Th>
@@ -121,6 +127,7 @@ export function DepositoTabela({ items, loading, onBaixa, onDetalhe }: DepositoT
                   <div className="max-w-[180px] truncate">{item.embarcadorRazao}</div>
                   <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>{formatCNPJ(item.embarcadorCnpj)}</div>
                 </Td>
+                <Td><div className="max-w-[160px] truncate">{item.transportadora || "—"}</div></Td>
                 <Td><div className="max-w-[220px] truncate">{item.descricao}</div></Td>
                 <Td>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={estiloTipo(item.tipoEntrada)}>

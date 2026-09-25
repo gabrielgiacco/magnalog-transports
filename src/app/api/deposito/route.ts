@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status") || "EM_ESTOQUE";
   const tipoEntrada = searchParams.get("tipoEntrada");
   const embarcadorCnpj = searchParams.get("embarcadorCnpj");
+  const transportadora = searchParams.get("transportadora");
   const motivoBaixa = searchParams.get("motivoBaixa");
   const diasMin = searchParams.get("diasMin");
   const dataInicio = searchParams.get("dataInicio");
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
   if (status !== "TODOS") where.status = status;
   if (tipoEntrada) where.tipoEntrada = tipoEntrada;
   if (embarcadorCnpj) where.embarcadorCnpj = String(embarcadorCnpj).replace(/\D/g, "");
+  if (transportadora) where.transportadora = { contains: transportadora, mode: "insensitive" };
   if (motivoBaixa) where.motivoBaixa = motivoBaixa;
   if (q) {
     where.OR = [
@@ -39,6 +41,7 @@ export async function GET(req: NextRequest) {
       { descricao: { contains: q, mode: "insensitive" } },
       { embarcadorRazao: { contains: q, mode: "insensitive" } },
       { localizacao: { contains: q, mode: "insensitive" } },
+      { transportadora: { contains: q, mode: "insensitive" } },
     ];
   }
 
@@ -103,6 +106,7 @@ export async function POST(req: NextRequest) {
         pesoKg: body.pesoKg !== undefined ? Number(body.pesoKg) : undefined,
         valorMercadoria: body.valorMercadoria !== undefined ? Number(body.valorMercadoria) : undefined,
         localizacao: body.localizacao || null,
+        transportadora: body.transportadora?.trim() || null,
         notaNumero: body.notaNumero || null,
         notaSerie: body.notaSerie || null,
         notaChave: body.notaChave || null,
