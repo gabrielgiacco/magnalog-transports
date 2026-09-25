@@ -69,6 +69,9 @@ model User {
   avariasResolvidas       Avaria[]               @relation("AvariaResolvida")
   auditLogs               AuditLog[]
   presencas               PresencaVisita[]
+  depositoRegistrados     DepositoItem[]         @relation("DepositoRegistrado")
+  depositoBaixados        DepositoItem[]         @relation("DepositoBaixado")
+  depositoMovimentos      DepositoMovimento[]    @relation("DepositoMovimentoUsuario")
   anexosEnviados          AnexoEntrega[]
   anexosGenericos         Anexo[]                @relation("AnexoUploader")
   anexosLiberados         Anexo[]                @relation("AnexoLiberador")
@@ -388,6 +391,7 @@ model Entrega {
   fatura         Fatura?                @relation(fields: [faturaId], references: [id])
   notas          NotaFiscal[]
   ocorrencias    Ocorrencia[]
+  depositoItens  DepositoItem[]
   contasPagar    ContaPagar[]
   qualidade      QualidadeOperacional?
   avarias        Avaria[]
@@ -527,6 +531,7 @@ model NotaFiscal {
   avarias           Avaria[]
   avariaProdutos    AvariaProduto[] @relation("AvariaProdutoNota")
   notasServico      NotaServico[]
+  depositoItens     DepositoItem[]
 
   @@index([emitenteCnpj])
   @@index([destinatarioCnpj])
@@ -1197,8 +1202,9 @@ model Avaria {
   registradoPor User        @relation("AvariaRegistrada", fields: [registradoPorId], references: [id])
   resolvidoPor  User?       @relation("AvariaResolvida", fields: [resolvidoPorId], references: [id])
 
-  produtos   AvariaProduto[]
-  devolucoes NotaDevolucao[]
+  produtos      AvariaProduto[]
+  devolucoes    NotaDevolucao[]
+  depositoItens DepositoItem[]
 
   @@index([entregaId])
   @@index([notaFiscalId])
@@ -1304,6 +1310,9 @@ model NotaDevolucao {
   updatedAt DateTime @updatedAt
 
   avaria Avaria @relation(fields: [avariaId], references: [id], onDelete: Cascade)
+
+  // Singular: a FK do lado do DepositoItem e @unique — uma NFD e um lote fisico.
+  depositoItem DepositoItem?
 
   @@index([avariaId])
   @@index([status])
@@ -1723,4 +1732,147 @@ model MensagemWhatsRecebida {
   @@unique([provedor, providerId])
   @@index([telefone, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
+}
+
+// ─── Depósito (estoque de mercadoria parada no CD) ───────────────────────────
+//
+// DepositoItem e dono de UM conceito: a mercadoria esta fisicamente aqui.
+// Nada no schema era dono disso — NotaDevolucao.status = PENDENTE apenas
+// aproximava, e Avaria.status e fluxo de tratativa, nao de localizacao.
+//
+// NotaDevolucao.status continua existindo como ESPELHO (a tela de Avarias e o
+// seletor da Declaracao de Saida leem dele). Quem escreve os dois e so
+// src/lib/deposito.ts — ver o mapa STATUS_DEVOLUCAO_POR_MOTIVO la.
+
+// Os cinco jeitos de uma mercadoria entrar no deposito.
+enum TipoEntradaDeposito {
+  DEVOLUCAO_TOTAL   // NF recusada inteira
+  DEVOLUCAO_PARCIAL // ressalva / recusa parcial
+  SOBRA             // mercadoria sem NF
+  AVARIA            // avaria retida no CD
+  ARMAZENAGEM       // chegou so para armazenar e depois volta
+}
+
+// Dois estados so: baixa parcial continua EM_ESTOQUE e sai de volumesBaixados.
+// Um terceiro valor "PARCIAL" seria estado duplicado.
+enum StatusDepositoItem {
+  EM_ESTOQUE
+  BAIXADO
+}
+
+enum MotivoBaixaDeposito {
+  REEXPEDIDO           // nova tentativa de entrega
+  DEVOLVIDO_EMBARCADOR // voltou para o embarcador
+  RETIRADO_EMBARCADOR  // o embarcador retirou no CD
+  DESCARTE             // descartado / perda
+}
+
+enum OrigemDepositoItem {
+  MANUAL
+  AVARIA
+  NOTA_DEVOLUCAO
+  OCORRENCIA
+  ENTREGA
+}
+
+enum TipoMovimentoDeposito {
+  ENTRADA
+  AJUSTE
+  BAIXA
+  ESTORNO
+}
+
+model DepositoItem {
+  id     String @id @default(cuid())
+  codigo String @unique // DEP-00001
+
+  tipoEntrada TipoEntradaDeposito
+  status      StatusDepositoItem  @default(EM_ESTOQUE)
+
+  // O relatorio e endereçado ao EMBARCADOR (quem contratou o frete), nao ao
+  // destinatario. Desnormalizado de proposito: sobra nao tem NF de onde
+  // derivar, e o relatorio tem de continuar certo se a NF for apagada.
+  embarcadorCnpj  String
+  embarcadorRazao String
+
+  // Identificacao da mercadoria. Nota e texto, nao FK: sobra nao tem nota.
+  notaNumero      String?
+  notaSerie       String?
+  notaChave       String?
+  descricao       String  @db.Text
+  volumes         Int     @default(0)
+  pesoKg          Float   @default(0)
+  valorMercadoria Float   @default(0)
+
+  localizacao String? // texto curto: "Rua 3, box 2"
+
+  // Relogio do deposito. NAO e o da armazenagem (entrega.dataChegada ->
+  // entrega.dataEntrega), que continua onde esta. Sao perguntas diferentes.
+  // Sem default: lancamento retroativo precisa informar a data real.
+  dataEntrada DateTime
+  dataSaida   DateTime?
+
+  motivoBaixa      MotivoBaixaDeposito?
+  volumesBaixados  Int                  @default(0)
+  responsavelSaida String?
+  documentoSaida   String? // "DS-00007", numero da NF de retorno...
+  observacoesSaida String?              @db.Text
+
+  // Origem — rastro do registro que gerou o item.
+  origem          OrigemDepositoItem @default(MANUAL)
+  avariaId        String?
+  notaDevolucaoId String?            @unique // 1:1 real: uma NFD = um lote
+  ocorrenciaId    String? // String pura, como DeclaracaoSaidaItem
+  entregaId       String?
+  notaFiscalId    String?
+
+  observacoes String? @db.Text
+
+  registradoPorId String
+  baixadoPorId    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  registradoPor User           @relation("DepositoRegistrado", fields: [registradoPorId], references: [id])
+  baixadoPor    User?          @relation("DepositoBaixado", fields: [baixadoPorId], references: [id])
+  avaria        Avaria?        @relation(fields: [avariaId], references: [id])
+  notaDevolucao NotaDevolucao? @relation(fields: [notaDevolucaoId], references: [id])
+  entrega       Entrega?       @relation(fields: [entregaId], references: [id])
+  notaFiscal    NotaFiscal?    @relation(fields: [notaFiscalId], references: [id])
+
+  movimentos DepositoMovimento[]
+
+  @@index([status])
+  @@index([status, dataEntrada]) // KPI "parados ha mais de N dias"
+  @@index([status, embarcadorCnpj]) // relatorio semanal por embarcador
+  @@index([tipoEntrada])
+  @@index([dataEntrada])
+  @@index([avariaId])
+  @@index([entregaId])
+  @@index([notaFiscalId])
+  @@index([ocorrenciaId])
+}
+
+// Razao de existir em vez de usar so o AuditLog: o relatorio mensal precisa de
+// "quanto entrou e quanto saiu no periodo" por embarcador, e com baixa parcial
+// as datas do item nao respondem isso. Tambem torna ESTORNO uma operacao real.
+model DepositoMovimento {
+  id     String       @id @default(cuid())
+  itemId String
+  item   DepositoItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  tipo        TipoMovimentoDeposito
+  volumes     Int                   @default(0) // quantidade movida, sempre positiva
+  motivo      MotivoBaixaDeposito?
+  documento   String?
+  responsavel String?
+  observacoes String?               @db.Text
+
+  usuarioId String
+  usuario   User     @relation("DepositoMovimentoUsuario", fields: [usuarioId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@index([tipo])
+  @@index([createdAt])
 }
