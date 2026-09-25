@@ -1806,6 +1806,13 @@ model DepositoItem {
 
   localizacao String? // texto curto: "Rua 3, box 2"
 
+  // Quem trouxe a mercadoria de volta (Porto, Belluno...). Texto livre porque
+  // a origem dele, Avaria.transportadoraChegada, tambem e — e la existem 12
+  // grafias para 2 transportadoras. A busca usa contains insensitive, entao
+  // "porto" acha todas as variacoes; a tela oferece lista de sugestao para
+  // novas entradas nao criarem a 13a grafia.
+  transportadora String?
+
   // Relogio do deposito. NAO e o da armazenagem (entrega.dataChegada ->
   // entrega.dataEntrega), que continua onde esta. Sao perguntas diferentes.
   // Sem default: lancamento retroativo precisa informar a data real.
@@ -1845,6 +1852,7 @@ model DepositoItem {
   @@index([status])
   @@index([status, dataEntrada]) // KPI "parados ha mais de N dias"
   @@index([status, embarcadorCnpj]) // relatorio semanal por embarcador
+  @@index([transportadora])
   @@index([tipoEntrada])
   @@index([dataEntrada])
   @@index([avariaId])
