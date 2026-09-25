@@ -10,7 +10,7 @@ const ALLOWED_MIME = new Set([
   "application/pdf",
 ]);
 
-export type OwnerType = "MOTORISTA" | "VEICULO" | "AVARIA" | "DECLARACAO_SAIDA";
+export type OwnerType = "MOTORISTA" | "VEICULO" | "AVARIA" | "DECLARACAO_SAIDA" | "DEPOSITO";
 
 interface Ctx {
   ownerType: OwnerType;

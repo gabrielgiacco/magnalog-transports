@@ -68,8 +68,8 @@ export default withAuth(
       return NextResponse.redirect(new URL("/importacao?tab=danfe", req.url));
     }
 
-    // Conferente — só pode acessar kanban, agendamentos, avarias e entregas (somente leitura)
-    if (token?.role === "CONFERENTE" && !pathname.startsWith("/kanban") && !pathname.startsWith("/agendamentos") && !pathname.startsWith("/avarias") && !pathname.startsWith("/entregas") && !pathname.startsWith("/imprimir")) {
+    // Conferente — só pode acessar kanban, agendamentos, avarias, entregas e deposito (somente leitura)
+    if (token?.role === "CONFERENTE" && !pathname.startsWith("/kanban") && !pathname.startsWith("/agendamentos") && !pathname.startsWith("/avarias") && !pathname.startsWith("/entregas") && !pathname.startsWith("/deposito") && !pathname.startsWith("/imprimir")) {
       return NextResponse.redirect(new URL("/kanban", req.url));
     }
 
@@ -119,6 +119,7 @@ export const config = {
     "/usuarios/:path*",
     "/portal/:path*",
     "/avarias/:path*",
+    "/deposito/:path*",
     // Fora do grupo (dashboard): sem esta entrada as paginas de impressao nao
     // tinham NENHUM gate. Cada pagina tambem checa a sessao por conta propria.
     "/imprimir/:path*",
