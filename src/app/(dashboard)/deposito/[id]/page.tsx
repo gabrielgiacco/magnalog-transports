@@ -7,6 +7,7 @@ import { ChevronLeft, Pencil, Trash2, RotateCcw, ArrowDownCircle, ArrowUpCircle,
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Input, Select, Textarea } from "@/components/ui";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
+import { ProdutosCard } from "./ProdutosCard";
 import { formatCNPJ } from "@/lib/utils";
 import { TIPOS_ENTRADA, corDias, labelTipo, labelMotivo, fmtKg, fmtBRL, fmtData } from "../deposito-ui";
 import { BaixaModal } from "../BaixaModal";
@@ -236,6 +237,8 @@ export default function DepositoItemPage() {
             )}
           </Card>
         </div>
+
+        <ProdutosCard itemId={id} />
 
         <AnexosCard
           apiBase={`/api/deposito/${id}/anexos`}

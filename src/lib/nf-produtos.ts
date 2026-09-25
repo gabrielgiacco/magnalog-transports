@@ -186,3 +186,58 @@ export function agregarProdutosParaConferencia(
 
   return linhas;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Parser de produtos para o card "Produtos" do Depósito.
+//
+// Cópia isolada de propósito: já existem duas versões quase idênticas deste
+// parser embutidas em src/app/api/notas/[id]/produtos/route.ts e em
+// src/app/api/avarias/[id]/route.ts (função local parseNFXml). Esta função
+// existe para o card de produtos do Depósito não depender de nenhuma rota já
+// em produção — nenhuma das duas foi tocada. Quando alguém mexer nesse
+// parsing de novo, o ideal é migrar as duas rotas acima para importar daqui
+// em vez de manter cópias divergentes. (O `parseNFProducts` acima, usado na
+// conferência de paletização, é outro consumidor do mesmo XML — mantido como
+// está; não faz parte desta migração.)
+
+export interface ProdutoNF {
+  codigo: string;
+  descricao: string;
+  ncm: string | null;
+  unidade: string | null;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+}
+
+export function parseProdutosDoXml(xmlOriginal: string | null | undefined): ProdutoNF[] {
+  if (!xmlOriginal) return [];
+  try {
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: "@_",
+      parseAttributeValue: false,
+      numberParseOptions: { hex: false, leadingZeros: false, skipLike: /.*/ },
+    });
+    const parsed = parser.parse(xmlOriginal);
+    const nfe = parsed?.nfeProc?.NFe || parsed?.NFe;
+    const infNFe = nfe?.infNFe;
+    if (!infNFe) return [];
+
+    const detArray = Array.isArray(infNFe.det) ? infNFe.det : infNFe.det ? [infNFe.det] : [];
+    return detArray.map((d: any) => {
+      const p = d.prod || {};
+      return {
+        codigo: String(p.cProd || ""),
+        descricao: String(p.xProd || ""),
+        ncm: p.NCM ? String(p.NCM) : null,
+        unidade: p.uCom ? String(p.uCom) : null,
+        quantidade: parseFloat(String(p.qCom || "0")) || 0,
+        valorUnitario: parseFloat(String(p.vUnCom || "0")) || 0,
+        valorTotal: parseFloat(String(p.vProd || "0")) || 0,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
