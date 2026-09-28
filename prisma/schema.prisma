@@ -1884,3 +1884,23 @@ model DepositoMovimento {
   @@index([tipo])
   @@index([createdAt])
 }
+
+// ─── Sincronizacao com o Meu Danfe ──────────────────────────────────────────
+//
+// A API reestruturou a listagem (/fd/my/{Tipo}): o antigo `page` saiu e agora
+// se percorre por cursor, mandando em `after` a ultima chave recebida ate vir
+// um bloco com menos de 50.
+//
+// Guardar a ultima chave nao e otimizacao, e requisito: a chamada SEM `after`
+// recomeca do zero e so pode 1 vez por hora, por tipo — e insistir antes do
+// prazo RENOVA a contagem de uma hora. Por isso `ultimaVarreduraEm` tambem
+// mora aqui: a trava tem de ser local, antes da chamada, senao cada tentativa
+// empurra o desbloqueio.
+model SincronizacaoMarcador {
+  tipo              String    @id // "NFE" | "CTE"
+  ultimaChave       String?
+  ultimaVarreduraEm DateTime? // ultimo recomeco (chamada sem `after`)
+  ultimoBlocoEm     DateTime? // ultima continuacao bem-sucedida
+  chavesVistas      Int       @default(0)
+  atualizadoEm      DateTime  @updatedAt
+}
