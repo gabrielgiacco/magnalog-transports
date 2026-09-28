@@ -2,11 +2,12 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button, Card, Empty } from "@/components/ui";
-import { RefreshCw, Loader2, Download, CheckCircle2, AlertTriangle, DownloadCloud, Truck, Receipt } from "lucide-react";
+import { RefreshCw, Loader2, CheckCircle2, AlertTriangle, DownloadCloud, Truck, Receipt } from "lucide-react";
 import { ListaClassificada, type NfClassificada, type TipoContaPagar } from "./ListaClassificada";
+import { ListaFaltantes, type FaltanteItem } from "./ListaFaltantes";
 
 type Tipo = "NFE" | "CTE";
-type ChaveItem = { chave: string; existe: boolean };
+type ChaveItem = FaltanteItem & { existe: boolean };
 type Progresso = { blocos: number; chavesVistas: number };
 type Marcador = { ultimaChave: string | null; ultimaVarreduraEm: string | null; ultimoBlocoEm: string | null };
 
@@ -23,7 +24,7 @@ export function SincronizacaoTab() {
   const [varrendo, setVarrendo] = useState(false);
   const [progresso, setProgresso] = useState<Progresso | null>(null);
   const [marcador, setMarcador] = useState<Marcador | null>(null);
-  const [faltando, setFaltando] = useState<ChaveItem[]>([]);
+  const [faltando, setFaltando] = useState<FaltanteItem[]>([]);
   const [jaTemos, setJaTemos] = useState(0);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [classificando, setClassificando] = useState(false);
@@ -41,8 +42,7 @@ export function SincronizacaoTab() {
   async function sincronizar(recomecar: boolean) {
     if (recomecar) {
       const confirmou = window.confirm(
-        "A varredura completa reinicia a listagem do zero, ignorando o ponto onde parou. " +
-          "Só é permitida 1 vez por hora para cada tipo de documento. Continuar?"
+        "A varredura completa reinicia a listagem do zero, ignorando o ponto onde parou. Só é permitida 1 vez por hora para cada tipo de documento. Continuar?"
       );
       if (!confirmou) return;
     }
@@ -303,11 +303,10 @@ export function SincronizacaoTab() {
         </Card>
       )}
 
-      <ListaClassificada
-        titulo="Faltando no TMS" modo="faltando" itens={faltando.map((f) => ({ chave: f.chave, jaExiste: false }))}
-        selecionadas={selecionadas} onAlternar={(chave) => toggle(setSelecionadas, chave)}
+      <ListaFaltantes
+        itens={faltando} selecionadas={selecionadas} onToggle={(chave) => toggle(setSelecionadas, chave)}
         onMarcarTodas={() => setSelecionadas(new Set(faltando.map((f) => f.chave)))} onLimpar={() => setSelecionadas(new Set())}
-        acaoLabel="Baixar e classificar" acaoIcon={<Download size={13} />} onAcao={classificar} acaoCarregando={classificando}
+        onBaixar={classificar} baixando={classificando}
       />
 
       {(freteItens.length > 0 || compraItens.length > 0) && (
