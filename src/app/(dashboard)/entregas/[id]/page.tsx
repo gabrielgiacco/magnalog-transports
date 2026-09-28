@@ -18,9 +18,11 @@ import { LocalDaEntrega } from "@/components/entrega/LocalDaEntrega";
 import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import { AvisoEntregaModal } from "@/components/entrega/AvisoEntregaModal";
 import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
+import { SepararPorAgendaModal } from "@/components/entrega/SepararPorAgendaModal";
 import { TicketModal } from "@/components/entrega/TicketModal";
 import { EventosMotorista } from "@/components/entrega/EventosMotorista";
 import { Smartphone, Receipt, MessageCircle } from "lucide-react";
+import { extrairM3 } from "@/lib/agenda-nf";
 
 const STATUS_FLOW = [
   { key: "PROGRAMADO", label: "Programado", icon: "📋" },
@@ -59,6 +61,7 @@ export default function EntregaDetailPage() {
   const [showAvisoEntrega, setShowAvisoEntrega] = useState(false);
   const [avisoPendente, setAvisoPendente] = useState(false);
   const [showSugestao, setShowSugestao] = useState(false);
+  const [showSepararAgenda, setShowSepararAgenda] = useState(false);
   const [selectedNotas, setSelectedNotas] = useState<string[]>([]);
   const [separando, setSeparando] = useState(false);
   const [danfeModal, setDanfeModal] = useState<{ open: boolean; xml: string | null; loading: boolean; fullscreen: boolean }>({ open: false, xml: null, loading: false, fullscreen: false });
@@ -593,6 +596,16 @@ export default function EntregaDetailPage() {
                 <Truck size={14} /> Sugerir Veículo
               </button>
             )}
+            {!isReadOnly && entrega.notas && entrega.notas.length >= 2 && (
+              <button
+                onClick={() => setShowSepararAgenda(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                style={{ borderColor: "#3b82f6", color: "#3b82f6", background: "transparent" }}
+                title="Separar as NFs desta entrega por data de agendamento"
+              >
+                <Calendar size={14} /> Separar por agenda
+              </button>
+            )}
             {entrega.motoristaComplId && (
               <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}?motorista=complementar`, '_blank')}>
                 <Printer size={14} /> Carta Frete Compl.
@@ -795,6 +808,10 @@ export default function EntregaDetailPage() {
                   )}
                   <Field label="Rota" value={entrega.rota?.codigo} mono />
                   <Field label="Paletes" value={entrega.quantidadePaletes > 0 ? String(entrega.quantidadePaletes) : "—"} />
+                  <Field label="Cubagem" value={(() => {
+                    const total = (entrega.notas || []).reduce((s: number, n: any) => s + (extrairM3(n.infAdicionais) || 0), 0);
+                    return total > 0 ? `${total.toFixed(3)} m³` : "—";
+                  })()} mono />
                   <Field label="Data Chegada" value={formatDate(entrega.dataChegada)} mono />
                   <Field label="Data Agendada" value={formatDate(entrega.dataAgendada)} mono />
                   <Field label="Data Entrega" value={formatDate(entrega.dataEntrega)} mono />
@@ -1716,6 +1733,13 @@ export default function EntregaDetailPage() {
         onClose={() => setShowSugestao(false)}
         entregaId={id}
         onAtribuido={reloadEntrega}
+      />
+
+      <SepararPorAgendaModal
+        entregaId={id}
+        open={showSepararAgenda}
+        onClose={() => setShowSepararAgenda(false)}
+        onSeparado={reloadEntrega}
       />
     </>
   );

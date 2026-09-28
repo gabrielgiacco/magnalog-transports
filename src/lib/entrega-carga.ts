@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseNFProducts } from "@/lib/nf-produtos";
+import { M3_REGEX } from "./agenda-nf";
 
 export type FonteCarga = "paletes" | "m3" | "sem_dados";
 
@@ -9,8 +10,6 @@ export type CargaEntrega = {
   fonte: FonteCarga;
   ncmsPrincipais: string[];
 };
-
-const M3_REGEX = /M\s*[3³]\s*:?\s*(\d+(?:[.,]\d+)?)/i;
 
 type EntregaLike = {
   quantidadePaletes: number | null;
