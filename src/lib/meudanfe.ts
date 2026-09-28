@@ -167,27 +167,28 @@ export async function baixarPdf(chave: string, formato: FormatoDanfe): Promise<P
   };
 }
 
-export interface PaginaChaves {
+export interface BlocoChaves {
   chaves: string[];
-  pagina: number;
-  totalPaginas: number;
-  totalDocumentos: number;
+  /** true quando veio menos de 50 — fim da lista. */
+  fim: boolean;
+  /** ultima chave do bloco, para o proximo `after`. null se veio vazio. */
+  ultimaChave: string | null;
 }
 
 /**
- * Lista as chaves da Área do Cliente. GRÁTIS. 50 por página (fixo), ordenadas
- * da mais antiga para a mais recente.
+ * Lista um bloco de ate 50 chaves da Área do Cliente. GRÁTIS.
  *
- * O filtro `doc` casa emitente, destinatário ou remetente — NÃO transportador.
- * Para uma transportadora, filtrar pelo próprio CNPJ não traz as cargas.
+ * Sem `after`, a listagem recomeça do início — e isso só pode 1x por hora
+ * por tipo de documento. Com `after`, continua da última chave recebida e
+ * não tem limite. O chamador PRECISA travar o recomeço antes de chamar
+ * aqui; ver o marcador em src/app/api/sincronizacao/route.ts.
  */
 export async function listarChaves(
   tipo: "NFE" | "CTE",
-  pagina = 1,
-  doc?: string
-): Promise<PaginaChaves> {
-  const params = new URLSearchParams({ page: String(pagina) });
-  if (doc) params.set("doc", doc.replace(/\D/g, ""));
+  after?: string | null
+): Promise<BlocoChaves> {
+  const params = new URLSearchParams();
+  if (after) params.set("after", after);
 
   const res = await fetch(`${API_BASE}/fd/my/${tipo}?${params}`, {
     headers: { "Api-Key": apiKey() },
@@ -197,21 +198,23 @@ export async function listarChaves(
   if (!res.ok) throw new MeuDanfeError("Erro ao listar documentos do Meu Danfe.", 502);
 
   const dados = await res.json();
-  if (dados.status === "PAGE_NOT_FOUND") {
-    throw new MeuDanfeError(dados.statusMessage || "Página não encontrada.", 404);
+  if (dados.status === "INVALID_CHAVE") {
+    throw new MeuDanfeError(
+      "A última chave marcada não existe mais na sua Área do Cliente. Faça uma varredura completa.",
+      409
+    );
   }
-  if (dados.status === "INVALID_DOC") {
-    throw new MeuDanfeError("CPF/CNPJ informado no filtro é inválido.", 400);
+  if (dados.status === "TOO_MANY_REQUESTS") {
+    throw new MeuDanfeError(dados.statusMessage || "Recomeço da listagem bloqueado. Tente mais tarde.", 429);
   }
   if (dados.status !== "OK") {
     throw new MeuDanfeError(dados.statusMessage || "Erro ao listar documentos.", 502);
   }
 
-  const page = dados.page || {};
+  const chaves: string[] = dados.chaves || [];
   return {
-    chaves: page.elements || [],
-    pagina: page.number || pagina,
-    totalPaginas: page.totalPages || 0,
-    totalDocumentos: page.totalElements || 0,
+    chaves,
+    fim: chaves.length < 50,
+    ultimaChave: chaves.length > 0 ? chaves[chaves.length - 1] : null,
   };
 }

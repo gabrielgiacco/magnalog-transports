@@ -12,9 +12,14 @@ interface ChaveItem {
 }
 
 interface Progresso {
-  paginaAtual: number;
-  totalPaginas: number;
-  totalDocumentos: number;
+  blocos: number;
+  chavesVistas: number;
+}
+
+interface Marcador {
+  ultimaChave: string | null;
+  ultimaVarreduraEm: string | null;
+  ultimoBlocoEm: string | null;
 }
 
 // Downloads de XML já armazenado são gratuitos, mas ainda são requisições HTTP.
@@ -22,36 +27,68 @@ interface Progresso {
 // consulta já usa e vem funcionando.
 const CONCURRENCY = 3;
 
+// Trava de segurança: 200 blocos x 50 chaves = 10.000 chaves por acionamento.
+// Nunca deve ser atingido em uso normal — existe só para um bug não girar
+// para sempre chamando a API sem parar.
+const LIMITE_BLOCOS = 200;
+
 export function SincronizacaoTab() {
   const [tipo, setTipo] = useState<Tipo>("NFE");
   const [varrendo, setVarrendo] = useState(false);
   const [progresso, setProgresso] = useState<Progresso | null>(null);
+  const [marcador, setMarcador] = useState<Marcador | null>(null);
   const [faltando, setFaltando] = useState<ChaveItem[]>([]);
   const [jaTemos, setJaTemos] = useState(0);
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
   const [importando, setImportando] = useState(false);
   const [resultado, setResultado] = useState<{ ok: number; erro: number } | null>(null);
 
-  async function varrer() {
+  async function sincronizar(recomecar: boolean) {
+    if (recomecar) {
+      const confirmou = window.confirm(
+        "A varredura completa reinicia a listagem do zero, ignorando o ponto onde parou. " +
+          "Só é permitida 1 vez por hora para cada tipo de documento. Continuar?"
+      );
+      if (!confirmou) return;
+    }
+
     setVarrendo(true);
     setFaltando([]);
     setJaTemos(0);
     setSelecionadas(new Set());
     setResultado(null);
+    setProgresso(null);
 
     const ausentes: ChaveItem[] = [];
     let presentes = 0;
-    let pagina = 1;
-    let totalPaginas = 1;
+    let blocos = 0;
 
     try {
-      while (pagina <= totalPaginas) {
-        const res = await fetch(`/api/sincronizacao?tipo=${tipo}&pagina=${pagina}`);
-        if (!res.ok) throw new Error((await res.json()).error || "Erro ao listar");
+      let fim = false;
+      let primeiraChamada = true;
+
+      while (!fim && blocos < LIMITE_BLOCOS) {
+        const params = new URLSearchParams({ tipo });
+        if (recomecar && primeiraChamada) params.set("recomecar", "1");
+        primeiraChamada = false;
+
+        const res = await fetch(`/api/sincronizacao?${params}`);
         const d = await res.json();
 
-        totalPaginas = d.totalPaginas || 0;
-        setProgresso({ paginaAtual: pagina, totalPaginas, totalDocumentos: d.totalDocumentos || 0 });
+        if (!res.ok) {
+          if (res.status === 429) {
+            toast.error(d.error || "Recomeço da listagem bloqueado. Aguarde o horário informado.");
+          } else if (res.status === 409) {
+            toast.error(d.error || "O marcador salvo não é mais válido — faça uma varredura completa.");
+          } else {
+            toast.error(d.error || "Erro ao listar");
+          }
+          return;
+        }
+
+        blocos++;
+        setProgresso({ blocos, chavesVistas: d.chavesVistas || 0 });
+        setMarcador(d.marcador || null);
 
         for (const item of d.chaves as ChaveItem[]) {
           if (item.existe) presentes++;
@@ -61,8 +98,7 @@ export function SincronizacaoTab() {
         setFaltando([...ausentes]);
         setJaTemos(presentes);
 
-        if (totalPaginas === 0) break;
-        pagina++;
+        fim = !!d.fim;
       }
 
       setSelecionadas(new Set(ausentes.map((a) => a.chave)));
@@ -72,7 +108,7 @@ export function SincronizacaoTab() {
           : `${ausentes.length} documento(s) existem no Meu Danfe e não estão aqui.`
       );
     } catch (e: any) {
-      toast.error(e.message || "Erro na varredura");
+      toast.error(e.message || "Erro na sincronização");
     } finally {
       setVarrendo(false);
     }
@@ -145,10 +181,6 @@ export function SincronizacaoTab() {
     }
   }
 
-  const pctVarredura = progresso && progresso.totalPaginas > 0
-    ? Math.round((progresso.paginaAtual / progresso.totalPaginas) * 100)
-    : 0;
-
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -175,24 +207,35 @@ export function SincronizacaoTab() {
               <option value="NFE">NF-e</option>
               <option value="CTE">CT-e</option>
             </select>
-            <Button onClick={varrer} disabled={varrendo || importando}>
+            <Button variant="ghost" onClick={() => sincronizar(true)} disabled={varrendo || importando}>
+              Varredura completa
+            </Button>
+            <Button onClick={() => sincronizar(false)} disabled={varrendo || importando}>
               {varrendo ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-              {varrendo ? "Varrendo..." : "Verificar"}
+              {varrendo ? "Sincronizando..." : "Sincronizar"}
             </Button>
           </div>
         </div>
+        {marcador?.ultimoBlocoEm && (
+          <div className="text-[11px] mt-2" style={{ color: "var(--text3)" }}>
+            Última sincronização: {new Date(marcador.ultimoBlocoEm).toLocaleString("pt-BR")}
+          </div>
+        )}
       </Card>
 
       {progresso && (
         <Card className="p-4">
           <div className="flex items-center justify-between text-xs mb-2">
             <span style={{ color: "var(--text2)" }}>
-              Página {progresso.paginaAtual} de {progresso.totalPaginas} · {progresso.totalDocumentos} documento(s) na sua conta
+              {progresso.blocos} bloco{progresso.blocos === 1 ? "" : "s"} · {progresso.chavesVistas} chave(s) vistas
             </span>
-            <span className="font-mono" style={{ color: "var(--text3)" }}>{pctVarredura}%</span>
+            {varrendo && <span style={{ color: "var(--text3)" }}>buscando...</span>}
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
-            <div className="h-full transition-all" style={{ width: `${pctVarredura}%`, background: "var(--accent)" }} />
+            <div
+              className={varrendo ? "h-full w-full animate-pulse" : "h-full w-full"}
+              style={{ background: "var(--accent)" }}
+            />
           </div>
           <div className="flex items-center gap-4 mt-3 text-xs">
             <span className="flex items-center gap-1" style={{ color: "#10b981" }}>
