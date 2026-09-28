@@ -628,6 +628,12 @@ model ContaPagar {
   observacoes    String?          @db.Text
   rotaId         String?
   entregaId      String?
+
+  // Chave da NF-e de compra que originou a despesa, quando veio da
+  // sincronizacao com o Meu Danfe. Unica para o mesmo documento nao virar
+  // duas contas a pagar se a sincronizacao rodar de novo.
+  chaveAcesso String? @unique
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -1903,4 +1909,20 @@ model SincronizacaoMarcador {
   ultimoBlocoEm     DateTime? // ultima continuacao bem-sucedida
   chavesVistas      Int       @default(0)
   atualizadoEm      DateTime  @updatedAt
+}
+
+// ─── Configuracao da empresa ────────────────────────────────────────────────
+//
+// O CNPJ proprio estava escrito a mao em 5 lugares (paginas de impressao e o
+// parser de OFX). Passa a morar aqui porque agora ele tambem DECIDE coisa: e
+// o que separa nota de frete de nota de compra na sincronizacao — se a
+// Magnalog e a destinataria, a mercadoria foi comprada, nao transportada.
+model ConfiguracaoEmpresa {
+  id             String   @id @default("default")
+  cnpj           String   @default("40784237000125")
+  razaoSocial    String   @default("MAGNA LOG TRANSPORTES LTDA")
+  // CNPJs adicionais da propria empresa (filial, outro estabelecimento).
+  // Nota destinada a qualquer um deles tambem conta como compra.
+  cnpjsAdicionais String[] @default([])
+  atualizadoEm   DateTime @updatedAt
 }
