@@ -19,6 +19,7 @@ import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import { AvisoEntregaModal } from "@/components/entrega/AvisoEntregaModal";
 import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
 import { SepararPorAgendaModal } from "@/components/entrega/SepararPorAgendaModal";
+import { AcoesMenu } from "@/components/entrega/AcoesMenu";
 import { TicketModal } from "@/components/entrega/TicketModal";
 import { EventosMotorista } from "@/components/entrega/EventosMotorista";
 import { Smartphone, Receipt, MessageCircle } from "lucide-react";
@@ -578,69 +579,47 @@ export default function EntregaDetailPage() {
                 <Copy size={14} /> Editar
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}`, '_blank')}>
-              <Printer size={14} /> Carta Frete
-            </Button>
             {!isReadOnly && (
               <Button variant="ghost" size="sm" onClick={() => setShowLinkMotorista(true)}>
                 <Smartphone size={14} /> Link Motorista
               </Button>
             )}
-            {!isReadOnly && (
-              <button
-                onClick={() => setShowSugestao(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                style={{ borderColor: "#3b82f6", color: "#3b82f6", background: "transparent" }}
-                title="Sugerir veículo baseado na carga ou histórico"
-              >
-                <Truck size={14} /> Sugerir Veículo
-              </button>
-            )}
-            {!isReadOnly && entrega.notas && entrega.notas.length >= 2 && (
-              <button
-                onClick={() => setShowSepararAgenda(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                style={{ borderColor: "#3b82f6", color: "#3b82f6", background: "transparent" }}
-                title="Separar as NFs desta entrega por data de agendamento"
-              >
-                <Calendar size={14} /> Separar por agenda
-              </button>
-            )}
-            {entrega.motoristaComplId && (
-              <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/entrega/${id}?motorista=complementar`, '_blank')}>
-                <Printer size={14} /> Carta Frete Compl.
-              </Button>
-            )}
-            {!isReadOnly && (
-              <button
-                onClick={() => setShowDiaria(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                style={{ borderColor: "#d97706", color: "#d97706", background: "transparent" }}
-                title="Gerar diária (penalidade financeira sem alterar status)"
-              >
-                <DollarSign size={14} /> Gerar Diária
-              </button>
-            )}
-            {!isReadOnly && (
-              <button
-                onClick={() => setShowTicket(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                style={{ borderColor: "#059669", color: "#059669", background: "transparent" }}
-                title="Montar a solicitação de aprovação de ticket para o embarcador"
-              >
-                <Receipt size={14} /> Solicitar Ticket
-              </button>
-            )}
-            {!isReadOnly && (entrega.status === "ENTREGUE" || entrega.status === "FINALIZADO") && (
-              <button
-                onClick={() => setShowAvisoEntrega(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border-2 transition-all hover:bg-green-50 dark:hover:bg-green-950/30"
-                style={{ borderColor: "#25d366", color: "#25d366", background: "transparent" }}
-                title="Avisar o embarcador por WhatsApp que a entrega foi concluída"
-              >
-                <MessageCircle size={14} /> Avisar Embarcador
-              </button>
-            )}
+            {/* Acoes de uso eventual: moram no menu "Mais" para a barra nao virar
+                uma fileira de 9 a 11 botoes. Condicoes identicas as de antes. */}
+            <AcoesMenu
+              grupos={[
+                {
+                  titulo: "Documentos",
+                  itens: [
+                    { label: "Carta Frete", icon: Printer, onClick: () => window.open(`/imprimir/carta-frete/entrega/${id}`, "_blank") },
+                    ...(entrega.motoristaComplId
+                      ? [{ label: "Carta Frete Compl.", icon: Printer, onClick: () => window.open(`/imprimir/carta-frete/entrega/${id}?motorista=complementar`, "_blank") }]
+                      : []),
+                  ],
+                },
+                {
+                  titulo: "Carga",
+                  itens: !isReadOnly && entrega.notas && entrega.notas.length >= 2
+                    ? [{ label: "Separar por agenda", icon: Calendar, cor: "#3b82f6", title: "Separar as NFs desta entrega por data de agendamento", onClick: () => setShowSepararAgenda(true) }]
+                    : [],
+                },
+                {
+                  titulo: "Financeiro",
+                  itens: !isReadOnly
+                    ? [
+                        { label: "Gerar Diária", icon: DollarSign, cor: "#d97706", title: "Gerar diária (penalidade financeira sem alterar status)", onClick: () => setShowDiaria(true) },
+                        { label: "Solicitar Ticket", icon: Receipt, cor: "#059669", title: "Montar a solicitação de aprovação de ticket para o embarcador", onClick: () => setShowTicket(true) },
+                      ]
+                    : [],
+                },
+                {
+                  titulo: "Comunicação",
+                  itens: !isReadOnly && (entrega.status === "ENTREGUE" || entrega.status === "FINALIZADO")
+                    ? [{ label: "Avisar Embarcador", icon: MessageCircle, cor: "#25d366", title: "Avisar o embarcador por WhatsApp que a entrega foi concluída", onClick: () => setShowAvisoEntrega(true) }]
+                    : [],
+                },
+              ]}
+            />
             {!isReadOnly && entrega.status !== "OCORRENCIA" && entrega.status !== "FINALIZADO" && (
               <Button variant="danger" size="sm" onClick={() => setShowOcorrencia(true)}>
                 <AlertCircle size={14} /> Ocorrência
@@ -786,6 +765,18 @@ export default function EntregaDetailPage() {
                 <div className="space-y-3">
                   <Field label={entrega.motoristaCompl ? "Motorista (Principal)" : "Motorista"} value={entrega.motorista?.nome} />
                   <Field label={entrega.motoristaCompl ? "Veículo (Principal)" : "Veículo"} value={entrega.veiculo ? `${entrega.veiculo.placa} — ${entrega.veiculo.tipo}` : "—"} />
+                  {/* Sugestao ao lado do veiculo, da cubagem e dos paletes — o contexto
+                      em que ela faz sentido. Saiu da barra do topo. */}
+                  {!isReadOnly && (
+                    <button
+                      onClick={() => setShowSugestao(true)}
+                      className="-mt-1 inline-flex items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-70"
+                      style={{ color: "#3b82f6" }}
+                      title="Sugerir veículo baseado na carga ou histórico"
+                    >
+                      <Truck size={12} /> Sugerir veículo
+                    </button>
+                  )}
                   {entrega.veiculo?.dono && entrega.veiculo.dono.id !== entrega.motorista?.id && (
                     <Field
                       label="👑 Dono do Veículo"
