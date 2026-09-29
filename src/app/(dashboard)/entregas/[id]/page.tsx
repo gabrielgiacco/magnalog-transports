@@ -34,6 +34,19 @@ const STATUS_FLOW = [
   { key: "FINALIZADO", label: "Finalizado", icon: "🏁" },
 ];
 
+// Solicitacao de ticket so e usada com a Unicharm: e o unico embarcador com
+// tabela de valores de ticket e o autor de todas as solicitacoes ja feitas.
+// Compara pela raiz do CNPJ (8 digitos) para cobrir qualquer filial. Nao da
+// para usar "tem TabelaTicket" como regra: a mesma tabela guarda o WhatsApp
+// de outros embarcadores.
+const RAIZES_CNPJ_TICKET = ["13884068"];
+
+function usaSolicitacaoTicket(entrega: any): boolean {
+  return (entrega?.notas || []).some((n: any) =>
+    RAIZES_CNPJ_TICKET.includes(String(n.emitenteCnpj || "").replace(/\D/g, "").slice(0, 8)),
+  );
+}
+
 export default function EntregaDetailPage() {
   const params = useParams()!;
   const id = params!.id as string;
@@ -608,7 +621,9 @@ export default function EntregaDetailPage() {
                   itens: !isReadOnly
                     ? [
                         { label: "Gerar Diária", icon: DollarSign, cor: "#d97706", title: "Gerar diária (penalidade financeira sem alterar status)", onClick: () => setShowDiaria(true) },
-                        { label: "Solicitar Ticket", icon: Receipt, cor: "#059669", title: "Montar a solicitação de aprovação de ticket para o embarcador", onClick: () => setShowTicket(true) },
+                        ...(usaSolicitacaoTicket(entrega)
+                          ? [{ label: "Solicitar Ticket", icon: Receipt, cor: "#059669", title: "Montar a solicitação de aprovação de ticket para o embarcador", onClick: () => setShowTicket(true) }]
+                          : []),
                       ]
                     : [],
                 },
