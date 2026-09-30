@@ -465,7 +465,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const count = await prisma.entrega.count();
   const codigo = notasParaSeparar.map((n) => n.numero).join(" / ");
 
-  // Criar nova entrega com dados do mesmo destinatário (herdar dataChegada da original)
+  // Criar nova entrega com dados do mesmo destinatário. Herda dataChegada e a
+  // agenda da original: a agenda ja foi definida (muitas vezes pelo "Separar por
+  // agenda", a partir dos dados adicionais) e separar notas nao a muda.
   const novaEntrega = await prisma.entrega.create({
     data: {
       codigo,
@@ -480,6 +482,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       volumeTotal,
       status: entregaOrigem.status,
       dataChegada: entregaOrigem.dataChegada,
+      dataAgendada: entregaOrigem.dataAgendada,
     },
   });
 
