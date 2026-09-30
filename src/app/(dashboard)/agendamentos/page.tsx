@@ -309,7 +309,7 @@ export default function AgendamentosPage() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
 
         {/* Aviso de Atrasadas */}
         {viewMode === "lista" && atrasadas > 0 && (

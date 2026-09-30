@@ -564,7 +564,7 @@ export default function NormasPaletizacaoPage() {
   return (
     <>
       <Topbar title="Normas de Paletização" subtitle="Configure o lastro e altura para conferência física dos produtos" />
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div className="space-y-5">
           {/* Ações e Busca */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -1,17 +1,20 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useLayoutStore } from "@/hooks/useLayoutStore";
+import { useTheme } from "@/hooks/useTheme";
 import { QUALIDADE_ENABLED } from "@/lib/features";
 import { navGroups, type NavItem } from "./nav-items";
-import { X, ChevronLeft, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { X, ChevronLeft, ChevronRight as ChevronRightIcon, Sun, Moon, LogOut } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { isSidebarOpen, isSidebarCollapsed, toggleCollapse, setSidebarOpen } = useLayoutStore();
   const role = (session?.user as any)?.role || "OPERACIONAL";
+  const { theme, toggle: toggleTheme, mounted } = useTheme();
+  const isDark = mounted && theme === "dark";
 
   const canSee = (item: NavItem) => {
     if (item.href === "/qualidade" && !QUALIDADE_ENABLED) return false;
@@ -141,6 +144,26 @@ export function Sidebar() {
             </div>
           ))}
         </nav>
+
+        {/* Celular: tema e Sair sairam da barra do topo para o titulo caber.
+            De md para cima eles continuam la, entao aqui ficam escondidos. */}
+        <div className="md:hidden flex items-center gap-2 px-3 py-3" style={{ borderTop: "1px solid var(--sidebar-border)" }}>
+          <button
+            onClick={toggleTheme}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] text-[13px] font-medium"
+            style={{ border: "1px solid var(--sidebar-border)", background: "var(--sidebar-hover)", color: "var(--sidebar-muted)" }}
+          >
+            {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            {isDark ? "Tema claro" : "Tema escuro"}
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[10px] text-[13px] font-medium"
+            style={{ border: "1px solid var(--sidebar-border)", background: "var(--sidebar-hover)", color: "var(--sidebar-muted)" }}
+          >
+            <LogOut size={15} /> Sair
+          </button>
+        </div>
 
         {/* Marca */}
         <div

@@ -309,7 +309,7 @@ export default function ConfiguracoesPage() {
   return (
     <>
       <Topbar title="Configurações" subtitle="Preferências do sistema" />
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div className="max-w-[1700px] columns-1 xl:columns-2 gap-5">
           {/* Perfil */}
           <Section icon={User} title="Perfil do Usuário">

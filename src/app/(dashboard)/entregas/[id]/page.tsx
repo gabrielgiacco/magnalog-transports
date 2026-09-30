@@ -644,7 +644,7 @@ export default function EntregaDetailPage() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
         {/* Status flow card */}
         <Card>
           <div className="flex items-center justify-between mb-4">
@@ -1193,7 +1193,7 @@ export default function EntregaDetailPage() {
 
       {/* Edit Modal */}
       <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Editar Entrega" size="lg">
-         <div className="grid grid-cols-2 gap-4">
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Razão Social" value={editForm.razaoSocial} onChange={(e) => set("razaoSocial", e.target.value)} />
             <Input label="Cidade" value={editForm.cidade} onChange={(e) => set("cidade", e.target.value)} />
             <Input label="UF" value={editForm.uf} onChange={(e) => set("uf", e.target.value)} maxLength={2} />
@@ -1211,7 +1211,7 @@ export default function EntregaDetailPage() {
             </Select>
 
             {!showComplFields ? (
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <Button
                   type="button"
                   variant="ghost"
@@ -1223,7 +1223,7 @@ export default function EntregaDetailPage() {
               </div>
             ) : (
               <>
-                <div className="col-span-2 flex items-center justify-between py-2 border-b text-[10px] font-bold text-slate-400 dark:text-neutral-500 uppercase">
+                <div className="sm:col-span-2 flex items-center justify-between py-2 border-b text-[10px] font-bold text-slate-400 dark:text-neutral-500 uppercase">
                   <span>Motorista Complementar</span>
                   <button
                     type="button"
@@ -1308,7 +1308,7 @@ export default function EntregaDetailPage() {
                   label="Status do Canhoto Compl."
                   value={editForm.statusCanhotoCompl}
                   onChange={(e) => set("statusCanhotoCompl", e.target.value)}
-                  className="col-span-2"
+                  className="sm:col-span-2"
                 >
                   <option value="PENDENTE">Pendente</option>
                   <option value="RECEBIDO">Recebido</option>
@@ -1327,7 +1327,7 @@ export default function EntregaDetailPage() {
             </Select>
             
             <Input label="Qtd Paletes" type="number" value={editForm.quantidadePaletes} onChange={(e) => set("quantidadePaletes", e.target.value)} />
-            <div className="col-span-2 py-2 border-b text-[10px] font-bold text-slate-400 dark:text-neutral-500 uppercase">Valores e Financeiro (Motorista Principal)</div>
+            <div className="sm:col-span-2 py-2 border-b text-[10px] font-bold text-slate-400 dark:text-neutral-500 uppercase">Valores e Financeiro (Motorista Principal)</div>
             <Input label="Valor Frete Cliente" type="number" value={editForm.valorFrete} onChange={(e) => set("valorFrete", e.target.value)} />
             <Input label="Valor Descarga (reembolso)" type="number" step="0.01" value={editForm.valorDescarga} onChange={(e) => set("valorDescarga", e.target.value)} placeholder="0,00" />
 
@@ -1339,7 +1339,7 @@ export default function EntregaDetailPage() {
             <Input label="Data Adiantamento Motorista" type="date" value={editForm.dataAdiantamento} onChange={(e) => set("dataAdiantamento", e.target.value)} />
             <Input label="Data Pagamento Saldo Motorista" type="date" value={editForm.dataPagamentoSaldo} onChange={(e) => set("dataPagamentoSaldo", e.target.value)} />
 
-            <Textarea label="Observações" value={editForm.observacoes} onChange={(e) => set("observacoes", e.target.value)} className="col-span-2" />
+            <Textarea label="Observações" value={editForm.observacoes} onChange={(e) => set("observacoes", e.target.value)} className="sm:col-span-2" />
          </div>
          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
             <Button variant="ghost" onClick={() => setShowEdit(false)}>Cancelar</Button>

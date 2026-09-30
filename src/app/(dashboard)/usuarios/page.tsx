@@ -106,7 +106,7 @@ export default function UsuariosPage() {
       <Topbar title="Usuários & Permissões" subtitle="Gerenciamento de acessos ao sistema"
         actions={<Button onClick={openNew}><Plus size={15} /> Novo Usuário</Button>} />
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         {loading ? <Loading /> : usuarios.length === 0 ? <Empty icon="👥" text="Nenhum usuário" /> : (
           <Card className="p-0 overflow-hidden">
             <Table>

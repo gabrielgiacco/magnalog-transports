@@ -49,7 +49,7 @@ export default function NotasPage() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
         {/* Filters */}
         <Card className="p-4">
           <div className="flex gap-3 items-center flex-wrap">

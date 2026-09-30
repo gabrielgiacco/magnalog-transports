@@ -179,7 +179,7 @@ export default function ProdutosPage() {
           </Button>
         }
       />
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div className="max-w-7xl mx-auto space-y-4">
           {/* Abas */}
           <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>

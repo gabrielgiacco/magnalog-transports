@@ -211,7 +211,7 @@ export default function RotaDetailPage() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
         {/* Progress Card */}
         <Card>
           <div className="flex items-center gap-6">

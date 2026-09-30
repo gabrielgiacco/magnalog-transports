@@ -392,7 +392,7 @@ export default function FaturamentoPage() {
         actions={<Button variant="ghost" size="sm" onClick={fetchData}><RefreshCw size={14} /> Atualizar</Button>}
       />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6">
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">

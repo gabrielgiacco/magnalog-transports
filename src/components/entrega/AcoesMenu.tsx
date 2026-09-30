@@ -54,9 +54,15 @@ export function AcoesMenu({ grupos }: { grupos: GrupoAcoes[] }) {
       </Button>
 
       {aberto && (
+        // No celular o menu abre como painel preso na base da tela: um menu
+        // suspenso ancorado no botao sairia pela borda quando o botao fica
+        // perto dela. De md para cima, menu suspenso normal.
+        <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setAberto(false)} />
+      )}
+      {aberto && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 z-50 w-60 rounded-xl py-1.5 shadow-2xl"
+          className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl pt-2 pb-5 max-h-[70vh] overflow-y-auto md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-full md:mt-2 md:w-60 md:rounded-xl md:py-1.5 md:pb-1.5 md:max-h-none md:overflow-visible shadow-2xl"
           style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
         >
           {visiveis.map((grupo, gi) => (
@@ -73,7 +79,7 @@ export function AcoesMenu({ grupos }: { grupos: GrupoAcoes[] }) {
                     setAberto(false);
                     item.onClick();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-colors hover:bg-[var(--surface2)]"
+                  className="w-full flex items-center gap-2.5 px-4 py-3 md:px-3 md:py-2 text-left text-[14px] md:text-[13px] transition-colors hover:bg-[var(--surface2)]"
                   style={{ color: "var(--text)" }}
                 >
                   <item.icon size={14} style={{ color: item.cor || "var(--text2)" }} />
