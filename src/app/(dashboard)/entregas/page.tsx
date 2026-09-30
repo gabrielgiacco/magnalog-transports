@@ -14,7 +14,7 @@ import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/util
 import { QUALIDADE_ENABLED } from "@/lib/features";
 import {
   Plus, Filter, RefreshCw, Search, Eye, ChevronLeft, ChevronRight,
-  Package, MapPin, User, Truck, Trash2, ArrowUp, ArrowDown, ArrowUpDown, X, Calendar,
+  EyeOff, Package, MapPin, User, Truck, Trash2, ArrowUp, ArrowDown, ArrowUpDown, X, Calendar,
 } from "lucide-react";
 import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
 
@@ -373,9 +373,9 @@ export default function EntregasPage() {
       <Topbar
         title="Entregas"
         subtitle={`${total} registro${total !== 1 ? "s" : ""} encontrado${total !== 1 ? "s" : ""}`}
-        actions={!isReadOnly ?
+        acoesRapidas={!isReadOnly ?
           <Button onClick={() => setShowModal(true)}>
-            <Plus size={15} /> Nova Entrega
+            <Plus size={15} /> Nova<span className="hidden sm:inline"> Entrega</span>
           </Button>
         : undefined}
       />
@@ -400,7 +400,7 @@ export default function EntregasPage() {
         {/* Filters */}
         <Card className="p-3 sm:p-4">
           <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-            <div className="relative flex-1 min-w-0 w-full sm:w-auto sm:min-w-[200px]">
+            <div className="relative flex-1 min-w-0 w-full md:w-auto md:min-w-[200px]">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
               <input
                 value={search}
@@ -415,21 +415,38 @@ export default function EntregasPage() {
                 </button>
               )}
             </div>
-            <label className="flex items-center gap-2 text-xs cursor-pointer select-none" style={{ color: "var(--text2)" }}>
-              <input type="checkbox" checked={mostrarFinalizados} onChange={(e) => setMostrarFinalizados(e.target.checked)}
-                className="accent-orange-500 w-3.5 h-3.5" />
-              Mostrar finalizados
-            </label>
-            <Button variant="ghost" size="sm" onClick={() => setShowFiltros((v: boolean) => !v)}
-              className={(dynamicFilters.length > 0 || agendadaDe || agendadaAte) ? "bg-orange-50 text-orange-600" : ""}>
-              <Filter size={13} /> Filtros {(() => {
-                const count = dynamicFilters.length + ((agendadaDe || agendadaAte) ? 1 : 0);
-                return count > 0 ? `(${count})` : "";
-              })()}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={fetchEntregas}>
-              <RefreshCw size={13} /> Atualizar
-            </Button>
+            {/* Celular: linha compacta (finalizados, filtros, atualizar); md+: itens soltos */}
+            <div className="flex items-center gap-2 w-full md:w-auto md:contents">
+              {/* Celular: pilula de alternancia */}
+              <button
+                type="button"
+                onClick={() => setMostrarFinalizados((v: boolean) => !v)}
+                aria-pressed={mostrarFinalizados}
+                className="md:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold select-none"
+                style={mostrarFinalizados
+                  ? { background: "rgba(249,115,22,.12)", border: "1px solid rgba(249,115,22,.32)", color: "var(--accent)" }
+                  : { background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text2)" }}
+              >
+                {mostrarFinalizados ? <Eye size={13} /> : <EyeOff size={13} />}
+                Finalizadas: {mostrarFinalizados ? "visíveis" : "ocultas"}
+              </button>
+              {/* Desktop: checkbox original */}
+              <label className="hidden md:flex items-center gap-2 text-xs cursor-pointer select-none" style={{ color: "var(--text2)" }}>
+                <input type="checkbox" checked={mostrarFinalizados} onChange={(e) => setMostrarFinalizados(e.target.checked)}
+                  className="accent-orange-500 w-3.5 h-3.5" />
+                Mostrar finalizados
+              </label>
+              <Button variant="ghost" size="sm" onClick={() => setShowFiltros((v: boolean) => !v)}
+                className={(dynamicFilters.length > 0 || agendadaDe || agendadaAte) ? "bg-orange-50 text-orange-600" : ""}>
+                <Filter size={13} /> Filtros {(() => {
+                  const count = dynamicFilters.length + ((agendadaDe || agendadaAte) ? 1 : 0);
+                  return count > 0 ? `(${count})` : "";
+                })()}
+              </Button>
+              <Button variant="ghost" size="sm" className="ml-auto md:ml-0" onClick={fetchEntregas} aria-label="Atualizar">
+                <RefreshCw size={13} /> <span className="hidden md:inline">Atualizar</span>
+              </Button>
+            </div>
           </div>
 
           {/* Filter Panel (date + dynamic filters) */}

@@ -644,7 +644,7 @@ export default function EntregaDetailPage() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
+      <div className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-6 space-y-4">
         {/* Status flow card */}
         <Card>
           <div className="flex items-center justify-between mb-4">
@@ -692,18 +692,18 @@ export default function EntregaDetailPage() {
                )}
              </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               {STATUS_FLOW.map((s, i) => {
                 const done = i < currentIdx;
                 const current = i === currentIdx;
                 const next = i === currentIdx + 1;
                 return (
-                  <div key={s.key} className="flex items-center gap-2 flex-1">
-                    <div className="flex flex-col items-center gap-1 flex-1">
+                  <div key={s.key} className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+                    <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
                       <button
                         onClick={() => !isReadOnly && next && handleStatusChange(s.key)}
                         disabled={isReadOnly || saving || (!next && !current)}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-lg transition-all
+                        className={`w-7 h-7 sm:w-9 sm:h-9 flex-shrink-0 rounded-full flex items-center justify-center text-lg transition-all
                           ${current ? "ring-2 ring-orange-400 scale-110" : ""}
                           ${!isReadOnly && next ? "cursor-pointer hover:scale-110" : done ? "" : "opacity-30 cursor-not-allowed"}
                         `}
@@ -712,14 +712,14 @@ export default function EntregaDetailPage() {
                           border: current ? "2px solid var(--accent)" : "1px solid var(--border)",
                         }}
                         title={next ? `Avançar para ${s.label}` : ""}>
-                        {done ? <CheckCircle2 size={18} color="#fff" /> : <span style={{ fontSize: "14px" }}>{s.icon}</span>}
+                        {done ? <CheckCircle2 className="w-4 h-4 sm:w-[18px] sm:h-[18px]" color="#fff" /> : <span className="text-xs sm:text-[14px] leading-none">{s.icon}</span>}
                       </button>
-                      <span className={`text-[9px] font-mono text-center leading-tight ${current ? "text-orange-600 font-bold" : done ? "text-slate-400 dark:text-neutral-500" : "text-slate-300 dark:text-neutral-600"}`}>
+                      <span className={`text-[8px] sm:text-[9px] font-mono text-center leading-tight ${current ? "text-orange-600 font-bold" : done ? "text-slate-400 dark:text-neutral-500" : "text-slate-300 dark:text-neutral-600"}`}>
                         {s.label}
                       </span>
                     </div>
                     {i < STATUS_FLOW.length - 1 && (
-                      <div className="h-px flex-none w-4" style={{ background: i < currentIdx ? "var(--accent)" : "var(--border)" }} />
+                      <div className="h-px flex-none w-2 sm:w-4" style={{ background: i < currentIdx ? "var(--accent)" : "var(--border)" }} />
                     )}
                   </div>
                 );
@@ -729,7 +729,7 @@ export default function EntregaDetailPage() {
         </Card>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="abas-rolagem gap-2 border-b" style={{ borderColor: "var(--border)" }}>
           <TabButton active={tab === "info"} onClick={() => setTab("info")} icon={FileText}>Informações</TabButton>
           <TabButton active={tab === "historico"} onClick={() => setTab("historico")} icon={History}>Histórico</TabButton>
           <TabButton active={tab === "avarias"} onClick={() => setTab("avarias")} icon={AlertTriangle}>Avarias</TabButton>
@@ -1755,7 +1755,7 @@ function TabButton({ children, active, onClick, icon: Icon }: any) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2 
+      className={`flex items-center gap-2 px-3 py-3 md:px-6 md:py-4 whitespace-nowrap text-sm font-bold transition-all border-b-2
         ${active ? "border-accent text-accent" : "border-transparent text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:text-neutral-300"}`}
     >
       <Icon size={16} />

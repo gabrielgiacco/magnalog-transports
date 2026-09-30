@@ -151,9 +151,9 @@ export default function RotasPage() {
       <Topbar
         title="Rotas"
         subtitle={`${rotas.length} rota(s) ${mostrarFinalizadas ? "registradas" : "em aberto"}`}
-        actions={
+        acoesRapidas={
           <Button onClick={() => setShowModal(true)}>
-            <Plus size={15} /> Nova Rota
+            <Plus size={15} /> Nova<span className="hidden sm:inline"> Rota</span>
           </Button>
         }
       />

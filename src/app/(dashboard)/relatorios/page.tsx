@@ -169,7 +169,7 @@ export default function RelatoriosPage() {
         {/* Controls */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           {/* Tabs */}
-          <div className="flex rounded-xl overflow-hidden w-full sm:w-auto" style={{ border:"1px solid var(--border)" }}>
+          <div className="abas-rolagem rounded-xl w-full sm:w-auto" style={{ border:"1px solid var(--border)" }}>
             {(["mensal","anual","motoristas","fornecedor"] as const).map((t) => (
               <button key={t} onClick={() => setTab(t)}
                 className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-all capitalize"

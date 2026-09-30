@@ -145,7 +145,7 @@ export default function FrotaPage() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-4 px-3 sm:px-6 pt-3 sm:pt-4" style={{ borderBottom: "1px solid var(--border)" }}>
+      <div className="abas-rolagem gap-4 px-3 sm:px-6 pt-3 sm:pt-4" style={{ borderBottom: "1px solid var(--border)" }}>
         <button className={`pb-3 text-sm font-semibold transition-all border-b-2 px-1 ${tab === "motoristas" ? "text-blue-600 border-blue-600" : "text-slate-500 border-transparent hover:text-slate-800"}`} onClick={() => setTab("motoristas")}>
           Motoristas ({motoristas.length})
         </button>

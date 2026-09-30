@@ -730,11 +730,11 @@ export default function AvariasPage() {
   return (
     <>
       <Topbar title="Avarias e Ocorrências" subtitle="Controle de mercadorias com ocorrência"
-        actions={<Button size="sm" onClick={() => { resetForm(); setShowCreate(true); }}><Plus size={14} /> <span className="hidden sm:inline">Nova Avaria</span><span className="sm:hidden">Nova</span></Button>} />
+        acoesRapidas={<Button size="sm" onClick={() => { resetForm(); setShowCreate(true); }}><Plus size={14} /> <span className="hidden sm:inline">Nova Avaria</span><span className="sm:hidden">Nova</span></Button>} />
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
         {/* Tabs */}
-        <div className="flex gap-1 p-1 rounded-xl w-full sm:w-fit" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
+        <div className="abas-rolagem gap-1 p-1 rounded-xl w-full sm:w-fit" style={{ background: "var(--surface2)", border: "1px solid var(--border)" }}>
           {([
             { key: "dashboard", label: "Dashboard", icon: BarChart2 },
             { key: "registros", label: "Registros", icon: List },
@@ -745,7 +745,7 @@ export default function AvariasPage() {
             { key: "declaracao-saida", label: "Declaração Saída", icon: LogOut },
           ] as const).map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === t.key ? "bg-orange-500/10 text-orange-500 shadow-sm" : "text-[var(--text2)] hover:bg-[var(--surface)]"}`}>
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${tab === t.key ? "bg-orange-500/10 text-orange-500 shadow-sm" : "text-[var(--text2)] hover:bg-[var(--surface)]"}`}>
               <t.icon size={14} /> {t.label}
             </button>
           ))}
@@ -1186,16 +1186,16 @@ export default function AvariasPage() {
         {tab === "ocorrencias" && (
           <>
             <Card className="p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center">
-                <div className="relative flex-1 w-full">
+              <div className="flex gap-2 sm:gap-3 items-center">
+                <div className="relative flex-1 min-w-0">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
                   <input value={searchOcorrencia} onChange={e => setSearchOcorrencia(e.target.value)}
                     placeholder="Buscar por NF, código de entrega, cliente, motorista..."
                     className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none"
                     style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }} />
                 </div>
-                <Button variant="ghost" size="sm" onClick={fetchOcorrencias} className="flex-shrink-0">
-                  <RefreshCw size={13} /> Atualizar
+                <Button variant="ghost" size="sm" onClick={fetchOcorrencias} className="flex-shrink-0" aria-label="Atualizar">
+                  <RefreshCw size={13} /> <span className="hidden sm:inline">Atualizar</span>
                 </Button>
               </div>
             </Card>

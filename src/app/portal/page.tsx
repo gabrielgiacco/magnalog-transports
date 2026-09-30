@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Loading, StatusBadge } from "@/components/ui";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { formatDate, formatWeight } from "@/lib/utils";
+import { MenuUsuarioPortal } from "./MenuUsuarioPortal";
+import { ListaNotasPortalMobile } from "./ListaNotasPortalMobile";
 import { Search, LogOut, FileText, ChevronLeft, ChevronRight, Package, AlertTriangle, Filter, X, Eye, Truck, MapPin, Calendar, User, Clock, Building2, Paperclip, Download } from "lucide-react";
 
 
@@ -102,17 +104,18 @@ export default function PortalPage() {
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between"
+      <header className="px-4 py-3 md:px-6 md:py-4 flex items-center justify-between"
         style={{ background: "var(--surface)", borderBottom: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-4">
-          <img src="/logo.png" alt="MAGNALOG" className="h-8 w-auto object-contain" />
-          <div className="h-5 w-px" style={{ background: "var(--border2)" }} />
+        <div className="flex items-center gap-3 md:gap-4">
+          <img src="/logo.png" alt="MAGNALOG" className="h-6 md:h-8 w-auto object-contain" />
+          <div className="hidden sm:block h-5 w-px" style={{ background: "var(--border2)" }} />
           <div>
             <div className="text-sm font-semibold">Portal do Cliente</div>
-            <div className="text-[10px] font-mono" style={{ color: "var(--text3)" }}>Acompanhamento de Cargas</div>
+            <div className="hidden sm:block text-[10px] font-mono" style={{ color: "var(--text3)" }}>Acompanhamento de Cargas</div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="md:hidden"><MenuUsuarioPortal user={user} /></div>
+        <div className="hidden md:flex items-center gap-4">
           <div className="text-right">
             <div className="text-sm font-medium">{user?.name}</div>
             <div className="text-[10px]" style={{ color: "var(--text3)" }}>{user?.email}</div>
@@ -129,10 +132,10 @@ export default function PortalPage() {
 
       <main className="max-w-[1800px] mx-auto px-4 py-6">
         {/* Stats / Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-6">
           <button
             onClick={() => { setFilterStatus(""); setPage(1); }}
-            className={`text-left rounded-xl p-5 transition-all relative overflow-hidden ${filterStatus === "" ? "ring-2 ring-offset-2 ring-blue-500" : "hover:opacity-80"}`}
+            className={`text-left rounded-xl p-3 sm:p-5 transition-all relative overflow-hidden ${filterStatus === "" ? "ring-2 ring-offset-2 ring-blue-500" : "hover:opacity-80"}`}
             style={{ 
               background: "var(--surface)", 
               border: "1px solid var(--border)",
@@ -140,7 +143,7 @@ export default function PortalPage() {
             }}
           >
             <div className="text-[10px] font-mono uppercase tracking-widest mb-2 z-10 relative" style={{ color: "var(--text3)" }}>Total de NFs</div>
-            <div className="font-head text-3xl font-black z-10 relative" style={{ color: "var(--accent)" }}>{total}</div>
+            <div className="font-head text-2xl sm:text-3xl font-black z-10 relative" style={{ color: "var(--accent)" }}>{total}</div>
             <div className="absolute bottom-0 left-0 h-1 transition-all duration-1000" style={{ background: "var(--accent)", width: "100%", opacity: 0.5 }} />
           </button>
 
@@ -153,7 +156,7 @@ export default function PortalPage() {
             <button
               key={item.id}
               onClick={() => { setFilterStatus(item.id); setPage(1); }}
-              className={`text-left rounded-xl p-5 transition-all relative overflow-hidden ${filterStatus === item.id ? "ring-2 ring-offset-2" : "hover:opacity-80"}`}
+              className={`text-left rounded-xl p-3 sm:p-5 transition-all relative overflow-hidden ${filterStatus === item.id ? "ring-2 ring-offset-2" : "hover:opacity-80"}`}
               style={{ 
                 background: "var(--surface)", 
                 border: "1px solid var(--border)",
@@ -162,7 +165,7 @@ export default function PortalPage() {
               } as any}
             >
               <div className="text-[10px] font-mono uppercase tracking-widest mb-2 z-10 relative" style={{ color: "var(--text3)" }}>{item.label}</div>
-              <div className="font-head text-3xl font-black z-10 relative" style={{ color: item.color }}>{item.value}</div>
+              <div className="font-head text-2xl sm:text-3xl font-black z-10 relative" style={{ color: item.color }}>{item.value}</div>
               <div className="absolute bottom-0 left-0 h-1 transition-all duration-1000" style={{ background: item.color, width: total > 0 ? `${(item.value / total) * 100}%` : '0%', opacity: 0.5 }} />
             </button>
           ))}
@@ -170,14 +173,14 @@ export default function PortalPage() {
 
         {/* Filters */}
         <div className="flex gap-3 mb-5 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-0 w-full md:w-auto md:min-w-[200px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por NF, cliente, emitente, cidade, CNPJ..."
               className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm outline-none"
               style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }} />
           </div>
           <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-            className="px-3 py-2.5 rounded-xl text-sm outline-none"
+            className="w-full md:w-auto px-3 py-2.5 rounded-xl text-sm outline-none"
             style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}>
             <option value="">Todos os status</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -274,7 +277,8 @@ export default function PortalPage() {
             </div>
           ) : (
             <>
-              <table className="w-full border-collapse table-fixed text-[13px]">
+              <ListaNotasPortalMobile notas={notas} onAbrir={setDetalheNota} />
+              <table className="hidden md:table w-full border-collapse table-fixed text-[13px]">
                 <colgroup>
                   <col style={{ width: "6%" }} />   {/* NF */}
                   <col style={{ width: "12%" }} />  {/* Emitente */}
@@ -855,8 +859,8 @@ export default function PortalPage() {
 
               {/* Pagination */}
               {pages > 1 && (
-                <div className="flex items-center justify-between px-2 py-2" style={{ borderTop: "1px solid var(--border)" }}>
-                  <span className="text-xs font-mono" style={{ color: "var(--text3)" }}>Página {page} de {pages} · {total} registros</span>
+                <div className="flex items-center justify-between px-3 md:px-2 py-2" style={{ borderTop: "1px solid var(--border)" }}>
+                  <span className="text-xs font-mono" style={{ color: "var(--text3)" }}><span className="md:hidden">Pág. {page}/{pages}</span><span className="hidden md:inline">Página {page} de {pages} · {total} registros</span></span>
                   <div className="flex gap-2">
                     <button onClick={() => setPage((p) => p - 1)} disabled={page === 1}
                       className="px-3 py-1.5 rounded-lg text-xs disabled:opacity-30 transition-all hover:opacity-70"
@@ -970,13 +974,13 @@ function DetalheNotaModal({ nota, onClose }: { nota: any; onClose: () => void })
 
           {/* Dados da nota */}
           <Section icon={FileText} title="Dados da Nota">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
               <Info label="Volumes" value={nota.volumes ?? "—"} />
               <Info label="Peso Bruto" value={formatWeight(nota.pesoBruto)} />
               <Info label="Valor da Nota" value={formatMoney(nota.valorNota)} />
               <Info label="Emissão" value={formatDate(nota.dataEmissao)} />
               {nota.chaveAcesso && (
-                <div className="col-span-2 sm:col-span-3">
+                <div className="sm:col-span-3">
                   <div className="text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text3)" }}>Chave de Acesso</div>
                   <div className="text-[11px] font-mono break-all" style={{ color: "var(--text2)" }}>{nota.chaveAcesso}</div>
                 </div>
@@ -988,7 +992,7 @@ function DetalheNotaModal({ nota, onClose }: { nota: any; onClose: () => void })
           {e ? (
             <>
               <Section icon={Truck} title="Entrega">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                   <Info label="Código" value={e.codigo} mono />
                   <Info label="Motorista" value={e.motorista?.nome || "—"} />
                   {e.notas && e.notas.length > 1 && (
@@ -998,7 +1002,7 @@ function DetalheNotaModal({ nota, onClose }: { nota: any; onClose: () => void })
               </Section>
 
               <Section icon={Calendar} title="Datas">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-sm">
                   <Info label="Chegada no CD" value={e.dataChegada ? formatDate(e.dataChegada) : "—"} mono />
                   <Info label="Agendamento" value={e.dataAgendada ? formatDate(e.dataAgendada) : "—"} mono />
                   <Info label="Entrega" value={e.dataEntrega ? formatDate(e.dataEntrega) : "—"} mono color={e.dataEntrega ? "#059669" : undefined} />

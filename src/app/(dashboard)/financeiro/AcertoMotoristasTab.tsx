@@ -405,7 +405,7 @@ export function AcertoMotoristasTab({ embedded = false }: { embedded?: boolean }
           </div>
         )}
         {/* Tabs */}
-        <div className="flex items-center gap-6 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="abas-rolagem items-center gap-6 border-b" style={{ borderColor: "var(--border)" }}>
           <button 
             className={`pb-3 font-head font-bold text-sm transition-colors ${abaAtiva === "acertos" ? "text-rose-600 border-b-2 border-rose-600" : "text-gray-400 dark:text-neutral-500 hover:text-gray-600 dark:hover:text-neutral-300"}`}
             onClick={() => setAbaAtiva("acertos")}

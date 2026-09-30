@@ -245,7 +245,7 @@ export default function RotaDetailPage() {
         </Card>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="abas-rolagem gap-2 border-b" style={{ borderColor: "var(--border)" }}>
           <TabButton active={tab === "info"} onClick={() => setTab("info")} icon={FileText}>Visão Geral</TabButton>
           {isAdmin && QUALIDADE_ENABLED && (
             <TabButton active={tab === "qualidade"} onClick={() => setTab("qualidade")} icon={ShieldCheck}>Qualidade Operacional</TabButton>
@@ -433,7 +433,7 @@ function TabButton({ children, active, onClick, icon: Icon }: any) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all border-b-2"
+      className="flex items-center gap-2 px-3 py-3 md:px-6 md:py-4 whitespace-nowrap text-sm font-bold transition-all border-b-2"
       style={{
         borderColor: active ? "var(--accent)" : "transparent",
         color: active ? "var(--accent)" : "var(--text3)",

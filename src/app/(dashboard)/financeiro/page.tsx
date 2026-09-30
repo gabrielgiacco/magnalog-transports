@@ -78,7 +78,7 @@ export default function FinanceiroPage() {
       <div className="flex-1 overflow-y-auto">
         {/* Tabs */}
         <div className="sticky top-0 z-10 bg-[var(--surface)] border-b" style={{ borderColor: "var(--border)" }}>
-          <div className="flex overflow-x-auto">
+          <div className="abas-rolagem">
             {TABS.map((t) => {
               const active = tab === t.key;
               return (

@@ -39,7 +39,7 @@ type LoteItem = { chave: string; status: "pendente" | "consultando" | "ok" | "er
 function TabBtn({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: any; children: React.ReactNode }) {
   return (
     <button onClick={onClick}
-      className={`flex items-center gap-2 px-5 py-3 text-sm font-bold transition-all border-b-2
+      className={`flex items-center gap-2 px-3 py-3 md:px-5 whitespace-nowrap text-sm font-bold transition-all border-b-2
         ${active ? "border-[var(--accent)] text-[var(--accent)]" : "border-transparent text-slate-400 hover:text-slate-600"}`}>
       <Icon size={16} /> {children}
     </button>
@@ -355,7 +355,7 @@ export default function ImportacaoPage() {
       <Topbar title="Documentos Fiscais" subtitle="Importação, consulta de notas e visualização de DANFE" />
       <div className="flex-1 overflow-y-auto">
         {/* Tabs */}
-        <div className="flex gap-1 px-6 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="abas-rolagem gap-1 px-3 sm:px-6 border-b" style={{ borderColor: "var(--border)" }}>
           <TabBtn active={tab === "importar"} onClick={() => setTab("importar")} icon={Upload}>Importar XML</TabBtn>
           <TabBtn active={tab === "notas"} onClick={() => setTab("notas")} icon={FileText}>Notas Fiscais</TabBtn>
           <TabBtn active={tab === "danfe"} onClick={() => setTab("danfe")} icon={FileSearch}>Consulta DANFE</TabBtn>

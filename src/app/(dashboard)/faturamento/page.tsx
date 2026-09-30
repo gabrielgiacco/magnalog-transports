@@ -373,7 +373,7 @@ export default function FaturamentoPage() {
   const tabBtn = (key: TabKey, label: string, Icon: any, count?: number) => (
     <button
       onClick={() => setTab(key)}
-      className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors ${
+      className={`flex items-center whitespace-nowrap gap-2 px-4 py-2 text-xs font-semibold border-b-2 transition-colors ${
         tab === key ? "border-[var(--accent)] text-[var(--accent)]" : "border-transparent text-[var(--text3)] hover:text-[var(--text2)]"
       }`}
     >
@@ -389,34 +389,34 @@ export default function FaturamentoPage() {
       <Topbar
         title="Faturamento"
         subtitle="Controle de fretes e armazenagem a receber"
-        actions={<Button variant="ghost" size="sm" onClick={fetchData}><RefreshCw size={14} /> Atualizar</Button>}
+        acoesRapidas={<Button variant="ghost" size="sm" onClick={fetchData} aria-label="Atualizar"><RefreshCw size={14} /><span className="hidden sm:inline"> Atualizar</span></Button>}
       />
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6">
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <Card className="p-3 sm:p-4 min-w-0">
             <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>CT-es Pendentes</div>
-            <div className="text-xl font-bold font-mono" style={{ color: "#f97316" }}>{formatCurrency(totalPendenteCtes)}</div>
+            <div className="text-[15px] sm:text-xl font-bold font-mono" style={{ color: "#f97316" }}>{formatCurrency(totalPendenteCtes)}</div>
             <div className="text-[10px]" style={{ color: "var(--text3)" }}>{ctesAgrupados.reduce((s, g) => s + g.ctes.length, 0)} CT-e(s)</div>
           </Card>
-          <Card className="p-4">
+          <Card className="p-3 sm:p-4 min-w-0">
             <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Armazenagem Pendente</div>
-            <div className="text-xl font-bold font-mono" style={{ color: "#3b82f6" }}>{formatCurrency(totalArmPendente)}</div>
+            <div className="text-[15px] sm:text-xl font-bold font-mono" style={{ color: "#3b82f6" }}>{formatCurrency(totalArmPendente)}</div>
             <div className="text-[10px]" style={{ color: "var(--text3)" }}>
               {armazenagemPendente.length} fornecedor(es) · {armazenagemPendente.reduce((s: number, g: any) => s + g.totalPaletes, 0)} palete(s)
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="p-3 sm:p-4 min-w-0">
             <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Faturas em Aberto</div>
-            <div className="text-xl font-bold font-mono" style={{ color: "#eab308" }}>{formatCurrency(totalFaturasAbertas)}</div>
+            <div className="text-[15px] sm:text-xl font-bold font-mono" style={{ color: "#eab308" }}>{formatCurrency(totalFaturasAbertas)}</div>
             <div className="text-[10px]" style={{ color: "var(--text3)" }}>
               {faturas.filter((f) => f.status === "ABERTA").length + faturasArm.filter((f: any) => f.status === "ABERTA").length} fatura(s)
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="p-3 sm:p-4 min-w-0">
             <div className="text-[10px] font-mono uppercase tracking-widest mb-1" style={{ color: "var(--text3)" }}>Faturas Pagas</div>
-            <div className="text-xl font-bold font-mono" style={{ color: "#10b981" }}>{formatCurrency(totalFaturasPagas)}</div>
+            <div className="text-[15px] sm:text-xl font-bold font-mono" style={{ color: "#10b981" }}>{formatCurrency(totalFaturasPagas)}</div>
             <div className="text-[10px]" style={{ color: "var(--text3)" }}>
               {faturas.filter((f) => f.status === "PAGA").length + faturasArm.filter((f: any) => f.status === "PAGA").length} fatura(s)
             </div>
@@ -435,7 +435,7 @@ export default function FaturamentoPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b" style={{ borderColor: "var(--border)" }}>
+        <div className="abas-rolagem gap-1 border-b" style={{ borderColor: "var(--border)" }}>
           {tabBtn("fretes", "Fretes (CT-es)", Truck, ctesAgrupados.reduce((s, g) => s + g.ctes.length, 0))}
           {tabBtn("armazenagem", "Armazenagem", Warehouse, armazenagemPendente.reduce((s: number, g: any) => s + g.entregas.length, 0))}
           {tabBtn("diarias", "Diárias", DollarSign, diariasPendentes.length)}

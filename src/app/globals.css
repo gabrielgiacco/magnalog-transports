@@ -75,6 +75,12 @@ body {
 html.dark ::-webkit-scrollbar-thumb { background: #2a3038; }
 html.dark ::-webkit-scrollbar-thumb:hover { background: #3d454f; }
 
+/* Barra de abas que rola sozinha quando nao cabe (celular), em vez de alargar
+   a pagina e fazer a tela inteira deslizar para o lado. */
+.abas-rolagem { display: flex; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.abas-rolagem::-webkit-scrollbar { display: none; }
+.abas-rolagem > * { flex-shrink: 0; white-space: nowrap; }
+
 /* Kanban drag */
 .kanban-col-over { background: rgba(249, 115, 22, 0.06) !important; border-color: rgba(249, 115, 22, 0.35) !important; }
 .kanban-card-dragging { opacity: 0.5; transform: rotate(2deg); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2); }
