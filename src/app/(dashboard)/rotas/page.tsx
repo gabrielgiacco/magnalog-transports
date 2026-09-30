@@ -6,7 +6,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, StatusBadge, Modal, Input, Select, ComboboxMotorista } from "@/components/ui";
 import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
 import { QUALIDADE_ENABLED } from "@/lib/features";
-import { Plus, RefreshCw, ChevronDown, ChevronUp, Truck, User, Package, Calendar, Route, Search, Trash2, Filter } from "lucide-react";
+import { Plus, RefreshCw, ChevronDown, ChevronUp, Truck, User, Package, Calendar, Route, Search, Trash2, Filter, Eye, EyeOff } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 export default function RotasPage() {
@@ -162,11 +162,11 @@ export default function RotasPage() {
         {/* Route Filters */}
         <Card className="p-3 sm:p-4">
           <div className="flex gap-2 sm:gap-3 items-center flex-wrap">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold uppercase" style={{ color: "var(--text3)" }}>
+            <div className="hidden md:flex items-center gap-1.5 text-xs font-bold uppercase" style={{ color: "var(--text3)" }}>
               <Filter size={14} />
               Filtros:
             </div>
-            <div className="relative flex-1 min-w-0 w-full sm:w-auto sm:min-w-[180px]">
+            <div className="relative flex-1 min-w-0 w-full md:w-auto md:min-w-[180px]">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
               <input
                 value={filterNF}
@@ -176,7 +176,7 @@ export default function RotasPage() {
                 style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
               />
             </div>
-            <div className="relative flex-1 min-w-0 w-full sm:w-auto sm:min-w-[180px]">
+            <div className="relative flex-1 min-w-0 w-full md:w-auto md:min-w-[180px]">
               <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
               <input
                 value={filterMotorista}
@@ -186,20 +186,37 @@ export default function RotasPage() {
                 style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
               />
             </div>
-            {(filterNF || filterMotorista) && (
+            {/* Celular: linha compacta (limpar, finalizadas, atualizar); md+: itens soltos na linha unica */}
+            <div className="flex items-center gap-2 w-full md:w-auto md:contents">
+              {(filterNF || filterMotorista) && (
+                <button
+                  onClick={() => { setFilterNF(""); setFilterMotorista(""); }}
+                  className="text-[10px] font-bold text-rose-500 hover:text-rose-600 px-2 py-1.5 rounded-md hover:bg-rose-50 transition-colors"
+                >
+                  Limpar
+                </button>
+              )}
+              {/* Celular: pilula de alternancia */}
               <button
-                onClick={() => { setFilterNF(""); setFilterMotorista(""); }}
-                className="text-[10px] font-bold text-rose-500 hover:text-rose-600 px-2 py-1.5 rounded-md hover:bg-rose-50 transition-colors"
+                type="button"
+                onClick={() => setMostrarFinalizadas((v) => !v)}
+                aria-pressed={mostrarFinalizadas}
+                className="md:hidden flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold select-none"
+                style={mostrarFinalizadas
+                  ? { background: "rgba(249,115,22,.12)", border: "1px solid rgba(249,115,22,.32)", color: "var(--accent)" }
+                  : { background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text2)" }}
               >
-                Limpar
+                {mostrarFinalizadas ? <Eye size={13} /> : <EyeOff size={13} />}
+                Finalizadas: {mostrarFinalizadas ? "visíveis" : "ocultas"}
               </button>
-            )}
-            <label className="flex items-center gap-2 text-xs cursor-pointer select-none" style={{ color: "var(--text2)" }}>
-              <input type="checkbox" checked={mostrarFinalizadas} onChange={(e) => setMostrarFinalizadas(e.target.checked)}
-                className="accent-orange-500 w-3.5 h-3.5" />
-              Mostrar finalizadas
-            </label>
-            <Button variant="ghost" size="sm" onClick={fetchRotas}><RefreshCw size={13} /> <span className="hidden xs:inline">Atualizar</span></Button>
+              {/* Desktop: checkbox original */}
+              <label className="hidden md:flex items-center gap-2 text-xs cursor-pointer select-none" style={{ color: "var(--text2)" }}>
+                <input type="checkbox" checked={mostrarFinalizadas} onChange={(e) => setMostrarFinalizadas(e.target.checked)}
+                  className="accent-orange-500 w-3.5 h-3.5" />
+                Mostrar finalizadas
+              </label>
+              <Button variant="ghost" size="sm" className="ml-auto md:ml-0" onClick={fetchRotas}><RefreshCw size={13} /> <span className="hidden xs:inline">Atualizar</span></Button>
+            </div>
           </div>
         </Card>
 

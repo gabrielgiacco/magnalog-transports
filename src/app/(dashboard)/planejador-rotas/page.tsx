@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Input, Select, ComboboxMotorista } from "@/components/ui";
-import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation, Navigation2, Plus, AlertCircle, Filter, X, Package, Route, ChevronUp, ChevronDown } from "lucide-react";
+import { Map, MapPin, Truck, Calendar, Save, Trash2, RefreshCw, Search, Navigation, Navigation2, Plus, AlertCircle, Filter, X, Package, Route, ChevronUp, ChevronDown, Check } from "lucide-react";
 import { formatWeight, formatCurrency } from "@/lib/utils";
 import { DEPOSITO, MAX_PARADAS_OTIMIZAR } from "@/lib/rota-trajeto";
 import type { MapEntrega } from "@/components/map/RouteMap";
@@ -68,6 +68,7 @@ export default function PlanejadorRotasPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [focusDelivery, setFocusDelivery] = useState<string | null>(null);
   const [selectedFornecedores, setSelectedFornecedores] = useState<string[]>([]);
+  const [fornecedoresAberto, setFornecedoresAberto] = useState(false); // lista expandida no celular
   const [trajeto, setTrajeto] = useState<Trajeto | null>(null);
   const [calculandoTrajeto, setCalculandoTrajeto] = useState(false);
   const [otimizando, setOtimizando] = useState(false);
@@ -325,7 +326,60 @@ export default function PlanejadorRotasPage() {
           
           {/* Filtro de Fornecedores — acima do mapa */}
           {fornecedoresUnicos.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
+            <>
+            {/* Celular: botão compacto que expande uma lista vertical */}
+            <div className="md:hidden bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl shadow-sm shrink-0">
+              <button
+                onClick={() => setFornecedoresAberto(v => !v)}
+                aria-expanded={fornecedoresAberto}
+                className="w-full min-h-[44px] flex items-center gap-2 px-3 text-left"
+              >
+                <Package size={14} className="text-slate-500 shrink-0" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 shrink-0">Fornecedores</span>
+                <span className="flex-1 min-w-0 truncate text-xs font-semibold text-orange-600 text-right">
+                  {selectedFornecedores.length === 0
+                    ? "todos"
+                    : selectedFornecedores.length === 1
+                      ? selectedFornecedores[0]
+                      : `${selectedFornecedores.length} selecionados`}
+                </span>
+                <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${fornecedoresAberto ? "rotate-180" : ""}`} />
+              </button>
+              {fornecedoresAberto && (
+                <div className="border-t border-slate-200">
+                  <div className="max-h-[50vh] overflow-y-auto">
+                    {fornecedoresUnicos.map(nome => {
+                      const isActive = selectedFornecedores.includes(nome);
+                      const count = entregas.filter(e => e.notas?.some(n => n.emitenteRazao === nome)).length;
+                      return (
+                        <button
+                          key={nome}
+                          onClick={() => toggleFornecedor(nome)}
+                          className="w-full min-h-[44px] flex items-center gap-3 px-3 text-left border-b border-slate-100 last:border-b-0 active:bg-orange-50"
+                        >
+                          <span className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
+                            isActive ? "bg-orange-500 border-orange-500 text-white" : "border-slate-300 bg-white"
+                          }`}>
+                            {isActive && <Check size={14} />}
+                          </span>
+                          <span className="flex-1 min-w-0 truncate text-sm text-slate-700">{nome}</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-500 shrink-0">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedFornecedores.length > 0 && (
+                    <button
+                      onClick={() => setSelectedFornecedores([])}
+                      className="w-full min-h-[44px] text-xs text-rose-500 font-semibold border-t border-slate-200"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="hidden md:flex items-center gap-2 flex-wrap bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
               <div className="flex items-center gap-1.5 text-slate-500 mr-1 shrink-0">
                 <Package size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">Fornecedor</span>
@@ -364,6 +418,7 @@ export default function PlanejadorRotasPage() {
                 </button>
               )}
             </div>
+            </>
           )}
 
           <Card className="flex-1 w-full p-0 overflow-hidden shadow-md" style={{ border: "1px solid var(--border)" }}>

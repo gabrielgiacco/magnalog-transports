@@ -341,7 +341,7 @@ export default function KanbanPage() {
       <Topbar
         title="Kanban Operacional"
         subtitle={`${filtered.length} de ${entregas.length} entregas`}
-        actions={
+        acoesRapidas={
           <div className="flex items-center gap-2">
             <div className="relative hidden sm:block">
               <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />

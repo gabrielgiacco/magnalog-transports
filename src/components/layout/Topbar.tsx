@@ -10,9 +10,11 @@ interface TopbarProps {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  // Acoes do tamanho de um icone que nao podem quebrar para a 2a linha no celular.
+  acoesRapidas?: React.ReactNode;
 }
 
-export function Topbar({ title, subtitle, actions }: TopbarProps) {
+export function Topbar({ title, subtitle, actions, acoesRapidas }: TopbarProps) {
   const { toggleSidebar } = useLayoutStore();
 
   return (
@@ -52,6 +54,7 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
         </div>
       )}
       <div className="flex items-center gap-2 flex-shrink-0">
+        {acoesRapidas}
         <div className="hidden sm:block">
           <GlobalSearch />
         </div>

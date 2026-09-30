@@ -127,7 +127,7 @@ export default function DepositoPage() {
         title="Depósito"
         subtitle="Mercadoria parada no CD"
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setShowCandidatos(true)}
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all active:scale-95"
@@ -137,18 +137,20 @@ export default function DepositoPage() {
                 border: `1px solid ${candidatosPendentes > 0 ? "rgba(249,115,22,.35)" : "var(--border)"}`,
               }}
             >
-              <ClipboardList size={14} /> Candidatos • {candidatosPendentes}
+              <ClipboardList size={14} />
+              <span className="hidden sm:inline">Candidatos •</span> {candidatosPendentes}
             </button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => window.open("/api/deposito/export?preset=lup", "_blank")}
               title="Planilha da LUP: devolução + sobra em estoque"
+              aria-label="Exportar"
             >
-              <Download size={14} /> Exportar
+              <Download size={14} /> <span className="hidden sm:inline">Exportar</span>
             </Button>
             <Button size="sm" onClick={() => setShowEntrada(true)}>
-              <Plus size={14} /> Entrada manual
+              <Plus size={14} /> Entrada<span className="hidden sm:inline"> manual</span>
             </Button>
           </div>
         }
@@ -194,7 +196,9 @@ export default function DepositoPage() {
         {/* Filtros */}
         <Card className="p-3 sm:p-4">
           <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-            <div className="relative flex-1 min-w-0 w-full sm:w-auto sm:min-w-[200px]">
+            {/* Celular: busca + atualizar (só ícone) na mesma linha */}
+            <div className="flex items-center gap-2 w-full min-w-0 sm:w-auto sm:flex-1 sm:min-w-[200px]">
+            <div className="relative flex-1 min-w-0">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
               <input
                 value={search}
@@ -204,6 +208,13 @@ export default function DepositoPage() {
                 style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
               />
             </div>
+            <div className="sm:hidden">
+              <Button variant="ghost" size="sm" onClick={carregar} title="Atualizar" aria-label="Atualizar">
+                <RefreshCw size={14} />
+              </Button>
+            </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 w-full sm:contents">
             <select
               value={filterTipo}
               onChange={(e) => { setFilterTipo(e.target.value); setPage(1); }}
@@ -228,7 +239,7 @@ export default function DepositoPage() {
             <select
               value={filterEmbarcador}
               onChange={(e) => { setFilterEmbarcador(e.target.value); setPage(1); }}
-              className="px-3 py-2 rounded-lg text-xs outline-none cursor-pointer"
+              className="col-span-2 sm:col-span-1 px-3 py-2 rounded-lg text-xs outline-none cursor-pointer"
               style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
             >
               <option value="">Todos os embarcadores</option>
@@ -242,26 +253,29 @@ export default function DepositoPage() {
               list="dl-transp-filtro"
               placeholder="Transportadora"
               title="Busca por parte do nome — 'porto' encontra todas as grafias."
-              className="px-3 py-2 rounded-lg text-xs outline-none w-full sm:w-auto sm:min-w-[160px]"
+              className="col-span-2 sm:col-span-1 px-3 py-2 rounded-lg text-xs outline-none w-full sm:w-auto sm:min-w-[160px]"
               style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
             />
             <datalist id="dl-transp-filtro">
               {transportadoras.map((t) => <option key={t} value={t} />)}
             </datalist>
-            <Button variant="ghost" size="sm" onClick={carregar}>
-              <RefreshCw size={13} /> Atualizar
-            </Button>
+            </div>
+            <div className="hidden sm:block">
+              <Button variant="ghost" size="sm" onClick={carregar}>
+                <RefreshCw size={13} /> Atualizar
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--text3)" }}>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest w-full sm:w-auto" style={{ color: "var(--text3)" }}>
               <Calendar size={11} /> Período (data de entrada)
             </div>
             <input
               type="date"
               value={dataInicio}
               onChange={(e) => { setDataInicio(e.target.value); setPage(1); }}
-              className="px-2.5 py-1.5 rounded-lg text-xs outline-none"
+              className="flex-1 min-w-0 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs outline-none"
               style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
             />
             <span className="text-xs" style={{ color: "var(--text3)" }}>até</span>
@@ -269,7 +283,7 @@ export default function DepositoPage() {
               type="date"
               value={dataFim}
               onChange={(e) => { setDataFim(e.target.value); setPage(1); }}
-              className="px-2.5 py-1.5 rounded-lg text-xs outline-none"
+              className="flex-1 min-w-0 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs outline-none"
               style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }}
             />
             {hasAnyFilter && (
@@ -282,7 +296,7 @@ export default function DepositoPage() {
               </button>
             )}
           </div>
-          <p className="text-[10px] mt-2" style={{ color: "var(--text3)" }}>
+          <p className="hidden sm:block text-[10px] mt-2" style={{ color: "var(--text3)" }}>
             Dias parado é o relógio do depósito — não é o cálculo de armazenagem.
           </p>
         </Card>

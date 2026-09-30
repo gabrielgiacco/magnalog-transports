@@ -336,11 +336,26 @@ export default function AgendamentosPage() {
               </button>
             </div>
 
+            {/* Celular: lista suspensa começando por Hoje */}
+            {viewMode === "lista" && (
+              <select
+                value={filtroData}
+                onChange={(e) => { setFiltroData(e.target.value as FiltroData); setPage(1); }}
+                className="md:hidden flex-1 min-w-0 px-3 py-2 rounded-lg text-sm outline-none bg-[var(--surface2)] border border-[var(--border)] text-[var(--text)]"
+              >
+                <option value="HOJE">Hoje</option>
+                <option value="AMANHA">Amanhã</option>
+                <option value="SEMANA">Esta Semana</option>
+                <option value="MES">Este Mês</option>
+                <option value="TODAS">Todos</option>
+              </select>
+            )}
+
             {viewMode === "lista" && (["TODAS", "HOJE", "AMANHA", "SEMANA", "MES"] as FiltroData[]).map((f) => (
               <button
                 key={f}
                 onClick={() => { setFiltroData(f); setPage(1); }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                className={`hidden md:block px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
                   filtroData === f
                     ? "border-orange-500/50 bg-orange-500/10 text-orange-500"
                     : "border-transparent text-[var(--text2)] hover:bg-[var(--surface2)]"
