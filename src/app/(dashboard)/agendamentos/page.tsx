@@ -8,6 +8,7 @@ import {
   Table, Th, Td, Tr,
 } from "@/components/ui";
 import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/utils";
+import { AgendaListaMobile } from "./AgendaListaMobile";
 import { Calendar, Search, Eye, RefreshCw, ChevronLeft, ChevronRight, Clock, List, LayoutGrid, CalendarDays } from "lucide-react";
 
 type FiltroData = "TODAS" | "HOJE" | "AMANHA" | "SEMANA" | "MES";
@@ -471,7 +472,20 @@ export default function AgendamentosPage() {
             </div>
 
             {loadingCal ? <Loading /> : (
-              <div className="overflow-x-auto">
+              <>
+              {/* Celular: lista so com os dias que tem entrega. A grade de 7
+                  colunas ficava com ~50px por dia. */}
+              <div className="md:hidden">
+                <AgendaListaMobile
+                  year={calMes.year}
+                  month={calMes.month}
+                  ultimoDia={new Date(calMes.year, calMes.month + 1, 0).getDate()}
+                  getEntregasForDay={getEntregasForDay}
+                  hojeStr={todayStr}
+                  onAbrir={(id) => router.push(`/entregas/${id}`)}
+                />
+              </div>
+              <div className="hidden md:block overflow-x-auto">
                 {/* Day headers */}
                 <div className="grid grid-cols-7 text-center" style={{ borderBottom: "1px solid var(--border)" }}>
                   {DIAS_SEMANA.map((d) => (
@@ -534,6 +548,7 @@ export default function AgendamentosPage() {
                   })}
                 </div>
               </div>
+              </>
             )}
           </Card>
         )}
