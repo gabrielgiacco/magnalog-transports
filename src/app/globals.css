@@ -81,6 +81,14 @@ html.dark ::-webkit-scrollbar-thumb:hover { background: #3d454f; }
 .abas-rolagem::-webkit-scrollbar { display: none; }
 .abas-rolagem > * { flex-shrink: 0; white-space: nowrap; }
 
+/* Mesma ideia para uma linha de botoes, so no celular: rola em vez de quebrar.
+   De md para cima nao rola, para nao cortar menus suspensos ancorados nela. */
+@media (max-width: 767px) {
+  .rolagem-celular { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .rolagem-celular::-webkit-scrollbar { display: none; }
+  .rolagem-celular > * { flex-shrink: 0; white-space: nowrap; }
+}
+
 /* Kanban drag */
 .kanban-col-over { background: rgba(249, 115, 22, 0.06) !important; border-color: rgba(249, 115, 22, 0.35) !important; }
 .kanban-card-dragging { opacity: 0.5; transform: rotate(2deg); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2); }

@@ -578,11 +578,22 @@ export default function EntregaDetailPage() {
       <Topbar
         title={entrega.notas && entrega.notas.length > 0 ? `NF ${entrega.notas.map((n: any) => n.numero).join(", ")}` : entrega.codigo}
         subtitle={entrega.razaoSocial}
-        actions={
-          <div className="flex gap-2">
+        // Celular: Voltar sobe para a linha do sino e o resto da barra rola
+        // para o lado quando nao cabe. De md para cima, tudo como antes.
+        acoesRapidas={
+          <div className="md:hidden">
             <Button variant="ghost" size="sm" onClick={() => router.back()}>
               <ChevronLeft size={14} /> Voltar
             </Button>
+          </div>
+        }
+        actions={
+          <div className="flex gap-2 rolagem-celular">
+            <div className="hidden md:block">
+              <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                <ChevronLeft size={14} /> Voltar
+              </Button>
+            </div>
             {!isReadOnly && (
               <Button variant="ghost" size="sm" onClick={() => {
                 setEditForm(formatForEdit(entrega));
