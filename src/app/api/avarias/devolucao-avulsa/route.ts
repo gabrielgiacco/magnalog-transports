@@ -17,9 +17,12 @@ export async function POST(req: NextRequest) {
 
     if (!files.length) return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
 
-    const results = { importadas: 0, duplicadas: 0, mescladas: 0, erros: [] as { arquivo: string; erro: string }[] };
+    const results = { importadas: 0, duplicadas: 0, erros: [] as { arquivo: string; erro: string }[] };
 
-    // Cache de avarias encontradas/criadas por emitenteCnpj neste batch
+    // Cada importacao cria devolucao nova — nunca entra numa devolucao antiga,
+    // como era antes (juntava em qualquer pendente do mesmo emitente). XMLs do
+    // mesmo emitente enviados juntos viram uma devolucao so. Para juntar com uma
+    // existente, usa-se o "Importar XML" dentro da propria devolucao.
     const avariaCache: Record<string, string> = {};
 
     for (const file of files) {
@@ -37,22 +40,6 @@ export async function POST(req: NextRequest) {
         }
 
         let avariaId = avariaCache[nota.emitenteCnpj];
-
-        if (!avariaId) {
-          // Buscar avaria DEVOLUCAO PENDENTE existente com NFD do mesmo emitente CNPJ
-          const existingDev = await prisma.notaDevolucao.findFirst({
-            where: {
-              emitenteCnpj: nota.emitenteCnpj,
-              avaria: { tipo: "DEVOLUCAO", status: "PENDENTE" },
-            },
-            select: { avariaId: true },
-          });
-
-          if (existingDev) {
-            avariaId = existingDev.avariaId;
-            results.mescladas++;
-          }
-        }
 
         if (!avariaId) {
           // Criar nova avaria
