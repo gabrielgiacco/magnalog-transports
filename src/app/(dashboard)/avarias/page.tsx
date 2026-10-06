@@ -11,8 +11,9 @@ import { formatCurrency, formatDate, formatCNPJ } from "@/lib/utils";
 import {
   AlertTriangle, Plus, Search, RefreshCw, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calendar, Truck,
   BarChart2, List, FileText, Package, TrendingUp, User, Filter, Upload, Square, CheckSquare, LogOut, DollarSign,
-  ClipboardCheck, Printer,
+  ClipboardCheck, Printer, Download,
 } from "lucide-react";
+import { ExportarAvariasModal } from "./ExportarAvariasModal";
 import { useSession } from "next-auth/react";
 import { DiariasTab } from "./DiariasTab";
 import { DeclaracaoSaidaTab } from "./DeclaracaoSaidaTab";
@@ -129,6 +130,7 @@ export default function AvariasPage() {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false);
+  const [showExportar, setShowExportar] = useState(false);
   const [step, setStep] = useState(1);
   const [creating, setCreating] = useState(false);
 
@@ -730,7 +732,7 @@ export default function AvariasPage() {
   return (
     <>
       <Topbar title="Avarias e Ocorrências" subtitle="Controle de mercadorias com ocorrência"
-        acoesRapidas={<Button size="sm" onClick={() => { resetForm(); setShowCreate(true); }}><Plus size={14} /> <span className="hidden sm:inline">Nova Avaria</span><span className="sm:hidden">Nova</span></Button>} />
+        acoesRapidas={<div className="flex items-center gap-2"><Button variant="ghost" size="sm" onClick={() => setShowExportar(true)} title="Exportar avarias e faltas"><Download size={14} /> <span className="hidden sm:inline">Exportar</span></Button><Button size="sm" onClick={() => { resetForm(); setShowCreate(true); }}><Plus size={14} /> <span className="hidden sm:inline">Nova Avaria</span><span className="sm:hidden">Nova</span></Button></div>} />
 
       <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
         {/* Tabs */}
@@ -2079,6 +2081,8 @@ export default function AvariasPage() {
           </div>
         )}
       </Modal>
+
+      <ExportarAvariasModal open={showExportar} onClose={() => setShowExportar(false)} />
     </>
   );
 }
