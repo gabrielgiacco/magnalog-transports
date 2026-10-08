@@ -5,6 +5,8 @@ import { parseNotaFiscalXML } from "@/lib/xml-parser";
 import { parseCTeXML } from "@/lib/cte-parser";
 import { geocodeAddress } from "@/lib/geocode";
 import { indexarProdutosDoXml } from "@/lib/produto-catalogo";
+import { parseNFProducts } from "@/lib/nf-produtos";
+import { estimarCargaPelosItens } from "@/lib/carga-por-itens";
 
 export async function POST(req: NextRequest) {
   try {
@@ -142,6 +144,14 @@ export async function POST(req: NextRequest) {
 
         // Se checamos até aqui e não é CT-e, processamos como NF-e
         const nota = parseNotaFiscalXML(xmlContent);
+
+        // NF sem volumes no transporte (ex.: Natural Mais, modFrete 9): calcula
+        // pelos itens e preenche so o que veio zerado.
+        if (!nota.volumes || !nota.pesoBruto) {
+          const carga = estimarCargaPelosItens(parseNFProducts(xmlContent).produtos);
+          if (!nota.volumes) nota.volumes = carga.volumes;
+          if (!nota.pesoBruto) nota.pesoBruto = carga.pesoKg;
+        }
 
         // 1. Verificar duplicidade pela chave de acesso
         const existing = await prisma.notaFiscal.findUnique({
