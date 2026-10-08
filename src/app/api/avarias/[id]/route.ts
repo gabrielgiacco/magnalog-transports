@@ -136,7 +136,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (body.status) data.status = body.status;
     if (body.resolucao !== undefined) data.resolucao = body.resolucao;
     if (body.observacoes !== undefined) data.observacoes = body.observacoes;
-    if (body.valorPrejuizo !== undefined) data.valorPrejuizo = body.valorPrejuizo;
+    if (body.valorPrejuizo !== undefined) {
+      const valor = Number(body.valorPrejuizo);
+      if (!Number.isFinite(valor) || valor < 0) {
+        return NextResponse.json({ error: "Valor do prejuízo inválido" }, { status: 400 });
+      }
+      data.valorPrejuizo = valor;
+    }
+    // dataOcorrencia é obrigatória no schema: vazio é ignorado
+    if (body.dataOcorrencia) data.dataOcorrencia = new Date(body.dataOcorrencia);
+    if (body.localOcorrencia !== undefined) data.localOcorrencia = body.localOcorrencia || null;
+    if (body.motoristaCpfChegada !== undefined) {
+      data.motoristaCpfChegada = String(body.motoristaCpfChegada || "").replace(/\D/g, "") || null;
+    }
     if (body.descricao !== undefined) data.descricao = body.descricao;
     if (body.tipo) data.tipo = body.tipo;
     if (body.fase) data.fase = body.fase;

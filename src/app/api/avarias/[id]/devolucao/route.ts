@@ -20,6 +20,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const results = { importadas: 0, duplicadas: 0, erros: [] as { arquivo: string; erro: string }[] };
 
+    // Com produtos, o prejuízo vem deles; só sem produtos soma o valor das NFDs
+    const semProdutos = (await prisma.avariaProduto.count({ where: { avariaId: params.id } })) === 0;
+
     for (const file of files) {
       try {
         const xmlContent = await file.text();
@@ -49,6 +52,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             xmlOriginal: xmlContent,
           },
         });
+        if (semProdutos && nota.valorNota) {
+          await prisma.avaria.update({
+            where: { id: params.id },
+            data: { valorPrejuizo: { increment: nota.valorNota } },
+          });
+        }
         results.importadas++;
       } catch (err: any) {
         results.erros.push({ arquivo: file.name, erro: err.message });
@@ -70,7 +79,24 @@ export async function DELETE(req: NextRequest) {
     const devolucaoId = searchParams.get("devolucaoId");
     if (!devolucaoId) return NextResponse.json({ error: "devolucaoId obrigatório" }, { status: 400 });
 
-    await prisma.notaDevolucao.delete({ where: { id: devolucaoId } });
+    const nfd = await prisma.notaDevolucao.findUnique({
+      where: { id: devolucaoId },
+      select: { avariaId: true, valorNota: true },
+    });
+    if (!nfd) return NextResponse.json({ error: "Devolução não encontrada" }, { status: 404 });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.notaDevolucao.delete({ where: { id: devolucaoId } });
+      // Com produtos, o prejuízo vem deles e não mexe; sem produtos, subtrai a NFD
+      const produtos = await tx.avariaProduto.count({ where: { avariaId: nfd.avariaId } });
+      if (produtos === 0) {
+        const av = await tx.avaria.findUnique({ where: { id: nfd.avariaId }, select: { valorPrejuizo: true } });
+        if (av) {
+          const novo = Math.round(Math.max(0, av.valorPrejuizo - (nfd.valorNota || 0)) * 100) / 100;
+          await tx.avaria.update({ where: { id: nfd.avariaId }, data: { valorPrejuizo: novo } });
+        }
+      }
+    });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -758,12 +758,13 @@ export default function AvariasPage() {
           loadingResumo ? <Loading /> : resumo && (
             <div className="space-y-4">
               {/* KPI Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-4">
                 <KpiCard label="Este Mês" value={resumo.totalMes} icon={AlertTriangle} color="#ef4444" />
                 <KpiCard label="Pendentes" value={resumo.pendentes} icon={Package} color="#f97316" />
                 <KpiCard label="Resolvidas" value={resumo.resolvidas} icon={TrendingUp} color="#10b981" />
                 <KpiCard label="Taxa Resolução" value={`${resumo.taxaResolucao}%`} icon={BarChart2} color="#3b82f6" />
                 <KpiCard label="Valor Prejuízo" value={formatCurrency(resumo.valorTotalPrejuizo)} icon={AlertTriangle} color="#ef4444" />
+                <KpiCard label="Devoluções (valor NF)" value={formatCurrency(resumo.valorDevolucoes || 0)} icon={FileText} color="#64748b" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -874,7 +875,7 @@ export default function AvariasPage() {
                             </div>
                             <div className="text-xs font-medium truncate">{a.entrega?.razaoSocial || (a.notaFiscal ? `NF ${a.notaFiscal.numero}` : "Sem vínculo")}</div>
                           </div>
-                          <span className="text-xs font-mono font-bold text-red-500 flex-shrink-0">{formatCurrency(a.valorPrejuizo)}</span>
+                          <span className={`text-xs font-mono font-bold flex-shrink-0 ${a.tipo === "DEVOLUCAO" ? "text-[var(--text2)]" : "text-red-500"}`}>{formatCurrency(a.valorPrejuizo)}</span>
                         </div>
                         <div className="flex items-center justify-between gap-2 text-[10px] font-mono" style={{ color: "var(--text3)" }}>
                           <span>{formatDate(a.dataOcorrencia)} · {FASE_LABELS[a.fase] || a.fase}</span>
@@ -916,7 +917,7 @@ export default function AvariasPage() {
                             <div className="text-[10px]" style={{ color: "var(--text3)" }}>{a.entrega?.razaoSocial || ""}</div>
                           </Td>
                           <Td><span className="text-xs" style={{ color: "var(--text2)" }}>{a.motorista?.nome || "—"}</span></Td>
-                          <Td><span className="text-xs font-mono font-bold text-red-500">{formatCurrency(a.valorPrejuizo)}</span></Td>
+                          <Td><span className={`text-xs font-mono font-bold ${a.tipo === "DEVOLUCAO" ? "text-[var(--text2)]" : "text-red-500"}`}>{formatCurrency(a.valorPrejuizo)}</span></Td>
                           <Td><StatusBadge status={a.status} /></Td>
                           <Td>
                             <button className="p-1.5 rounded-lg hover:opacity-70 transition-all" style={{ background: "var(--surface2)", color: "var(--text2)" }}
@@ -995,11 +996,7 @@ export default function AvariasPage() {
                     {/* Group Header */}
                     <div
                       className="flex items-center justify-between p-3 sm:p-4 cursor-pointer hover:bg-[#1e293b] transition-colors"
-                      onClick={() => setExpandedDevGroups(prev =>
-                        prev.includes(group.avaria.id)
-                          ? prev.filter((id: string) => id !== group.avaria.id)
-                          : [...prev, group.avaria.id]
-                      )}
+                      onClick={() => router.push(`/avarias/${group.avaria.id}`)}
                     >
                       <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
                         {/* Group checkbox */}
@@ -1060,9 +1057,20 @@ export default function AvariasPage() {
                         </div>
                       </div>
 
-                      <div className="ml-3 flex-shrink-0">
+                      <button
+                        aria-label={isExpanded ? "Recolher" : "Expandir"}
+                        className="ml-1 flex-shrink-0 p-2.5 -m-1 rounded-lg"
+                        onClick={ev => {
+                          ev.stopPropagation();
+                          setExpandedDevGroups(prev =>
+                            prev.includes(group.avaria.id)
+                              ? prev.filter((id: string) => id !== group.avaria.id)
+                              : [...prev, group.avaria.id]
+                          );
+                        }}
+                      >
                         {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
-                      </div>
+                      </button>
                     </div>
 
                     {/* Mobile stats */}

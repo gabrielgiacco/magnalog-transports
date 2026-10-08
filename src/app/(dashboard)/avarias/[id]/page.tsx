@@ -7,8 +7,9 @@ import { Button, Card, Loading, StatusBadge, Modal, Select, Textarea } from "@/c
 import { formatCurrency, formatDate, formatCNPJ, formatCPF } from "@/lib/utils";
 import {
   ChevronLeft, AlertTriangle, Package, MapPin, User, Truck, FileText,
-  CheckCircle2, Clock, XCircle, Upload, Eye, ChevronDown, ChevronUp, Box, Info, Weight, LogOut, Square, CheckSquare, Trash2,
+  CheckCircle2, Clock, XCircle, Upload, Eye, ChevronDown, ChevronUp, Box, Info, Weight, LogOut, Square, CheckSquare, Trash2, Pencil,
 } from "lucide-react";
+import { EditarAvariaModal } from "./EditarAvariaModal";
 import { formatWeight } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
@@ -49,6 +50,7 @@ export default function AvariaDetailPage() {
   const [avaria, setAvaria] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showResolve, setShowResolve] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [showDevStatus, setShowDevStatus] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [resolucao, setResolucao] = useState("");
@@ -176,6 +178,7 @@ export default function AvariaDetailPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.back()}><ChevronLeft size={14} /> Voltar</Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowEdit(true)}><Pencil size={14} /> Editar</Button>
             {avaria.status !== "RESOLVIDA" && avaria.status !== "DESCARTADA" && (
               <Button size="sm" onClick={() => setShowResolve(true)}>Resolver / Atualizar</Button>
             )}
@@ -288,7 +291,7 @@ export default function AvariaDetailPage() {
           <Card>
             <div className="flex items-center gap-2 mb-4">
               <Package size={14} className="text-red-500" />
-              <span className="text-xs font-mono uppercase tracking-widest text-slate-500">Prejuízo</span>
+              <span className="text-xs font-mono uppercase tracking-widest text-slate-500">{avaria.tipo === "DEVOLUCAO" ? "Valor das NFs devolvidas" : "Prejuízo"}</span>
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center bg-red-50 text-red-700 px-3 py-2 rounded-lg border border-red-100">
@@ -482,6 +485,9 @@ export default function AvariaDetailPage() {
           <Button onClick={handleDarSaida} loading={saving}>Confirmar Saída</Button>
         </div>
       </Modal>
+
+      <EditarAvariaModal avaria={avaria} open={showEdit} onClose={() => setShowEdit(false)}
+        onSaved={() => { fetch(`/api/avarias/${id}`).then(r => r.json()).then(setAvaria); }} />
 
       {/* Resolve Modal */}
       <Modal open={showResolve} onClose={() => setShowResolve(false)} title="Resolver / Atualizar Avaria" size="sm">

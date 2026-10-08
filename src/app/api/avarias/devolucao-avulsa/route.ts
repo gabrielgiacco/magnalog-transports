@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
         }
 
         let avariaId = avariaCache[nota.emitenteCnpj];
+        let novaAvaria = false;
 
         if (!avariaId) {
           // Criar nova avaria
@@ -55,10 +56,12 @@ export async function POST(req: NextRequest) {
               status: "PENDENTE",
               dataOcorrencia: nota.dataEmissao || new Date(),
               descricao: `Devolução - ${nota.emitenteRazao}`,
+              valorPrejuizo: nota.valorNota || 0,
               registradoPorId: userId,
             },
           });
           avariaId = avaria.id;
+          novaAvaria = true;
         }
 
         avariaCache[nota.emitenteCnpj] = avariaId;
@@ -87,6 +90,14 @@ export async function POST(req: NextRequest) {
             xmlOriginal: xmlContent,
           },
         });
+
+        // Avaria nova já nasceu com o valor desta NFD; as seguintes somam
+        if (!novaAvaria && nota.valorNota) {
+          await prisma.avaria.update({
+            where: { id: avariaId },
+            data: { valorPrejuizo: { increment: nota.valorNota } },
+          });
+        }
 
         results.importadas++;
       } catch (err: any) {

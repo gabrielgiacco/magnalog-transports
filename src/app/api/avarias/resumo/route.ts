@@ -14,6 +14,10 @@ export async function GET(req: NextRequest) {
     const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999));
 
     const monthFilter = { dataOcorrencia: { gte: startOfMonth, lte: endOfMonth } };
+    // Devolucao guarda o valor das NFs devolvidas — mercadoria que voltou, nao
+    // perda da transportadora. Conta a parte para nao inflar o prejuizo.
+    const semDevolucao = { ...monthFilter, tipo: { not: "DEVOLUCAO" as const } };
+    const soDevolucao = { ...monthFilter, tipo: "DEVOLUCAO" as const };
 
     const [
       totalMes,
@@ -25,13 +29,14 @@ export async function GET(req: NextRequest) {
       porMotorista,
       totalGeral,
       devolucoesPendentes,
+      valorDevolucoes,
     ] = await Promise.all([
       prisma.avaria.count({ where: monthFilter }),
       prisma.avaria.count({ where: { status: "PENDENTE" } }),
       prisma.avaria.count({ where: { ...monthFilter, status: "RESOLVIDA" } }),
       prisma.avaria.groupBy({ by: ["tipo"], _count: true, where: monthFilter }),
       prisma.avaria.groupBy({ by: ["fase"], _count: true, where: monthFilter }),
-      prisma.avaria.aggregate({ _sum: { valorPrejuizo: true }, where: monthFilter }),
+      prisma.avaria.aggregate({ _sum: { valorPrejuizo: true }, where: semDevolucao }),
       prisma.avaria.groupBy({
         by: ["motoristaId"],
         _count: true,
@@ -41,6 +46,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.avaria.count(),
       prisma.notaDevolucao.count({ where: { status: "PENDENTE" } }),
+      prisma.avaria.aggregate({ _sum: { valorPrejuizo: true }, where: soDevolucao }),
     ]);
 
     // Fetch motorista names
@@ -57,6 +63,7 @@ export async function GET(req: NextRequest) {
       resolvidas,
       taxaResolucao: totalMes > 0 ? Math.round((resolvidas / totalMes) * 100) : 0,
       valorTotalPrejuizo: valorTotal._sum.valorPrejuizo || 0,
+      valorDevolucoes: valorDevolucoes._sum.valorPrejuizo || 0,
       porTipo: porTipo.map((t) => ({ tipo: t.tipo, count: t._count })),
       porFase: porFase.map((f) => ({ fase: f.fase, count: f._count })),
       porMotorista: porMotorista.map((m) => ({
