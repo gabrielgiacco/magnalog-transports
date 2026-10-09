@@ -9,7 +9,8 @@ import {
 } from "@/components/ui";
 import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/utils";
 import { AgendaListaMobile } from "./AgendaListaMobile";
-import { Calendar, Search, Eye, RefreshCw, ChevronLeft, ChevronRight, Clock, List, LayoutGrid, CalendarDays } from "lucide-react";
+import { ChecklistCarregamentoModal } from "./ChecklistCarregamentoModal";
+import { Calendar, Search, Eye, RefreshCw, ChevronLeft, ChevronRight, Clock, List, LayoutGrid, CalendarDays, ClipboardCheck } from "lucide-react";
 
 type FiltroData = "TODAS" | "HOJE" | "AMANHA" | "SEMANA" | "DATA";
 
@@ -46,6 +47,15 @@ export default function AgendamentosPage() {
 
   // Day detail modal
   const [selectedDay, setSelectedDay] = useState<{ day: number; entregas: any[] } | null>(null);
+
+  // Checklist de carregamento
+  const [showChecklist, setShowChecklist] = useState(false);
+  const dataChecklist = () => {
+    if (filtroData === "DATA") return dataEscolhida;
+    if (filtroData !== "AMANHA") return hojeISO();
+    const d = new Date(); d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
 
   // Bulk scheduling states
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -307,6 +317,9 @@ export default function AgendamentosPage() {
         subtitle={`${total} entrega(s) com data marcada`}
         actions={
           <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => setShowChecklist(true)}>
+              <ClipboardCheck size={14} /> <span className="hidden sm:inline">Checklist de carregamento</span><span className="sm:hidden">Checklist</span>
+            </Button>
             <Button onClick={() => setShowBulkModal(true)} className="bg-orange-500 hover:bg-orange-600 text-white">
               <CalendarDays size={14} className="mr-1.5" /> Agendar em Lote (Excel)
             </Button>
@@ -747,6 +760,8 @@ export default function AgendamentosPage() {
           </div>
         </div>
       </Modal>
+
+      <ChecklistCarregamentoModal open={showChecklist} onClose={() => setShowChecklist(false)} dataInicial={dataChecklist()} />
     </>
   );
 }
