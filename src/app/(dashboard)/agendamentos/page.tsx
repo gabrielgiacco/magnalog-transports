@@ -11,7 +11,13 @@ import { formatCurrency, formatDate, formatWeight, formatCNPJ } from "@/lib/util
 import { AgendaListaMobile } from "./AgendaListaMobile";
 import { Calendar, Search, Eye, RefreshCw, ChevronLeft, ChevronRight, Clock, List, LayoutGrid, CalendarDays } from "lucide-react";
 
-type FiltroData = "TODAS" | "HOJE" | "AMANHA" | "SEMANA" | "MES";
+type FiltroData = "TODAS" | "HOJE" | "AMANHA" | "SEMANA" | "DATA";
+
+// Hoje no fuso local, como YYYY-MM-DD (valor de <input type="date">)
+const hojeISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 type ViewMode = "lista" | "calendario";
 
 // Agendamentos mostra só o que ainda está em aberto: entregue, finalizado e
@@ -30,6 +36,7 @@ export default function AgendamentosPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filtroData, setFiltroData] = useState<FiltroData>("TODAS");
+  const [dataEscolhida, setDataEscolhida] = useState(hojeISO);
   const [viewMode, setViewMode] = useState<ViewMode>("lista");
 
   // Calendar state
@@ -85,10 +92,10 @@ export default function AgendamentosPage() {
       dom.setDate(seg.getDate() + 6);
       params.set("dataInicio", new Date(Date.UTC(seg.getFullYear(), seg.getMonth(), seg.getDate())).toISOString());
       params.set("dataFim", new Date(Date.UTC(dom.getFullYear(), dom.getMonth(), dom.getDate(), 23, 59, 59, 999)).toISOString());
-    } else if (filtroData === "MES") {
-      const ultimoDia = new Date(y, m + 1, 0).getDate();
-      params.set("dataInicio", new Date(Date.UTC(y, m, 1)).toISOString());
-      params.set("dataFim", new Date(Date.UTC(y, m, ultimoDia, 23, 59, 59, 999)).toISOString());
+    } else if (filtroData === "DATA" && dataEscolhida) {
+      const [ano, mes, dia] = dataEscolhida.split("-").map(Number);
+      params.set("dataInicio", new Date(Date.UTC(ano, mes - 1, dia)).toISOString());
+      params.set("dataFim", new Date(Date.UTC(ano, mes - 1, dia, 23, 59, 59, 999)).toISOString());
     }
 
     try {
@@ -102,7 +109,7 @@ export default function AgendamentosPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, filtroData]);
+  }, [page, debouncedSearch, filtroData, dataEscolhida]);
 
   // Fetch calendar view (full month, no pagination)
   const fetchCalendar = useCallback(async () => {
@@ -346,12 +353,21 @@ export default function AgendamentosPage() {
                 <option value="HOJE">Hoje</option>
                 <option value="AMANHA">Amanhã</option>
                 <option value="SEMANA">Esta Semana</option>
-                <option value="MES">Este Mês</option>
+                <option value="DATA">Escolher data</option>
                 <option value="TODAS">Todos</option>
               </select>
             )}
+            {viewMode === "lista" && filtroData === "DATA" && (
+              <input
+                type="date"
+                value={dataEscolhida}
+                onChange={(e) => { setDataEscolhida(e.target.value); setPage(1); }}
+                aria-label="Data do agendamento"
+                className="md:hidden flex-1 min-w-0 px-3 py-2 rounded-lg text-sm outline-none bg-[var(--surface2)] border border-orange-500/50 text-[var(--text)]"
+              />
+            )}
 
-            {viewMode === "lista" && (["TODAS", "HOJE", "AMANHA", "SEMANA", "MES"] as FiltroData[]).map((f) => (
+            {viewMode === "lista" && (["TODAS", "HOJE", "AMANHA", "SEMANA"] as FiltroData[]).map((f) => (
               <button
                 key={f}
                 onClick={() => { setFiltroData(f); setPage(1); }}
@@ -365,9 +381,24 @@ export default function AgendamentosPage() {
                 {f === "HOJE" && "Hoje"}
                 {f === "AMANHA" && "Amanhã"}
                 {f === "SEMANA" && "Esta Semana"}
-                {f === "MES" && "Este Mês"}
               </button>
             ))}
+            {/* Dia especifico: escolher a data ja ativa o filtro; clicar ativa a data mostrada */}
+            {viewMode === "lista" && (
+              <input
+                type="date"
+                value={dataEscolhida}
+                onClick={() => { if (filtroData !== "DATA") { setFiltroData("DATA"); setPage(1); } }}
+                onChange={(e) => { setDataEscolhida(e.target.value); setFiltroData("DATA"); setPage(1); }}
+                title="Mostrar os agendamentos de um dia"
+                aria-label="Escolher data"
+                className={`hidden md:block px-3 py-2 rounded-lg text-sm font-medium transition-colors border outline-none ${
+                  filtroData === "DATA"
+                    ? "border-orange-500/50 bg-orange-500/10 text-orange-500"
+                    : "border-transparent bg-transparent text-[var(--text2)] hover:bg-[var(--surface2)]"
+                }`}
+              />
+            )}
           </div>
 
           <div className="flex gap-3">
