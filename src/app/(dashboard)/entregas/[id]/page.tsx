@@ -19,6 +19,8 @@ import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import { AvisoEntregaModal } from "@/components/entrega/AvisoEntregaModal";
 import { SugestaoVeiculoModal } from "@/components/entrega/SugestaoVeiculoModal";
 import { SepararPorAgendaModal } from "@/components/entrega/SepararPorAgendaModal";
+import { PaletesPorNFModal } from "@/components/entrega/PaletesPorNFModal";
+import { DividirVeiculosModal } from "@/components/entrega/DividirVeiculosModal";
 import { AcoesMenu } from "@/components/entrega/AcoesMenu";
 import { TicketModal } from "@/components/entrega/TicketModal";
 import { EventosMotorista } from "@/components/entrega/EventosMotorista";
@@ -1198,7 +1200,7 @@ export default function EntregaDetailPage() {
         )}
 
         {tab === "paletes" && (
-          <PaletizacaoTab entrega={entrega} />
+          <PaletizacaoTab entrega={entrega} podeDividir={!isReadOnly} onAtualizar={reloadEntrega} />
         )}
       </div>
 
@@ -2099,8 +2101,10 @@ function AvariasTab({ entregaId, entrega, isReadOnly }: { entregaId: string; ent
   );
 }
 
-function PaletizacaoTab({ entrega }: { entrega: any }) {
+function PaletizacaoTab({ entrega, podeDividir, onAtualizar }: { entrega: any; podeDividir: boolean; onAtualizar: () => void }) {
   const router = useRouter();
+  const [showPaletesNF, setShowPaletesNF] = useState(false);
+  const [showDividir, setShowDividir] = useState(false);
   const [buscaProduto, setBuscaProduto] = useState("");
 
   // Extrair e agrupar todos os produtos de todas as notas fiscais pelo código do produto e CNPJ do fornecedor
@@ -2379,14 +2383,26 @@ function PaletizacaoTab({ entrega }: { entrega: any }) {
       </div>
 
       {/* Ações da Aba */}
-      <div className="flex justify-between items-center p-3 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="flex flex-wrap justify-between items-center gap-3 p-3 rounded-xl border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
         <div className="text-xs text-slate-400 dark:text-neutral-500 flex items-center gap-2">
           <Info size={14} className="text-[var(--accent)]" />
           <span>Forneça esta ficha aos conferentes para guiar a montagem física no pátio.</span>
         </div>
-        <Button size="sm" onClick={handlePrint}>
-          <Printer size={13} /> Imprimir Ficha de Conferência
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setShowPaletesNF(true)}>
+            <Layers size={13} /> Paletes por NF
+          </Button>
+          {podeDividir && entrega.notas?.length >= 2 && entrega.status !== "ENTREGUE" && entrega.status !== "FINALIZADO" && (
+            <Button variant="ghost" size="sm" onClick={() => setShowDividir(true)}>
+              <Truck size={13} /> Dividir em veículos
+            </Button>
+          )}
+          <Button size="sm" onClick={handlePrint}>
+            <Printer size={13} /> Imprimir Ficha de Conferência
+          </Button>
+        </div>
+        <PaletesPorNFModal open={showPaletesNF} onClose={() => setShowPaletesNF(false)} notas={entrega.notas || []} />
+        <DividirVeiculosModal open={showDividir} onClose={() => setShowDividir(false)} entrega={entrega} onDividido={onAtualizar} />
       </div>
 
       {/* Tabela de Produtos e Normas */}
