@@ -272,6 +272,7 @@ export async function POST(req: NextRequest) {
         }
 
         results.notas.push({
+          id: notaCriada.id,
           numero: nota.numero,
           destinatario: nota.destinatarioRazao,
           cidade: nota.cidade,

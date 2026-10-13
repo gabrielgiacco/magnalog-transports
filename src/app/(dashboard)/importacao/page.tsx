@@ -21,7 +21,7 @@ import { MdfeTab } from "./MdfeTab";
 
 // ── Types ──
 interface ResultItem {
-  numero: string; destinatario: string; cidade: string;
+  id?: string; numero: string; destinatario: string; cidade: string;
   peso: number; volumes: number; entrega: string; agrupada: boolean;
 }
 interface ImportResult {
@@ -511,6 +511,29 @@ export default function ImportacaoPage() {
                       </div>
                     </Card>
                   )}
+
+                  {/* Ficha de conferencia das NFs desta importacao, ja na tela */}
+                  {result.notas.some((n) => n.id) && (() => {
+                    const urlFicha = "/imprimir/conferencia?nfIds=" + result.notas.filter((n) => n.id).map((n) => n.id).join(",");
+                    return (
+                      <Card>
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2 font-head text-sm font-bold">
+                            <ClipboardList size={15} style={{ color: "var(--accent)" }} /> Ficha de conferência
+                            <span className="text-[11px] font-normal" style={{ color: "var(--text3)" }}>· NFs desta importação</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => window.open(urlFicha, "_blank")}><ExternalLink size={13} /> Abrir em nova aba</Button>
+                            <Button size="sm" onClick={() => (document.getElementById("ficha-conferencia-importacao") as HTMLIFrameElement | null)?.contentWindow?.print()}>
+                              <Printer size={13} /> Imprimir ficha
+                            </Button>
+                          </div>
+                        </div>
+                        <iframe id="ficha-conferencia-importacao" src={urlFicha} title="Ficha de conferência"
+                          className="w-full rounded-lg bg-white" style={{ height: "75vh", border: "1px solid var(--border)" }} />
+                      </Card>
+                    );
+                  })()}
 
                   <div className="flex justify-center">
                     <Button variant="ghost" onClick={() => setResult(null)}><Upload size={15} /> Importar mais arquivos</Button>
