@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logFromRequest } from "@/lib/audit";
 import { parseNFProducts } from "@/lib/nf-produtos";
 import { agruparPorAgenda, type GrupoAgenda, type NotaParaAgenda } from "@/lib/agenda-nf";
+import { realinharAvariasDaEntrega } from "@/lib/avaria-entrega";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +135,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (fica.recebeAgenda && fica.data) dataOriginal.dataAgendada = new Date(fica.data);
 
     await tx.entrega.update({ where: { id: entrega.id }, data: dataOriginal });
+    // A avaria acompanha a NF que mudou de entrega
+    await realinharAvariasDaEntrega(tx, entrega.id);
 
     return criadas;
   });

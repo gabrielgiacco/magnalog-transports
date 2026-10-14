@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { calcularPrejuizo } from "@/lib/avaria-prejuizo";
+import { avariasDaEntrega } from "@/lib/avaria-entrega";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,9 @@ export async function GET(req: NextRequest) {
     if (fase) where.fase = fase;
     if (status) where.status = status;
     if (motoristaId) where.motoristaId = motoristaId;
-    if (entregaId) where.entregaId = entregaId;
+    // Avarias da entrega pelo vinculo direto ou por qualquer NF dela (declaracao
+    // que cobre NFs de mais de uma entrega aparece em todas elas)
+    if (entregaId) where.AND = [avariasDaEntrega(entregaId)];
 
     if (dataInicio || dataFim) {
       where.dataOcorrencia = {};

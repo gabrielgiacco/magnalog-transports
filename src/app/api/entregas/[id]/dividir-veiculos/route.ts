@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { logFromRequest } from "@/lib/audit";
+import { realinharAvariasDaEntrega } from "@/lib/avaria-entrega";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         quantidadePaletes: primeiro.paletes,
       },
     });
+
+    // A avaria acompanha a NF que mudou de entrega
+    await realinharAvariasDaEntrega(tx, entrega.id);
 
     return criadas;
   });

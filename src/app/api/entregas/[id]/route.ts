@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logFromRequest } from "@/lib/audit";
 import { parseNFProducts } from "@/lib/nf-produtos";
 import { calcularDescarga } from "@/lib/descarga-calc";
+import { realinharAvariasDaEntrega } from "@/lib/avaria-entrega";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireApi();
@@ -503,6 +504,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       volumeTotal: notasRestantes.reduce((s, n) => s + n.volumes, 0),
     },
   });
+
+  // A avaria acompanha a NF que mudou de entrega
+  await realinharAvariasDaEntrega(prisma, params.id);
 
   const sessionUser = (session.user as any);
   await logFromRequest(req, "ENTREGA_CRIADA", {
