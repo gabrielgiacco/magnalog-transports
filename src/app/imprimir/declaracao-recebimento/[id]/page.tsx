@@ -180,6 +180,13 @@ export default async function DeclaracaoRecebimentoPage({ params }: { params: { 
                 <div className="produto-sub">
                   NF: {nfNum} &nbsp;&nbsp; COD: {p.codigoProduto}
                 </div>
+                {tipo === "INVERSAO" && p.invertidoDescricao && (
+                  <div className="produto-sub">
+                    VEIO NO LUGAR: {p.invertidoDescricao}
+                    {p.invertidoCodigo ? ` (COD: ${p.invertidoCodigo})` : ""}
+                    {p.invertidoQuantidade != null ? ` – ${p.invertidoQuantidade} ${p.unidade || "FARDOS"}` : ""}
+                  </div>
+                )}
               </div>
             );
           })

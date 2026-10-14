@@ -1238,6 +1238,12 @@ model AvariaProduto {
   tipoDivergencia TipoAvaria?
   notaFiscalId    String?
 
+  // Inversão: o item que veio no lugar deste. Pode não estar em nenhuma NF
+  // da carga, por isso código é opcional e a descrição pode ser digitada.
+  invertidoCodigo     String?
+  invertidoDescricao  String?
+  invertidoQuantidade Float?
+
   avaria     Avaria      @relation(fields: [avariaId], references: [id], onDelete: Cascade)
   notaFiscal NotaFiscal? @relation("AvariaProdutoNota", fields: [notaFiscalId], references: [id])
 

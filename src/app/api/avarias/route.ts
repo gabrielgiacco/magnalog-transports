@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { calcularPrejuizo } from "@/lib/avaria-prejuizo";
 
 export const dynamic = "force-dynamic";
 
@@ -98,8 +99,24 @@ export async function POST(req: NextRequest) {
 
     // Calculate total damage from products
     const produtos = body.produtos || [];
+
+    // Toda linha de inversao precisa dizer o que veio no lugar
+    if (produtos.some((p: any) => p.tipoDivergencia === "INVERSAO" && !String(p.invertidoDescricao || "").trim())) {
+      return NextResponse.json(
+        { error: "Informe o item que veio no lugar em toda linha de inversão" },
+        { status: 400 },
+      );
+    }
+
+    // So falta e avaria contam como prejuizo (ver avaria-prejuizo.ts)
     const valorPrejuizo = body.valorPrejuizo ??
-      produtos.reduce((s: number, p: any) => s + (p.quantidadeAvaria * p.valorUnitario), 0);
+      calcularPrejuizo(
+        body.tipo,
+        produtos.map((p: any) => ({
+          tipoDivergencia: p.tipoDivergencia,
+          valorTotal: (p.quantidadeAvaria || 0) * (p.valorUnitario || 0),
+        })),
+      );
 
     const avaria = await prisma.avaria.create({
       data: {
@@ -133,6 +150,13 @@ export async function POST(req: NextRequest) {
             valorTotal: (p.quantidadeAvaria || 0) * (p.valorUnitario || 0),
             tipoDivergencia: p.tipoDivergencia || null,
             notaFiscalId: p.notaFiscalId || null,
+            // Item que veio no lugar (so inversao)
+            invertidoCodigo: p.tipoDivergencia === "INVERSAO" ? String(p.invertidoCodigo || "").trim() || null : null,
+            invertidoDescricao: p.tipoDivergencia === "INVERSAO" ? String(p.invertidoDescricao || "").trim() || null : null,
+            invertidoQuantidade:
+              p.tipoDivergencia === "INVERSAO" && p.invertidoQuantidade != null && p.invertidoQuantidade !== ""
+                ? Number(p.invertidoQuantidade)
+                : null,
           })),
         },
       },

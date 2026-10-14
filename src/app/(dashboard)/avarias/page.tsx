@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { Fragment, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Topbar } from "@/components/layout/Topbar";
+import { InversaoCampos } from "./InversaoCampos";
 import {
   Button, Card, Loading, Empty, StatusBadge, Modal, Input, Select, Textarea,
   Table, Th, Td, Tr,
@@ -160,7 +161,7 @@ export default function AvariasPage() {
   const [declProdutosPorNf, setDeclProdutosPorNf] = useState<Record<string, any[]>>({});
   const [declXmlNfs, setDeclXmlNfs] = useState<any[]>([]);
   const [declUploadingXml, setDeclUploadingXml] = useState(false);
-  const [declLinhas, setDeclLinhas] = useState<Array<{ key: string; notaFiscalId: string; nfNumero: string; codigoProduto: string; descricao: string; ncm: string; unidade: string; quantidadeNF: number; valorUnitario: number; quantidadeAvaria: number; tipoDivergencia: string }>>([]);
+  const [declLinhas, setDeclLinhas] = useState<Array<{ key: string; notaFiscalId: string; nfNumero: string; codigoProduto: string; descricao: string; ncm: string; unidade: string; quantidadeNF: number; valorUnitario: number; quantidadeAvaria: number; tipoDivergencia: string; invertidoCodigo?: string; invertidoDescricao?: string; invertidoQuantidade?: number }>>([]);
   const [declDados, setDeclDados] = useState({ transportadora: "", motoristaNome: "", motoristaCpf: "", placa: "", observacoes: "" });
   const [declProdutoSearch, setDeclProdutoSearch] = useState("");
 
@@ -556,7 +557,7 @@ export default function AvariasPage() {
     });
   }
 
-  function updateDeclLinha(key: string, patch: Partial<{ quantidadeAvaria: number; tipoDivergencia: string }>) {
+  function updateDeclLinha(key: string, patch: Partial<{ quantidadeAvaria: number; tipoDivergencia: string; invertidoCodigo: string; invertidoDescricao: string; invertidoQuantidade: number }>) {
     setDeclLinhas((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   }
 
@@ -647,6 +648,8 @@ export default function AvariasPage() {
 
   async function handleSalvarEImprimirDeclaracao() {
     if (declLinhas.length === 0) { toast.error("Selecione ao menos um produto com divergência"); return; }
+    const semInvertido = declLinhas.find((l) => l.tipoDivergencia === "INVERSAO" && !l.invertidoDescricao?.trim());
+    if (semInvertido) { toast.error(`Informe o item que veio no lugar na linha de inversão de ${semInvertido.descricao}`); return; }
     // tipo mais frequente entre as linhas → tipo da Avaria pai
     const counts = declLinhas.reduce((acc: Record<string, number>, l) => {
       acc[l.tipoDivergencia] = (acc[l.tipoDivergencia] || 0) + 1;
@@ -684,6 +687,9 @@ export default function AvariasPage() {
           valorUnitario: l.valorUnitario,
           notaFiscalId: l.notaFiscalId,
           tipoDivergencia: l.tipoDivergencia,
+          invertidoCodigo: l.invertidoCodigo || null,
+          invertidoDescricao: l.invertidoDescricao || null,
+          invertidoQuantidade: l.invertidoQuantidade ?? null,
         })),
       };
       const res = await fetch("/api/avarias", {
@@ -1897,6 +1903,9 @@ export default function AvariasPage() {
                 ...declEntregas.flatMap((ent: any) => ent.notas || []),
                 ...declXmlNfs,
               ];
+              // Itens de todas as NFs da declaração (opções do "veio no lugar")
+              const opcoesInversao = notasDoModal.flatMap((n: any) =>
+                (declProdutosPorNf[n.id] || []).map((p: any) => ({ codigo: String(p.codigoProduto || ""), descricao: String(p.descricao || "") })));
               const cardsRenderizados = notasDoModal.map((nf: any) => {
                 const produtos = declProdutosPorNf[nf.id] || [];
                 if (produtos.length === 0) return null;
@@ -1958,7 +1967,8 @@ export default function AvariasPage() {
                             const isFirst = subIdx === 0;
                             const isLast = subIdx === sublinhas.length - 1;
                             return (
-                              <tr key={linha.key}
+                              <Fragment key={linha.key}>
+                              <tr
                                 className="bg-orange-500/10 transition-colors"
                                 style={{ borderTop: "1px solid var(--border)" }}>
                                 <td className="px-2 py-1.5">
@@ -2003,7 +2013,11 @@ export default function AvariasPage() {
                                 <td className="px-2 py-1.5">
                                   <div className="flex items-center gap-2">
                                     <select value={linha.tipoDivergencia}
-                                      onChange={(e) => updateDeclLinha(linha.key, { tipoDivergencia: e.target.value })}
+                                      onChange={(e) => {
+                                        const t = e.target.value;
+                                        if (t === "INVERSAO") updateDeclLinha(linha.key, { tipoDivergencia: t, invertidoQuantidade: linha.invertidoQuantidade ?? linha.quantidadeAvaria });
+                                        else updateDeclLinha(linha.key, { tipoDivergencia: t, invertidoCodigo: undefined, invertidoDescricao: undefined, invertidoQuantidade: undefined });
+                                      }}
                                       className="px-2 py-1 rounded text-xs outline-none"
                                       style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}>
                                       {Object.entries(TIPO_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -2019,6 +2033,20 @@ export default function AvariasPage() {
                                   </div>
                                 </td>
                               </tr>
+                              {linha.tipoDivergencia === "INVERSAO" && (
+                                <tr className="bg-orange-500/10">
+                                  <td></td>
+                                  <td colSpan={4} className="px-2 pb-2">
+                                    <InversaoCampos
+                                      codigoProduto={linha.codigoProduto} descricaoProduto={linha.descricao}
+                                      invertidoCodigo={linha.invertidoCodigo} invertidoDescricao={linha.invertidoDescricao}
+                                      invertidoQuantidade={linha.invertidoQuantidade}
+                                      opcoes={opcoesInversao}
+                                      onChange={(patch) => updateDeclLinha(linha.key, patch)} />
+                                  </td>
+                                </tr>
+                              )}
+                              </Fragment>
                             );
                           });
                         })}
@@ -2044,7 +2072,7 @@ export default function AvariasPage() {
 
             <div className="flex justify-end gap-3 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
               <Button variant="ghost" onClick={() => setDeclStep(1)}>Voltar</Button>
-              <Button onClick={() => setDeclStep(3)} disabled={declLinhas.length === 0}>Próximo</Button>
+              <Button onClick={() => setDeclStep(3)} disabled={declLinhas.length === 0 || declLinhas.some((l) => l.tipoDivergencia === "INVERSAO" && !l.invertidoDescricao?.trim())}>Próximo</Button>
             </div>
           </div>
         )}

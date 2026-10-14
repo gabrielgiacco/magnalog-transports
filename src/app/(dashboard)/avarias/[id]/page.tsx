@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { EditarAvariaModal } from "./EditarAvariaModal";
 import { formatWeight } from "@/lib/utils";
+import { calcularPrejuizo, linhaContaComoPrejuizo } from "@/lib/avaria-prejuizo";
 import toast from "react-hot-toast";
 import { AnexosCard } from "@/components/entrega/AnexosCard";
 
@@ -335,6 +336,7 @@ export default function AvariaDetailPage() {
                 <thead>
                   <tr style={{ background: "var(--surface2)" }}>
                     <th className="text-left px-3 py-2 text-[9px] font-bold uppercase text-slate-400">Produto</th>
+                    <th className="text-left px-3 py-2 text-[9px] font-bold uppercase text-slate-400">Tipo</th>
                     <th className="text-left px-3 py-2 text-[9px] font-bold uppercase text-slate-400">NCM</th>
                     <th className="text-right px-3 py-2 text-[9px] font-bold uppercase text-slate-400">Qtd NF</th>
                     <th className="text-right px-3 py-2 text-[9px] font-bold uppercase text-slate-400">Qtd Avaria</th>
@@ -343,24 +345,49 @@ export default function AvariaDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {avaria.produtos.map((p: any) => (
+                  {avaria.produtos.map((p: any) => {
+                    const tipoLinha = p.tipoDivergencia || avaria.tipo;
+                    const cor = TIPO_COLORS[tipoLinha] || "#64748b";
+                    const conta = linhaContaComoPrejuizo(p.tipoDivergencia, avaria.tipo);
+                    return (
                     <tr key={p.id} style={{ borderTop: "1px solid var(--border)" }}>
                       <td className="px-3 py-2">
                         <div className="font-medium">{p.descricao}</div>
                         <div className="text-[9px] font-mono text-slate-400">Cód: {p.codigoProduto}</div>
+                        {tipoLinha === "INVERSAO" && p.invertidoDescricao && (
+                          <div className="text-[11px]" style={{ color: "#8b5cf6" }}>
+                            ↳ veio no lugar: {p.invertidoDescricao}
+                            {p.invertidoCodigo ? ` (cód. ${p.invertidoCodigo})` : ""}
+                            {p.invertidoQuantidade != null ? ` — ${p.invertidoQuantidade} un.` : ""}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: `${cor}15`, color: cor }}>
+                          {TIPO_LABELS[tipoLinha] || tipoLinha}
+                        </span>
                       </td>
                       <td className="px-3 py-2 font-mono text-slate-500">{p.ncm || "—"}</td>
                       <td className="px-3 py-2 text-right font-mono">{p.quantidadeNF}</td>
                       <td className="px-3 py-2 text-right font-mono font-bold text-red-500">{p.quantidadeAvaria}</td>
                       <td className="px-3 py-2 text-right font-mono text-slate-500">{formatCurrency(p.valorUnitario)}</td>
-                      <td className="px-3 py-2 text-right font-mono font-bold text-red-600">{formatCurrency(p.valorTotal)}</td>
+                      <td
+                        className={`px-3 py-2 text-right font-mono font-bold ${conta ? "text-red-600" : ""}`}
+                        style={conta ? undefined : { color: "var(--text3)" }}
+                      >
+                        {formatCurrency(p.valorTotal)}
+                        {!conta && <div className="text-[9px] font-normal">não conta</div>}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: "2px solid var(--border)", background: "var(--surface2)" }}>
-                    <td colSpan={5} className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">Total Prejuízo</td>
-                    <td className="px-3 py-2 text-right font-mono font-bold text-red-700">{formatCurrency(avaria.produtos.reduce((s: number, p: any) => s + p.valorTotal, 0))}</td>
+                    <td colSpan={6} className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-500">
+                      {avaria.tipo === "DEVOLUCAO" ? "Valor devolvido" : "Prejuízo (falta + avaria)"}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono font-bold text-red-700">{formatCurrency(calcularPrejuizo(avaria.tipo, avaria.produtos))}</td>
                   </tr>
                 </tfoot>
               </table>
