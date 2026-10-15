@@ -102,7 +102,17 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token }) {
       // Always fetch latest role/aprovado from DB so admin changes take effect immediately
-      const dbUser = await prisma.user.findUnique({ where: { email: token.email! } });
+      let dbUser;
+      try {
+        dbUser = await prisma.user.findUnique({ where: { email: token.email! } });
+      } catch (err) {
+        // Falha momentanea do banco (ex.: Neon derrubando a conexao) nao pode
+        // derrubar a sessao: se este callback lanca, o NextAuth apaga o cookie
+        // e o usuario cai no login no proximo clique. Mantem o token como esta;
+        // a proxima renovacao rele do banco.
+        console.error("[auth] falha ao reler usuario na renovacao da sessao:", (err as Error)?.message);
+        return token;
+      }
       // O e-mail pode ser reaproveitado depois de uma exclusao: o token do
       // usuario antigo nao pode virar sessao da conta nova. Sem userId ainda
       // (primeira passagem apos o login) aceita; depois, so o mesmo id.
