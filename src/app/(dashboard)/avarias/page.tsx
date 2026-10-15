@@ -15,6 +15,7 @@ import {
   ClipboardCheck, Printer, Download,
 } from "lucide-react";
 import { ExportarAvariasModal } from "./ExportarAvariasModal";
+import { ResumoProdutosModal } from "./ResumoProdutosModal";
 import { useSession } from "next-auth/react";
 import { DiariasTab } from "./DiariasTab";
 import { DeclaracaoSaidaTab } from "./DeclaracaoSaidaTab";
@@ -132,6 +133,7 @@ export default function AvariasPage() {
   // Create modal
   const [showCreate, setShowCreate] = useState(false);
   const [showExportar, setShowExportar] = useState(false);
+  const [resumoId, setResumoId] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [creating, setCreating] = useState(false);
 
@@ -927,7 +929,8 @@ export default function AvariasPage() {
                           <Td><StatusBadge status={a.status} /></Td>
                           <Td>
                             <button className="p-1.5 rounded-lg hover:opacity-70 transition-all" style={{ background: "var(--surface2)", color: "var(--text2)" }}
-                              onClick={ev => { ev.stopPropagation(); router.push(`/avarias/${a.id}`); }}>
+                              title="Resumo dos produtos afetados"
+                              onClick={ev => { ev.stopPropagation(); setResumoId(a.id); }}>
                               <Eye size={13} />
                             </button>
                           </Td>
@@ -2119,6 +2122,7 @@ export default function AvariasPage() {
       </Modal>
 
       <ExportarAvariasModal open={showExportar} onClose={() => setShowExportar(false)} />
+      <ResumoProdutosModal avariaId={resumoId} onClose={() => setResumoId(null)} />
     </>
   );
 }
