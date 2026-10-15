@@ -837,7 +837,7 @@ export default function AvariasPage() {
                 <div className="relative flex-1 min-w-[160px]">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }} />
                   <input value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Buscar código, NF, cliente..."
+                    placeholder="Buscar código, NF, cliente, produto..."
                     className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none"
                     style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)" }} />
                 </div>

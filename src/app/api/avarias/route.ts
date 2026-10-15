@@ -53,6 +53,11 @@ export async function GET(req: NextRequest) {
         { entrega: { notas: { some: { numero: { contains: q } } } } },
         { produtos: { some: { notaFiscal: { numero: { contains: q } } } } },
         { devolucoes: { some: { numero: { contains: q } } } },
+        // Produto afetado (codigo ou nome), incluindo o que veio no lugar numa inversao
+        { produtos: { some: { codigoProduto: { contains: q, mode: "insensitive" } } } },
+        { produtos: { some: { descricao: { contains: q, mode: "insensitive" } } } },
+        { produtos: { some: { invertidoCodigo: { contains: q, mode: "insensitive" } } } },
+        { produtos: { some: { invertidoDescricao: { contains: q, mode: "insensitive" } } } },
       ];
     }
 
