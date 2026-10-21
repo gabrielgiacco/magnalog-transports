@@ -91,7 +91,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         resolvidoPor: { select: { id: true, name: true } },
         produtos: {
           orderBy: { createdAt: "asc" },
-          include: { notaFiscal: { select: { id: true, numero: true, emitenteRazao: true, emitenteCnpj: true } } },
+          include: { notaFiscal: { select: { id: true, numero: true, chaveAcesso: true, emitenteRazao: true, emitenteCnpj: true } } },
         },
         devolucoes: { orderBy: { createdAt: "desc" } },
       },

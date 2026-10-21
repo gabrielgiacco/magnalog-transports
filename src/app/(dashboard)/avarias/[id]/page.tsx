@@ -10,6 +10,7 @@ import {
   CheckCircle2, Clock, XCircle, Upload, Eye, ChevronDown, ChevronUp, Box, Info, Weight, LogOut, Square, CheckSquare, Trash2, Pencil,
 } from "lucide-react";
 import { EditarAvariaModal } from "./EditarAvariaModal";
+import { EtiquetaBotoes } from "./EtiquetaBotoes";
 import { formatWeight } from "@/lib/utils";
 import { calcularPrejuizo, linhaContaComoPrejuizo } from "@/lib/avaria-prejuizo";
 import toast from "react-hot-toast";
@@ -180,6 +181,7 @@ export default function AvariaDetailPage() {
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.back()}><ChevronLeft size={14} /> Voltar</Button>
             <Button variant="ghost" size="sm" onClick={() => setShowEdit(true)}><Pencil size={14} /> Editar</Button>
+            <EtiquetaBotoes avaria={avaria} />
             {avaria.status !== "RESOLVIDA" && avaria.status !== "DESCARTADA" && (
               <Button size="sm" onClick={() => setShowResolve(true)}>Resolver / Atualizar</Button>
             )}
