@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { ENTREGA_NAO_ARQUIVADA, baixarOcorrenciasAbertas, resolucaoAutomatica } from "@/lib/ocorrencia-baixa";
 
 export async function GET(req: NextRequest) {
   const auth = await requireApi();
@@ -12,12 +13,18 @@ export async function GET(req: NextRequest) {
 
   const entregas = await prisma.entrega.findMany({
     where: {
-      OR: [
-        { status: { notIn: ["FINALIZADO"] } },
+      AND: [
         {
-          status: "FINALIZADO",
-          updatedAt: { gte: sevenDaysAgo }
-        }
+          OR: [
+            { status: { notIn: ["FINALIZADO"] } },
+            {
+              status: "FINALIZADO",
+              updatedAt: { gte: sevenDaysAgo }
+            }
+          ]
+        },
+        // Tentativa encerrada por reentrega: fica só no painel de Ocorrências.
+        ENTREGA_NAO_ARQUIVADA,
       ]
     },
     orderBy: { updatedAt: "desc" },
@@ -92,6 +99,10 @@ export async function PATCH(req: NextRequest) {
       await prisma.entrega.updateMany({ where: { rotaId }, data });
     }
 
+    // Rota concluída encerra as ocorrências que ainda estavam abertas nas entregas dela.
+    const resolucaoRota = resolucaoAutomatica(null, status);
+    if (resolucaoRota) await baixarOcorrenciasAbertas(prisma, { rotaId }, resolucaoRota);
+
     // Mapear status da entrega para status da rota se necessário
     let rotaStatus: string | undefined;
     if (status === "EM_ROTA") rotaStatus = "EM_ANDAMENTO";
@@ -109,6 +120,11 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (dataEntregaISO) data.dataEntrega = dataEntregaISO;
+
+  // Mesma regra do PUT /api/entregas/[id]: concluir ou sair de OCORRENCIA encerra as ocorrências abertas.
+  const anterior = await prisma.entrega.findUnique({ where: { id }, select: { status: true } });
+  const resolucao = resolucaoAutomatica(anterior?.status, status);
+  if (resolucao) await baixarOcorrenciasAbertas(prisma, { id }, resolucao);
 
   const entrega = await prisma.entrega.update({
     where: { id },

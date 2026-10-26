@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { logFromRequest } from "@/lib/audit";
+import { baixarOcorrenciasAbertas } from "@/lib/ocorrencia-baixa";
 
 export async function POST(
   req: NextRequest,
@@ -18,69 +20,94 @@ export async function POST(
     return NextResponse.json({ error: "Entrega original não encontrada" }, { status: 404 });
   }
 
-  // 1. Criar a nova entrega (Clone limpo)
-  const clone = await prisma.entrega.create({
-    data: {
-      codigo: originalEntrega.codigo + "-R" + Math.floor(Math.random() * 1000), // Sufixo para diferenciar
-      cnpj: originalEntrega.cnpj,
-      razaoSocial: originalEntrega.razaoSocial,
-      cidade: originalEntrega.cidade,
-      uf: originalEntrega.uf,
-      endereco: originalEntrega.endereco,
-      bairro: originalEntrega.bairro,
-      cep: originalEntrega.cep,
-      clienteId: originalEntrega.clienteId,
-      pesoTotal: originalEntrega.pesoTotal,
-      volumeTotal: originalEntrega.volumeTotal,
-      quantidadePaletes: originalEntrega.quantidadePaletes,
-      
-      // Limpar campos de tracking e financeiros para a nova viagem
-      status: "PROGRAMADO",
-      rotaId: null,
-      motoristaId: null,
-      veiculoId: null,
-      dataChegada: originalEntrega.dataChegada,
-      dataAgendada: null,
-      dataEntrega: null,
-      valorFrete: originalEntrega.valorFrete, // mantemos o valor de receita, ou talvez devesse zerar? mantendo.
-      valorDescarga: originalEntrega.valorDescarga,
-      valorArmazenagem: originalEntrega.valorArmazenagem,
-      diasArmazenagem: originalEntrega.diasArmazenagem,
-      
-      // Zero custo da viagem atual, isso quem define é a nova rota
-      valorMotorista: 0,
-      valorSaida: 0,
-      adiantamentoMotorista: 0,
-      descontosMotorista: 0,
-      saldoMotorista: 0,
-      dataAdiantamento: null,
-      dataPagamentoSaldo: null,
-      statusCanhoto: "PENDENTE",
-      observacoes: "Reentrega gerada a partir de falha anterior.",
-    }
-  });
+  // Tudo numa transação: sem ela, uma falha no meio deixava a entrega nova
+  // criada e a original ainda com as NFs, ou a original com a ocorrência aberta.
+  const { clone, baixadas } = await prisma.$transaction(async (tx) => {
+    // 1. Criar a nova entrega (Clone limpo)
+    const clone = await tx.entrega.create({
+      data: {
+        codigo: originalEntrega.codigo + "-R" + Math.floor(Math.random() * 1000), // Sufixo para diferenciar
+        cnpj: originalEntrega.cnpj,
+        razaoSocial: originalEntrega.razaoSocial,
+        cidade: originalEntrega.cidade,
+        uf: originalEntrega.uf,
+        endereco: originalEntrega.endereco,
+        bairro: originalEntrega.bairro,
+        cep: originalEntrega.cep,
+        clienteId: originalEntrega.clienteId,
+        pesoTotal: originalEntrega.pesoTotal,
+        volumeTotal: originalEntrega.volumeTotal,
+        quantidadePaletes: originalEntrega.quantidadePaletes,
 
-  // 2. Mover as notas fiscais para o novo clone
-  if (originalEntrega.notas.length > 0) {
-    const notaIds = originalEntrega.notas.map(n => n.id);
-    const notasNumeros = originalEntrega.notas.map(n => n.numero).join(", ");
-    
-    // Atualiza as notas para apontar para a nova entrega
-    await prisma.notaFiscal.updateMany({
-      where: { id: { in: notaIds } },
-      data: { entregaId: clone.id }
+        // Limpar campos de tracking e financeiros para a nova viagem
+        status: "PROGRAMADO",
+        rotaId: null,
+        motoristaId: null,
+        veiculoId: null,
+        dataChegada: originalEntrega.dataChegada,
+        dataAgendada: null,
+        dataEntrega: null,
+        valorFrete: originalEntrega.valorFrete, // mantemos o valor de receita, ou talvez devesse zerar? mantendo.
+        valorDescarga: originalEntrega.valorDescarga,
+        valorArmazenagem: originalEntrega.valorArmazenagem,
+        diasArmazenagem: originalEntrega.diasArmazenagem,
+
+        // Zero custo da viagem atual, isso quem define é a nova rota
+        valorMotorista: 0,
+        valorSaida: 0,
+        adiantamentoMotorista: 0,
+        descontosMotorista: 0,
+        saldoMotorista: 0,
+        dataAdiantamento: null,
+        dataPagamentoSaldo: null,
+        statusCanhoto: "PENDENTE",
+        observacoes: "Reentrega gerada a partir de falha anterior.",
+      }
     });
 
-    // 3. Atualizar a entrega original para manter o histórico visível
-    const notasMsg = `Tentativa Falha das NFs: ${notasNumeros}`;
-    await prisma.entrega.update({
-      where: { id: originalEntrega.id },
-      data: {
-        observacoes: originalEntrega.observacoes 
-          ? originalEntrega.observacoes + "\n" + notasMsg 
-          : notasMsg,
-        codigo: originalEntrega.codigo + " (FALHA)",
-      }
+    // 2. Mover as notas fiscais para o novo clone
+    if (originalEntrega.notas.length > 0) {
+      const notaIds = originalEntrega.notas.map(n => n.id);
+      const notasNumeros = originalEntrega.notas.map(n => n.numero).join(", ");
+
+      // Atualiza as notas para apontar para a nova entrega
+      await tx.notaFiscal.updateMany({
+        where: { id: { in: notaIds } },
+        data: { entregaId: clone.id }
+      });
+
+      // 3. Atualizar a entrega original para manter o histórico visível
+      const notasMsg = `Tentativa Falha das NFs: ${notasNumeros}`;
+      await tx.entrega.update({
+        where: { id: originalEntrega.id },
+        data: {
+          observacoes: originalEntrega.observacoes
+            ? originalEntrega.observacoes + "\n" + notasMsg
+            : notasMsg,
+          codigo: originalEntrega.codigo + " (FALHA)",
+        }
+      });
+    }
+
+    // 4. A ocorrência da original está resolvida: a reentrega é a solução.
+    // A original fica em OCORRENCIA, como arquivo da tentativa, e sai das telas
+    // que cobram ação (ver ENTREGA_NAO_ARQUIVADA).
+    const baixadas = await baixarOcorrenciasAbertas(
+      tx,
+      { id: originalEntrega.id },
+      `Reentrega gerada — nova entrega ${clone.codigo}`
+    );
+
+    return { clone, baixadas };
+  });
+
+  if (baixadas > 0) {
+    await logFromRequest(req, "OCORRENCIA_RESOLVIDA", {
+      user: { id: auth.user.id, email: auth.user.email, name: auth.user.nome, role: auth.user.role },
+      recursoTipo: "entrega",
+      recursoId: originalEntrega.id,
+      recursoDesc: `${originalEntrega.codigo} · reentrega ${clone.codigo}`,
+      detalhes: { motivo: "reentrega", novaEntregaId: clone.id, ocorrenciasBaixadas: baixadas },
     });
   }
 

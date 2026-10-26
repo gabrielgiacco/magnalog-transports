@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { validarToken, type EntregaDoToken } from "@/lib/upload-token";
 import { logFromRequest } from "@/lib/audit";
 import { lerPosicao, lerGps, type Posicao } from "@/lib/posicao-motorista";
+import { baixarOcorrenciasAbertas } from "@/lib/ocorrencia-baixa";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,12 @@ async function avancar(entrega: EntregaDoToken, de: De, para: Para) {
       ...(para === "ENTREGUE" && !entrega.dataEntrega ? { dataEntrega: new Date() } : {}),
     },
   });
-  return cas.count === 1;
+  if (cas.count !== 1) return false;
+  // Entregue encerra o que o motorista abriu na rota (ex.: "cliente ausente — volto depois").
+  if (para === "ENTREGUE") {
+    await baixarOcorrenciasAbertas(prisma, { id: entrega.id }, "Baixa automática — entregue pelo motorista");
+  }
+  return true;
 }
 
 type Registro = { entrega: EntregaDoToken; de: De; para: Para; gps: string; posicao: Posicao | null };

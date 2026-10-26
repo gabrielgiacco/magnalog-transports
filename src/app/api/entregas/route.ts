@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { calcularDescarga } from "@/lib/descarga-calc";
+import { ENTREGA_NAO_ARQUIVADA } from "@/lib/ocorrencia-baixa";
 
 export const dynamic = "force-dynamic";
 
@@ -56,15 +57,7 @@ export async function GET(req: NextRequest) {
     // Excluir apenas a "casca" original de uma reentrega: status=OCORRENCIA + todas as
     // ocorrências resolvidas. Sem o filtro por status, a reentrega ativa (que herda a
     // ocorrência original marcada como resolvida) também sumia da lista.
-    andConditions.push({
-      NOT: {
-        AND: [
-          { status: "OCORRENCIA" },
-          { ocorrencias: { some: {} } },
-          { ocorrencias: { none: { resolvida: false } } }
-        ]
-      }
-    });
+    andConditions.push(ENTREGA_NAO_ARQUIVADA);
 
     // Status filter: multiple values → OR (show any matching status)
     if (statusList.length === 1) {

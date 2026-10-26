@@ -686,7 +686,13 @@ export default function EntregaDetailPage() {
             </div>
           )}
 
-          {entrega.status === "OCORRENCIA" ? (
+          {entrega.status === "OCORRENCIA" && entrega.ocorrencias?.length > 0 && entrega.ocorrencias.every((o: { resolvida: boolean }) => o.resolvida) ? (
+             // Tentativa encerrada (ex.: reentrega gerada): fica só como arquivo, sem ações.
+             <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex-wrap">
+               <CheckCircle2 size={16} className="text-emerald-600 flex-shrink-0" />
+               <span className="text-sm text-emerald-700 dark:text-emerald-400 flex-1">Tentativa encerrada — ocorrência resolvida. Esta entrega fica como arquivo.</span>
+             </div>
+          ) : entrega.status === "OCORRENCIA" ? (
              <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 flex-wrap">
                <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
                <span className="text-sm text-red-600 flex-1">Esta entrega possui ocorrência registrada.{!isReadOnly && " Escolha uma ação:"}</span>
@@ -1023,6 +1029,11 @@ export default function EntregaDetailPage() {
                            </div>
                          </div>
                          <p className="text-xs text-slate-600 dark:text-neutral-300">{oc.descricao}</p>
+                         {oc.resolvida && (
+                           <p className="text-[11px] mt-1.5 pt-1.5 border-t border-red-100 dark:border-red-900/40 text-emerald-600">
+                             <strong>Resolvida:</strong> {oc.resolucao || "sem observação"}
+                           </p>
+                         )}
                       </div>
                     ))}
                   </div>

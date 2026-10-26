@@ -5,6 +5,7 @@ import { logFromRequest } from "@/lib/audit";
 import { parseNFProducts } from "@/lib/nf-produtos";
 import { calcularDescarga } from "@/lib/descarga-calc";
 import { realinharAvariasDaEntrega } from "@/lib/avaria-entrega";
+import { baixarOcorrenciasAbertas, resolucaoAutomatica } from "@/lib/ocorrencia-baixa";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireApi();
@@ -145,7 +146,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const data: any = { ...body };
 
-    // Ao finalizar entrega, marcar canhoto como recebido e dar baixa nas ocorrências.
+    // Ao finalizar entrega, marcar canhoto como recebido (a baixa das ocorrências fica logo antes do update).
     // NÃO sobrescrever dataEntrega: se veio no body usa; senão preserva a existente.
     // Se não existir data em lugar nenhum, rejeita (frontend deve pedir a data ao usuário).
     if (data.status === "FINALIZADO" || data.status === "ENTREGUE") {
@@ -165,13 +166,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
       if (data.status === "FINALIZADO") {
         data.statusCanhoto = "RECEBIDO";
-        await prisma.ocorrencia.updateMany({
-          where: { entregaId: params.id, resolvida: false },
-          data: {
-            resolvida: true,
-            resolucao: "Baixa automática — entrega finalizada",
-          },
-        });
       }
     }
 
@@ -325,6 +319,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     delete data.id;
     delete data.codigo;
     delete data.createdAt;
+
+    // Concluir a entrega ou tirá-la de OCORRENCIA encerra as ocorrências que
+    // ainda estão abertas. O "Resolver Ocorrência" baixa antes, com o texto do
+    // usuário, então aqui normalmente não sobra nada. Fica antes do update para
+    // a resposta já trazer as ocorrências atualizadas.
+    if (data.status) {
+      const anterior = await prisma.entrega.findUnique({ where: { id: params.id }, select: { status: true } });
+      const resolucao = resolucaoAutomatica(anterior?.status, data.status);
+      if (resolucao) await baixarOcorrenciasAbertas(prisma, { id: params.id }, resolucao);
+    }
 
     const entrega = await prisma.entrega.update({
       where: { id: params.id },

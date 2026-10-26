@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
+import { ENTREGA_NAO_ARQUIVADA } from "@/lib/ocorrencia-baixa";
 
 export async function GET(_req: NextRequest) {
   const auth = await requireApi();
@@ -22,13 +23,15 @@ export async function GET(_req: NextRequest) {
   ] = await Promise.all([
     // Em andamento (não finalizados)
     prisma.entrega.count({
-      where: { status: { notIn: ["FINALIZADO", "ENTREGUE"] } },
+      where: { status: { notIn: ["FINALIZADO", "ENTREGUE"] }, ...ENTREGA_NAO_ARQUIVADA },
     }),
     // Atrasadas: agendadas antes de hoje e não entregues
     prisma.entrega.count({
       where: {
         dataAgendada: { lt: hoje },
         status: { notIn: ["ENTREGUE", "FINALIZADO"] },
+        // Tentativa encerrada por reentrega não conta como atrasada (alimenta o sino).
+        ...ENTREGA_NAO_ARQUIVADA,
       },
     }),
     // Entregues hoje
@@ -63,14 +66,14 @@ export async function GET(_req: NextRequest) {
     // Contagem por status
     prisma.entrega.groupBy({
       by: ["status"],
-      where: { status: { notIn: ["FINALIZADO"] } },
+      where: { status: { notIn: ["FINALIZADO"] }, ...ENTREGA_NAO_ARQUIVADA },
       _count: true,
     }),
     // Últimas 8 entregas
     prisma.entrega.findMany({
       take: 8,
       orderBy: { updatedAt: "desc" },
-      where: { status: { notIn: ["FINALIZADO"] } },
+      where: { status: { notIn: ["FINALIZADO"] }, ...ENTREGA_NAO_ARQUIVADA },
       include: {
         motorista: { select: { nome: true } },
         notas: { select: { numero: true } },
