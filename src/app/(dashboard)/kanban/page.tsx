@@ -26,6 +26,7 @@ import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
 import { RefreshCw, ExternalLink, GripVertical, User, Package, Search, ShieldCheck, Calendar } from "lucide-react";
 import { QualityScoring } from "@/components/quality/QualityScoring";
 import { QUALIDADE_ENABLED } from "@/lib/features";
+import { etapaDaRota } from "@/lib/rota-etapa";
 
 const COLS = [
   { key: "PROGRAMADO",    label: "Programado",    icon: "📋", color: "#9ca3af" }, // cinza
@@ -186,7 +187,8 @@ export default function KanbanPage() {
           if (!groupedRotas[e.rotaId]) {
             groupedRotas[e.rotaId] = {
               id: `rota_${e.rotaId}`,
-              status: e.status, // Rota card maps to current tracking status
+              status: e.status, // trocado pela etapa da rota depois do agrupamento
+              statusEntregas: [] as string[],
               isRota: true,
               codigo: e.rota?.codigo || e.rotaId.substring(0, 5),
               razaoSocial: "",
@@ -203,6 +205,7 @@ export default function KanbanPage() {
             };
           }
           const r = groupedRotas[e.rotaId];
+          r.statusEntregas.push(e.status);
           r.pesoTotal += e.pesoTotal || 0;
           r._count.notas += e._count?.notas || 0;
           r.entregasCount++;
@@ -220,6 +223,9 @@ export default function KanbanPage() {
       }
 
       for (const r of Object.values(groupedRotas)) {
+        // Mesma etapa da tela de Rotas: a da entrega mais atrasada, sem contar ocorrências.
+        r.status = etapaDaRota(r.statusEntregas) ?? r.status;
+        delete r.statusEntregas;
         r.razaoSocial = `${r.entregasCount} Entregas Vinculadas na Rota`;
         r.cidade = r.cidadesArray.length > 0 ? r.cidadesArray.join(", ") : "Múltiplos Destinos";
         delete r.cidadesArray;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { ENTREGA_NAO_ARQUIVADA, baixarOcorrenciasAbertas, resolucaoAutomatica } from "@/lib/ocorrencia-baixa";
+import { moverRota } from "@/lib/rota-mover";
 
 export async function GET(req: NextRequest) {
   const auth = await requireApi();
@@ -63,60 +64,22 @@ export async function PATCH(req: NextRequest) {
   // Se por acaso não vier e alguma entrega ainda não tem dataEntrega, exige o input.
   const dataEntregaISO = dataEntrega ? new Date(dataEntrega) : null;
 
-  if (status === "ENTREGUE" || status === "FINALIZADO") {
-    if (id.startsWith("rota_")) {
-      const rotaId = id.replace("rota_", "");
-      if (!dataEntregaISO) {
-        const semData = await prisma.entrega.count({ where: { rotaId, dataEntrega: null } });
-        if (semData > 0) {
-          return NextResponse.json(
-            { error: "DATA_ENTREGA_OBRIGATORIA", message: "Informe a data em que a entrega foi realizada." },
-            { status: 400 }
-          );
-        }
-      }
-    } else {
-      const existente = await prisma.entrega.findUnique({ where: { id }, select: { dataEntrega: true } });
-      if (!dataEntregaISO && !existente?.dataEntrega) {
-        return NextResponse.json(
-          { error: "DATA_ENTREGA_OBRIGATORIA", message: "Informe a data em que a entrega foi realizada." },
-          { status: 400 }
-        );
-      }
-    }
+  // Cartão de rota: mesma regra da tela de Rotas (só move as entregas que
+  // precisam, nunca as em ocorrência, e deriva o status da rota).
+  if (id.startsWith("rota_")) {
+    const r = await prisma.$transaction((tx) => moverRota(tx, id.replace("rota_", ""), status, dataEntregaISO));
+    if (!r.ok) return NextResponse.json({ error: r.erro, message: r.mensagem }, { status: r.http });
+    return NextResponse.json({ ok: true, isRota: true, etapa: r.etapa });
   }
 
-  if (id.startsWith("rota_")) {
-    const rotaId = id.replace("rota_", "");
-
-    // Se veio dataEntrega, aplica em todas as entregas da rota (sobrescreve).
-    if (dataEntregaISO) {
-      await prisma.entrega.updateMany({
-        where: { rotaId },
-        data: { ...data, dataEntrega: dataEntregaISO },
-      });
-    } else {
-      await prisma.entrega.updateMany({ where: { rotaId }, data });
+  if (status === "ENTREGUE" || status === "FINALIZADO") {
+    const existente = await prisma.entrega.findUnique({ where: { id }, select: { dataEntrega: true } });
+    if (!dataEntregaISO && !existente?.dataEntrega) {
+      return NextResponse.json(
+        { error: "DATA_ENTREGA_OBRIGATORIA", message: "Informe a data em que a entrega foi realizada." },
+        { status: 400 }
+      );
     }
-
-    // Rota concluída encerra as ocorrências que ainda estavam abertas nas entregas dela.
-    const resolucaoRota = resolucaoAutomatica(null, status);
-    if (resolucaoRota) await baixarOcorrenciasAbertas(prisma, { rotaId }, resolucaoRota);
-
-    // Mapear status da entrega para status da rota se necessário
-    let rotaStatus: string | undefined;
-    if (status === "EM_ROTA") rotaStatus = "EM_ANDAMENTO";
-    else if (["ENTREGUE", "FINALIZADO"].includes(status)) rotaStatus = "CONCLUIDA";
-    else if (status === "PROGRAMADO") rotaStatus = "PLANEJADA";
-
-    if (rotaStatus) {
-      await prisma.rota.update({
-        where: { id: rotaId },
-        data: { status: rotaStatus as any }
-      });
-    }
-
-    return NextResponse.json({ ok: true, isRota: true });
   }
 
   if (dataEntregaISO) data.dataEntrega = dataEntregaISO;

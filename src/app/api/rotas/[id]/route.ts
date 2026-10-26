@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApi } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
 import { ORDEM_PARADAS } from "@/lib/upload-token";
+import { moverRota } from "@/lib/rota-mover";
+import { etapaDaRota, statusParaNovaEntrega } from "@/lib/rota-etapa";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireApi();
@@ -68,28 +70,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   data.pesoTotal = queryEntregas.reduce((s: number, e: any) => s + e.pesoTotal, 0);
   data.volumeTotal = queryEntregas.reduce((s: number, e: any) => s + e.volumeTotal, 0);
 
-  // 2. Ao concluir rota: marca entregas como ENTREGUE (não FINALIZADO).
-  //    O "Finalizar" fica separado — botão específico chama com finalizarEntregas: true.
-  if (body.status === "CONCLUIDA") {
-    const dataInformada = body.dataEntrega ? new Date(body.dataEntrega) : new Date();
-    // Preserva dataEntrega existente; só preenche as que estão vazias
-    await prisma.entrega.updateMany({
-      where: { rotaId: params.id, dataEntrega: null },
-      data: { dataEntrega: dataInformada },
-    });
-    // Marca como ENTREGUE (mas não sobrescreve entregas já FINALIZADAS ou com OCORRÊNCIA)
-    await prisma.entrega.updateMany({
-      where: { rotaId: params.id, status: { notIn: ["FINALIZADO", "OCORRENCIA"] } },
-      data: { status: "ENTREGUE", statusCanhoto: "RECEBIDO" },
-    });
-  }
-
-  // Finalizar rota: transforma todas as entregas ENTREGUE em FINALIZADO
-  if (body.finalizarEntregas) {
-    await prisma.entrega.updateMany({
-      where: { rotaId: params.id, status: { notIn: ["FINALIZADO", "OCORRENCIA"] } },
-      data: { status: "FINALIZADO", statusCanhoto: "RECEBIDO" },
-    });
+  // 2. Etapa da rota (Em Separação → Carregado → Em Rota → Entregue → Finalizado):
+  //    mesma regra do Kanban, que também ajusta o status interno da rota.
+  if (body.etapa) {
+    const r = await prisma.$transaction((tx) =>
+      moverRota(tx, params.id, body.etapa, body.dataEntrega ? new Date(body.dataEntrega) : null)
+    );
+    if (!r.ok) return NextResponse.json({ error: r.erro, message: r.mensagem }, { status: r.http });
   }
 
   // 3. Atualizar a rota
@@ -98,6 +85,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     data,
     include: { motorista: true, veiculo: true, entregas: true },
   });
+  // Entrega que entra agora acompanha a etapa da rota (Carregado ou Em Rota); senão Em Separação.
+  const statusNovaEntrega = statusParaNovaEntrega(etapaDaRota(updatedRota.entregas.map((e) => e.status)));
 
   // 3. Se mudou motorista, veículo ou valor, propagar para TODAS as entregas da rota
   if (body.motoristaId !== undefined || body.veiculoId !== undefined || body.valorMotorista !== undefined) {
@@ -120,7 +109,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         motoristaId: (updatedRota as any).motoristaId,
         veiculoId: (updatedRota as any).veiculoId,
         valorMotorista: (updatedRota as any).valorMotorista,
-        status: (updatedRota as any).status === "EM_ANDAMENTO" ? "EM_ROTA" : "CARREGADO"
+        status: statusNovaEntrega
       },
     });
   }
@@ -140,7 +129,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         motoristaId: (updatedRota as any).motoristaId,
         veiculoId: (updatedRota as any).veiculoId,
         valorMotorista: (updatedRota as any).valorMotorista,
-        status: (updatedRota as any).status === "EM_ANDAMENTO" ? "EM_ROTA" : "CARREGADO"
+        status: statusNovaEntrega
       },
     });
   }

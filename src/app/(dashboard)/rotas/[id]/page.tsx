@@ -13,13 +13,14 @@ import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import toast from "react-hot-toast";
 import { QualityScoring } from "@/components/quality/QualityScoring";
 import { QUALIDADE_ENABLED } from "@/lib/features";
+import { etapaDaRota } from "@/lib/rota-etapa";
+import { AvancarEtapaRota } from "@/components/rota/AvancarEtapaRota";
 
-const STATUS_ROTA: { key: string; label: string; icon: string; color: string; next?: string }[] = [
-  { key: "PLANEJADA",    label: "Planejada",    icon: "📋", color: "#f59e0b", next: "EM_ANDAMENTO" },
-  { key: "EM_ANDAMENTO", label: "Em Andamento", icon: "🚛", color: "#3b82f6", next: "CONCLUIDA" },
-  { key: "CONCLUIDA",    label: "Concluída",    icon: "✅", color: "#10b981" },
-  { key: "CANCELADA",    label: "Cancelada",    icon: "✕",  color: "#ef4444" },
-];
+// A etapa da rota é a das entregas dela (mesmo fluxo da entrega direta).
+const ICONE_ETAPA: Record<string, string> = {
+  PROGRAMADO: "📋", EM_SEPARACAO: "📦", CARREGADO: "🔄", EM_ROTA: "🚛",
+  ENTREGUE: "✅", FINALIZADO: "🏁", OCORRENCIA: "⚠️", CANCELADA: "✕",
+};
 
 export default function RotaDetailPage() {
   const params = useParams()!; const id = params!.id as string;
@@ -71,24 +72,12 @@ export default function RotaDetailPage() {
       });
       toast.success("Status atualizado");
       fetchRota();
-      if (newStatus === "CONCLUIDA" && QUALIDADE_ENABLED) {
-        setShowQualityPrompt(true);
-      }
     } finally { setSaving(false); }
   }
 
-  async function handleFinalizarEntregas() {
-    if (!window.confirm("Finalizar todas as entregas desta rota? Elas passarão de ENTREGUE para FINALIZADO.")) return;
-    setSaving(true);
-    try {
-      await fetch(`/api/rotas/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ finalizarEntregas: true }),
-      });
-      toast.success("Entregas finalizadas");
-      fetchRota();
-    } finally { setSaving(false); }
+  function handleEtapaAvancada(etapa: string) {
+    fetchRota();
+    if (etapa === "ENTREGUE" && QUALIDADE_ENABLED) setShowQualityPrompt(true);
   }
 
   function toggleEntrega(eId: string) {
@@ -162,8 +151,8 @@ export default function RotaDetailPage() {
   if (loading) return <><Topbar title="Rota" /><Loading /></>;
   if (!rota || rota.error) return <><Topbar title="Rota não encontrada" /></>;
 
-  const statusInfo = STATUS_ROTA.find(s => s.key === rota.status);
-  const nextStatus = STATUS_ROTA.find(s => s.key === statusInfo?.next);
+  const etapa = rota.status === "CANCELADA" ? null : etapaDaRota((rota.entregas ?? []).map((e: { status: string }) => e.status));
+  const etapaExibida = rota.status === "CANCELADA" ? "CANCELADA" : etapa;
 
   const totalFrete = rota.entregas?.reduce((s: number, e: any) => s + (e.valorFrete || 0), 0) ?? 0;
   const nfsTotal = rota.entregas?.reduce((s: number, e: any) => s + (e.notas?.length || 0), 0) ?? 0;
@@ -189,16 +178,7 @@ export default function RotaDetailPage() {
                 Cancelar Rota
               </Button>
             )}
-            {nextStatus && (
-              <Button size="sm" onClick={() => handleStatusChange(nextStatus.key)} loading={saving}>
-                {nextStatus.icon} {nextStatus.label}
-              </Button>
-            )}
-            {rota.status === "CONCLUIDA" && rota.entregas?.some((e: any) => e.status !== "FINALIZADO" && e.status !== "OCORRENCIA") && (
-              <Button size="sm" onClick={handleFinalizarEntregas} loading={saving}>
-                🏁 Finalizar
-              </Button>
-            )}
+            <AvancarEtapaRota rotaId={id} etapa={etapa} onAvancou={handleEtapaAvancada} />
             <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/rota/${id}`, '_blank')}>
               <Printer size={14} /> Carta Frete
             </Button>
@@ -216,11 +196,11 @@ export default function RotaDetailPage() {
         <Card>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
-              <div className="text-3xl">{statusInfo?.icon}</div>
+              <div className="text-3xl">{etapaExibida ? ICONE_ETAPA[etapaExibida] : ""}</div>
               <div>
                 <div className="text-[10px] font-mono uppercase tracking-widest mb-0.5" style={{ color: "var(--text3)" }}>Status</div>
                 <div className="flex items-center gap-2">
-                  <StatusBadge status={rota.status} />
+                  {etapaExibida && <StatusBadge status={etapaExibida} />}
                   {QUALIDADE_ENABLED && rota.qualidade?.id && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1"
                       style={{ background: "rgba(234, 179, 8, 0.15)", color: "#ca8a04", border: "1px solid rgba(234, 179, 8, 0.3)" }}

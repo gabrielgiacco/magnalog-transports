@@ -14,10 +14,14 @@ export async function GET(req: NextRequest) {
   const mostrarFinalizadas = searchParams.get("mostrarFinalizadas") === "true";
 
   const where: any = {};
-  // Por padrão a lista mostra só o que ainda está em aberto (planejada / em
-  // andamento). Um filtro de status explícito continua tendo precedência.
+  // Por padrão a lista mostra só o que ainda está em aberto. Rota concluída
+  // (etapa Entregue) continua visível até as entregas serem finalizadas, para dar
+  // para finalizar por aqui. Um filtro de status explícito tem precedência.
   if (status) where.status = status;
-  else if (!mostrarFinalizadas) where.status = { notIn: ["CONCLUIDA", "CANCELADA"] };
+  else if (!mostrarFinalizadas) {
+    where.status = { not: "CANCELADA" };
+    where.NOT = { status: "CONCLUIDA", entregas: { every: { status: { in: ["FINALIZADO", "OCORRENCIA"] } } } };
+  }
   if (nfFilter) {
     where.entregas = { some: { notas: { some: { numero: { contains: nfFilter, mode: "insensitive" } } } } };
   }
@@ -116,7 +120,8 @@ export async function POST(req: NextRequest) {
           motoristaId: rota.motoristaId,
           veiculoId: rota.veiculoId,
           valorMotorista: rota.valorMotorista,
-          status: "CARREGADO"
+          // Mesmo fluxo da entrega direta: a equipe marca Carregado depois.
+          status: "EM_SEPARACAO"
         },
       });
       // O updateMany nao preserva a ordem de entregaIds, e essa ordem e a do

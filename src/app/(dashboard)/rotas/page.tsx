@@ -6,6 +6,8 @@ import { Topbar } from "@/components/layout/Topbar";
 import { Button, Card, Loading, Empty, StatusBadge, Modal, Input, Select, ComboboxMotorista } from "@/components/ui";
 import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
 import { QUALIDADE_ENABLED } from "@/lib/features";
+import { etapaDaRota } from "@/lib/rota-etapa";
+import { AvancarEtapaRota } from "@/components/rota/AvancarEtapaRota";
 import { Plus, RefreshCw, ChevronDown, ChevronUp, Truck, User, Package, Calendar, Route, Search, Trash2, Filter, Eye, EyeOff } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -81,27 +83,6 @@ export default function RotasPage() {
       toast.error(error.message || "Erro ao criar rota");
     }
     finally { setSaving(false); }
-  }
-
-  async function handleStatusChange(rotaId: string, status: string) {
-    await fetch(`/api/rotas/${rotaId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    fetchRotas();
-    toast.success("Status atualizado");
-  }
-
-  async function handleFinalizarEntregas(rotaId: string) {
-    if (!window.confirm("Finalizar todas as entregas desta rota? Elas passarão de ENTREGUE para FINALIZADO.")) return;
-    await fetch(`/api/rotas/${rotaId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ finalizarEntregas: true }),
-    });
-    fetchRotas();
-    toast.success("Entregas finalizadas");
   }
 
   async function handleDeleteRota(id: string) {
@@ -221,14 +202,18 @@ export default function RotasPage() {
         </Card>
 
         {loading ? <Loading /> : rotas.length === 0 ? <Empty icon="🗺️" text="Nenhuma rota encontrada" /> : (
-          rotas.map((rota) => (
+          rotas.map((rota) => {
+            // A etapa da rota é a das entregas dela (mesmo fluxo da entrega direta).
+            const etapa = rota.status === "CANCELADA" ? null : etapaDaRota((rota.entregas ?? []).map((e: { status: string }) => e.status));
+            const etapaExibida = rota.status === "CANCELADA" ? "CANCELADA" : etapa;
+            return (
             <Card key={rota.id} className="p-0 overflow-hidden">
               {/* Header */}
               <div className="px-3 sm:px-5 py-3 sm:py-4">
                 {/* Row 1: code + status + actions */}
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                   <span className="font-mono text-[11px]" style={{ color: "var(--text3)" }}>{rota.codigo}</span>
-                  <StatusBadge status={rota.status} />
+                  {etapaExibida && <StatusBadge status={etapaExibida} />}
                   {QUALIDADE_ENABLED && rota.qualidade?.id && (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1"
                       style={{ background: "rgba(234, 179, 8, 0.15)", color: "#ca8a04", border: "1px solid rgba(234, 179, 8, 0.3)" }}>
@@ -236,15 +221,7 @@ export default function RotasPage() {
                     </span>
                   )}
                   <div className="flex items-center gap-2 ml-auto">
-                    {rota.status === "PLANEJADA" && (
-                      <Button size="sm" variant="ghost" onClick={() => handleStatusChange(rota.id, "EM_ANDAMENTO")}>Iniciar</Button>
-                    )}
-                    {rota.status === "EM_ANDAMENTO" && (
-                      <Button size="sm" variant="success" onClick={() => handleStatusChange(rota.id, "CONCLUIDA")}>Concluir</Button>
-                    )}
-                    {rota.status === "CONCLUIDA" && rota.entregas?.some((e: any) => e.status !== "FINALIZADO" && e.status !== "OCORRENCIA") && (
-                      <Button size="sm" onClick={() => handleFinalizarEntregas(rota.id)}>Finalizar</Button>
-                    )}
+                    <AvancarEtapaRota rotaId={rota.id} etapa={etapa} onAvancou={() => fetchRotas()} />
                     <Button size="sm" variant="ghost" onClick={() => router.push(`/rotas/${rota.id}`)}>
                       <span className="hidden sm:inline">Detalhes</span> →
                     </Button>
@@ -333,7 +310,8 @@ export default function RotasPage() {
                 </div>
               )}
             </Card>
-          ))
+            );
+          })
         )}
       </div>
 
