@@ -100,15 +100,21 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     });
   }
 
+  // As NFs da rota ficam agendadas para a data da rota: mudou a data, muda o agendamento de todas.
+  if (body.data) {
+    await prisma.entrega.updateMany({ where: { rotaId: params.id }, data: { dataAgendada: updatedRota.data } });
+  }
+
   // 4. Lógica específica para Adicionar/Remover entregas individuais (herdar ou limpar)
   if (body.addEntregaId) {
     await prisma.entrega.update({
       where: { id: body.addEntregaId },
-      data: { 
+      data: {
         rotaId: params.id,
         motoristaId: (updatedRota as any).motoristaId,
         veiculoId: (updatedRota as any).veiculoId,
         valorMotorista: (updatedRota as any).valorMotorista,
+        dataAgendada: updatedRota.data,
         status: statusNovaEntrega
       },
     });
@@ -124,11 +130,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     );
     await prisma.entrega.updateMany({
       where: { id: { in: body.addEntregaIds } },
-      data: { 
+      data: {
         rotaId: params.id,
         motoristaId: (updatedRota as any).motoristaId,
         veiculoId: (updatedRota as any).veiculoId,
         valorMotorista: (updatedRota as any).valorMotorista,
+        dataAgendada: updatedRota.data,
         status: statusNovaEntrega
       },
     });

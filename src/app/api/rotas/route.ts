@@ -120,6 +120,8 @@ export async function POST(req: NextRequest) {
           motoristaId: rota.motoristaId,
           veiculoId: rota.veiculoId,
           valorMotorista: rota.valorMotorista,
+          // As NFs ficam agendadas para a data da rota.
+          dataAgendada: rota.data,
           // Mesmo fluxo da entrega direta: a equipe marca Carregado depois.
           status: "EM_SEPARACAO"
         },
