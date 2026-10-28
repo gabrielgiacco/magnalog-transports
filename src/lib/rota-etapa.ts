@@ -34,6 +34,18 @@ export function proximaEtapa(etapa: string | null): EtapaEntrega | null {
   return FLUXO_ENTREGA[i + 1];
 }
 
+/**
+ * Etapas para onde a rota pode voltar pela tela de Rotas. Segue `deveMover`:
+ * voltar de Entregue para antes nao desfaz entrega nenhuma, entao nao e oferecido
+ * (desfazer uma entrega feita e na propria entrega).
+ */
+export function etapasParaVoltar(etapa: string | null): EtapaEntrega[] {
+  if (etapa === "CARREGADO") return ["EM_SEPARACAO"];
+  if (etapa === "EM_ROTA") return ["CARREGADO", "EM_SEPARACAO"];
+  if (etapa === "FINALIZADO") return ["ENTREGUE"];
+  return [];
+}
+
 /** Status interno da rota que corresponde a etapa. */
 export function statusRotaDaEtapa(etapa: EtapaEntrega): "PLANEJADA" | "EM_ANDAMENTO" | "CONCLUIDA" {
   if (etapa === "EM_ROTA") return "EM_ANDAMENTO";

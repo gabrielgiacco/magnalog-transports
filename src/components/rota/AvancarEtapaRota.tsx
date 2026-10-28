@@ -8,8 +8,9 @@ import { STATUS_LABELS } from "@/lib/utils";
 const ICONE: Record<string, string> = { EM_SEPARACAO: "📦", CARREGADO: "🔄", EM_ROTA: "🚛", ENTREGUE: "✅", FINALIZADO: "🏁" };
 
 /**
- * Botão que leva a rota para a próxima etapa do fluxo da entrega direta. Em
- * Entregue e Finalizado pede a data de entrega, como o Kanban.
+ * Botão que leva a rota para a próxima etapa do fluxo da entrega direta. A data
+ * de entrega só é pedida quando o servidor responde que alguma entrega ainda
+ * não tem data — no Finalizado, depois do Entregue, todas já têm e não pergunta.
  */
 export function AvancarEtapaRota({ rotaId, etapa, onAvancou }: { rotaId: string; etapa: string | null; onAvancou: (etapa: string) => void }) {
   const proxima = proximaEtapa(etapa);
@@ -17,8 +18,6 @@ export function AvancarEtapaRota({ rotaId, etapa, onAvancou }: { rotaId: string;
   const [data, setData] = useState(() => new Date().toISOString().slice(0, 10));
   const [salvando, setSalvando] = useState(false);
   if (!proxima) return null;
-
-  const pedeData = proxima === "ENTREGUE" || proxima === "FINALIZADO";
 
   async function avancar(dataEntrega?: string) {
     if (!proxima) return;
@@ -31,6 +30,11 @@ export function AvancarEtapaRota({ rotaId, etapa, onAvancou }: { rotaId: string;
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        // Alguma entrega ainda sem data: aí sim pergunta a data
+        if (!dataEntrega && err.error === "DATA_ENTREGA_OBRIGATORIA") {
+          setPedindoData(true);
+          return;
+        }
         throw new Error(err.message || err.error || "Erro ao avançar a rota");
       }
       setPedindoData(false);
@@ -45,7 +49,7 @@ export function AvancarEtapaRota({ rotaId, etapa, onAvancou }: { rotaId: string;
 
   return (
     <>
-      <Button size="sm" onClick={() => (pedeData ? setPedindoData(true) : avancar())} loading={salvando}>
+      <Button size="sm" onClick={() => avancar()} loading={salvando}>
         {ICONE[proxima]} {STATUS_LABELS[proxima]}
       </Button>
       <Modal open={pedindoData} onClose={() => setPedindoData(false)} title="Data da entrega" size="sm">

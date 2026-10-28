@@ -7,7 +7,7 @@ import { Button, Card, Loading, StatusBadge, Modal, Select, Table, Th, Td, Tr } 
 import { formatWeight, formatDate, formatCurrency } from "@/lib/utils";
 import {
   ArrowLeft, Truck, User, Calendar, Package, Weight,
-  Plus, Trash2, CheckCircle2, PlayCircle, AlertTriangle, Search, ShieldCheck, FileText, History, Printer, Smartphone
+  Plus, Trash2, CheckCircle2, PlayCircle, AlertTriangle, Search, ShieldCheck, FileText, History, Printer, Smartphone, Pencil
 } from "lucide-react";
 import { LinkMotoristaModal } from "@/components/entrega/LinkMotoristaModal";
 import toast from "react-hot-toast";
@@ -15,6 +15,7 @@ import { QualityScoring } from "@/components/quality/QualityScoring";
 import { QUALIDADE_ENABLED } from "@/lib/features";
 import { etapaDaRota } from "@/lib/rota-etapa";
 import { AvancarEtapaRota } from "@/components/rota/AvancarEtapaRota";
+import { EditarRotaModal } from "@/components/rota/EditarRotaModal";
 
 // A etapa da rota é a das entregas dela (mesmo fluxo da entrega direta).
 const ICONE_ETAPA: Record<string, string> = {
@@ -33,6 +34,7 @@ export default function RotaDetailPage() {
   const [saving, setSaving] = useState(false);
   const [showAddEntrega, setShowAddEntrega] = useState(false);
   const [showLink, setShowLink] = useState(false);
+  const [showEditar, setShowEditar] = useState(false);
   const [entregasDisp, setEntregasDisp] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchEntrega, setSearchEntrega] = useState("");
@@ -173,6 +175,11 @@ export default function RotaDetailPage() {
             <Button variant="ghost" size="sm" onClick={() => router.push("/rotas")}>
               <ArrowLeft size={14} /> Voltar
             </Button>
+            {rota.status !== "CANCELADA" && (
+              <Button variant="ghost" size="sm" onClick={() => setShowEditar(true)}>
+                <Pencil size={14} /> Editar
+              </Button>
+            )}
             {rota.status !== "CANCELADA" && rota.status !== "CONCLUIDA" && (
               <Button variant="danger" size="sm" onClick={() => handleStatusChange("CANCELADA")}>
                 Cancelar Rota
@@ -396,6 +403,8 @@ export default function RotaDetailPage() {
           </div>
       </Modal>
 
+      <EditarRotaModal rota={rota} etapa={etapa} motoristas={motoristas} veiculos={veiculos}
+        open={showEditar} onClose={() => setShowEditar(false)} onSaved={fetchRota} />
       <LinkMotoristaModal
         modo="rota"
         open={showLink}
