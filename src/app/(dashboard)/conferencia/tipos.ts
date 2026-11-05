@@ -42,3 +42,17 @@ export async function chamar(url: string, metodo: string, corpo?: unknown) {
   if (!r.ok) throw new Error(j.error || "Erro na requisição");
   return j;
 }
+
+/** GTIN com 14 digitos (mesma regra do servidor): EAN-13 com ou sem zero casa igual. */
+export function gtin14(codigo: string | null | undefined): string | null {
+  const d = String(codigo || "").replace(/\D/g, "");
+  if (d.length < 8 || d.length > 14) return null;
+  return d.padStart(14, "0");
+}
+
+/** Linhas da conferencia que casam com o codigo lido (o produto pode estar em varias NFs). */
+export function itensDoCodigo(itens: ItemConf[], codigo: string): ItemConf[] {
+  const g = gtin14(codigo);
+  if (!g) return [];
+  return itens.filter((i) => !i.foraDaCarga && (i.ean === g || i.eanUnidade === g));
+}

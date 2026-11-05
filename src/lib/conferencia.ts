@@ -81,7 +81,30 @@ export function acharItemDaLeitura<T extends ItemLeitura>(itens: T[], codigo: st
   return candidatos.find((i) => i.qtdConferida < i.qtdEsperada) || candidatos[0];
 }
 
-export type SituacaoItem = "OK" | "FALTA" | "SOBRA" | "FORA_DA_CARGA";
+/**
+ * Reparte uma quantidade lida entre as linhas do mesmo produto (ele pode estar
+ * em varias NFs da rota): completa o esperado de uma linha antes de passar para
+ * a proxima; o que passar de tudo vai para a primeira (vira sobra). Vazio se o
+ * codigo nao e da carga.
+ */
+export function distribuirLeitura<T extends ItemLeitura>(itens: T[], codigo: string, quantidade: number): { id: string; incremento: number }[] {
+  const g = gtin14(codigo);
+  if (!g) return [];
+  const linhas = itens.filter((i) => !i.foraDaCarga && (i.ean === g || i.eanUnidade === g));
+  if (linhas.length === 0) return [];
+  const inc = new Map<string, number>();
+  let resto = quantidade;
+  for (const l of linhas) {
+    if (resto <= 0) break;
+    const cabe = Math.max(0, l.qtdEsperada - l.qtdConferida);
+    const vai = Math.min(cabe, resto);
+    if (vai > 0) { inc.set(l.id, vai); resto -= vai; }
+  }
+  if (resto > 0) inc.set(linhas[0].id, (inc.get(linhas[0].id) || 0) + resto);
+  return Array.from(inc.entries()).map(([id, incremento]) => ({ id, incremento }));
+}
+
+export type SituacaoItem ="OK" | "FALTA" | "SOBRA" | "FORA_DA_CARGA";
 
 export interface ResultadoItem {
   situacao: SituacaoItem;

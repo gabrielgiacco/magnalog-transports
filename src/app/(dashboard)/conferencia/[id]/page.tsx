@@ -8,7 +8,8 @@ import { LeitorCodigo } from "@/components/conferencia/LeitorCodigo";
 import { ItemSheet } from "../ItemSheet";
 import { ListaItens } from "../ListaItens";
 import { ResultadoView } from "../ResultadoView";
-import { chamar, type Conferencia, type ItemConf, type Leitura } from "../tipos";
+import { QuantidadeModal } from "../QuantidadeModal";
+import { chamar, itensDoCodigo, type Conferencia, type ItemConf, type Leitura } from "../tipos";
 
 export default function ConferenciaDetalhePage() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,9 @@ export default function ConferenciaDetalhePage() {
   const [confirmando, setConfirmando] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
   const [avaria, setAvaria] = useState<{ id: string; codigo?: string } | null>(null);
+  // Leitura aguardando a quantidade no pop-up
+  const [lido, setLido] = useState<{ codigo: string; itens: ItemConf[] } | null>(null);
+  const [registrando, setRegistrando] = useState(false);
   const fila = useRef<Promise<unknown>>(Promise.resolve());
   const seq = useRef(0);
 
@@ -45,25 +49,32 @@ export default function ConferenciaDetalhePage() {
   const avisar = (ok: boolean, texto: string) =>
     setLeituras((l) => [{ chave: ++seq.current, ok, texto }, ...l].slice(0, 3));
 
-  // Leituras em fila: a resposta de cada bip chega na ordem em que foi lido
+  // Bipou: abre o pop-up com o produto e pede a quantidade (nada e somado antes de confirmar)
   const ler = useCallback((codigo: string) => {
-    fila.current = fila.current.then(async () => {
-      try {
-        const j = await chamar(base, "POST", { codigo });
-        const item: ItemConf = j.item;
-        if (j.foraDaCarga) {
-          navigator.vibrate?.([80, 60, 80]);
-          avisar(false, `Código ${codigo} não pertence à carga`);
-        } else {
-          avisar(true, `+1 · ${item.descricao} (NF ${item.nfNumero ?? "—"}) — contadas: ${item.qtdConferida}`);
-        }
-        trocarItem(item);
-      } catch (e: any) {
-        navigator.vibrate?.([80, 60, 80]);
-        avisar(false, e.message || `Falha ao ler ${codigo}`);
-      }
-    });
-  }, [base]);
+    if (lido) return; // ja ha um pop-up aberto
+    const itens = conf ? itensDoCodigo(conf.itens, codigo) : [];
+    navigator.vibrate?.(itens.length ? 80 : [80, 60, 80]);
+    setLido({ codigo, itens });
+  }, [conf, lido]);
+
+  async function registrar(quantidade: number) {
+    if (!lido) return;
+    setRegistrando(true);
+    try {
+      const j = await chamar(base, "POST", { codigo: lido.codigo, quantidade });
+      const atualizados: ItemConf[] = j.itens ?? [j.item];
+      atualizados.forEach(trocarItem);
+      const total = atualizados.reduce((s, i) => s + (i.qtdConferida || 0), 0)
+        + lido.itens.filter((i) => !atualizados.some((a) => a.id === i.id)).reduce((s, i) => s + (i.qtdConferida || 0), 0);
+      if (j.foraDaCarga) avisar(false, `Fora da carga: ${lido.codigo} · ${quantidade} registrada(s)`);
+      else avisar(true, `+${quantidade} · ${j.item.descricao} — contadas: ${total}`);
+      setLido(null);
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao registrar");
+    } finally {
+      setRegistrando(false);
+    }
+  }
 
   async function salvar(dados: { qtdConferida: number; qtdAvaria: number; observacao: string }) {
     if (!editando) return;
@@ -116,7 +127,7 @@ export default function ConferenciaDetalhePage() {
         {emAndamento ? (
           <>
             <div className="sticky top-0 z-20 -mx-4 px-4 py-2 md:mx-0 md:px-0" style={{ background: "var(--bg, var(--surface))" }}>
-              <LeitorCodigo onLer={ler} pausado={!!editando || confirmando} />
+              <LeitorCodigo onLer={ler} pausado={!!editando || confirmando || !!lido} />
             </div>
             {leituras.length > 0 && (
               <div className="space-y-1.5">
@@ -152,6 +163,10 @@ export default function ConferenciaDetalhePage() {
           <ResultadoView conf={conf} avaria={avaria} />
         )}
       </div>
+      {lido && (
+        <QuantidadeModal codigo={lido.codigo} itens={lido.itens} salvando={registrando}
+          onConfirmar={registrar} onCancelar={() => setLido(null)} />
+      )}
       {editando && (
         <ItemSheet item={editando} salvando={salvando} onFechar={() => setEditando(null)} onSalvar={salvar} />
       )}

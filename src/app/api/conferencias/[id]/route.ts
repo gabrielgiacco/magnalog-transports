@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApi } from "@/lib/api-auth";
-import { acharItemDaLeitura, compararItem, gtin14 } from "@/lib/conferencia";
+import { compararItem, distribuirLeitura, gtin14 } from "@/lib/conferencia";
 
 export const dynamic = "force-dynamic";
 
@@ -61,10 +61,13 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (conf.status !== "EM_ANDAMENTO") return erro("Conferência já finalizada", 400);
 
   const itens = await prisma.conferenciaItem.findMany({ where: { conferenciaId: params.id }, orderBy: { createdAt: "asc" } });
-  const achado = acharItemDaLeitura(itens, codigo);
-  if (achado) {
-    const item = await prisma.conferenciaItem.update({ where: { id: achado.id }, data: { qtdConferida: { increment: quantidade } } });
-    return NextResponse.json({ item: semEsperado(item), foraDaCarga: false });
+  // Mesmo produto em varias NFs: a quantidade e repartida completando uma NF por vez
+  const partes = distribuirLeitura(itens, codigo, quantidade);
+  if (partes.length > 0) {
+    const atualizados = await prisma.$transaction(
+      partes.map((p) => prisma.conferenciaItem.update({ where: { id: p.id }, data: { qtdConferida: { increment: p.incremento } } })),
+    );
+    return NextResponse.json({ item: semEsperado(atualizados[0]), itens: atualizados.map(semEsperado), foraDaCarga: false });
   }
 
   const ean = gtin14(codigo) ?? codigo;
