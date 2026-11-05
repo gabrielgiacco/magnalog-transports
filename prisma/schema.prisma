@@ -304,6 +304,62 @@ model Rota {
   avarias               Avaria[]
   lancamentos           LancamentoFinanceiro[]
   mdfes                 Mdfe[]
+  conferencias          Conferencia[]
+}
+
+// ─── Conferência de carregamento (celular, código de barras) ─────────────
+// Cega: o conferente não vê qtdEsperada enquanto confere. Os vínculos com
+// entrega, NF, conferente e avaria são referências simples (sem relação),
+// para não mexer nos modelos existentes.
+
+enum StatusConferencia {
+  EM_ANDAMENTO
+  CONCLUIDA
+  COM_DIVERGENCIA
+}
+
+model Conferencia {
+  id             String            @id @default(cuid())
+  rotaId         String
+  status         StatusConferencia @default(EM_ANDAMENTO)
+  conferenteId   String?
+  conferenteNome String?
+  iniciadaEm     DateTime          @default(now())
+  concluidaEm    DateTime?
+  avariaId       String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  rota  Rota              @relation(fields: [rotaId], references: [id], onDelete: Cascade)
+  itens ConferenciaItem[]
+
+  @@index([rotaId])
+}
+
+model ConferenciaItem {
+  id            String   @id @default(cuid())
+  conferenciaId String
+  entregaId     String?
+  notaFiscalId  String?
+  nfNumero      String?
+  codigoProduto String
+  descricao     String
+  unidade       String?
+  ean           String?  // código da caixa (cEAN, DUN-14 na maioria)
+  eanUnidade    String?  // código da unidade (cEANTrib)
+  valorUnitario Float    @default(0)
+  qtdEsperada   Float    @default(0)
+  qtdConferida  Float    @default(0)
+  qtdAvaria     Float    @default(0)
+  foraDaCarga   Boolean  @default(false) // código lido que não é de nenhuma NF da rota
+  observacao    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  conferencia Conferencia @relation(fields: [conferenciaId], references: [id], onDelete: Cascade)
+
+  @@index([conferenciaId])
+  @@index([ean])
 }
 
 enum StatusEntrega {

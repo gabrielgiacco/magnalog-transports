@@ -16,6 +16,7 @@ import { QUALIDADE_ENABLED } from "@/lib/features";
 import { etapaDaRota } from "@/lib/rota-etapa";
 import { AvancarEtapaRota } from "@/components/rota/AvancarEtapaRota";
 import { EditarRotaModal } from "@/components/rota/EditarRotaModal";
+import { ConferirCarregamento } from "@/components/rota/ConferirCarregamento";
 
 // A etapa da rota é a das entregas dela (mesmo fluxo da entrega direta).
 const ICONE_ETAPA: Record<string, string> = {
@@ -185,6 +186,7 @@ export default function RotaDetailPage() {
                 Cancelar Rota
               </Button>
             )}
+            {rota.status !== "CANCELADA" && <ConferirCarregamento rotaId={id} />}
             <AvancarEtapaRota rotaId={id} etapa={etapa} onAvancou={handleEtapaAvancada} />
             <Button variant="ghost" size="sm" onClick={() => window.open(`/imprimir/carta-frete/rota/${id}`, '_blank')}>
               <Printer size={14} /> Carta Frete

@@ -11,6 +11,7 @@ export type ProdutoParsed = {
   valorUnitario: number;
   valorTotal: number;
   ean: string;
+  eanTrib: string;
 };
 
 export type EmitenteParsed = {
@@ -60,6 +61,7 @@ export function parseNFProducts(xmlContent: string | null): ParseNFResult {
         valorUnitario: parseFloat(String(p.vUnCom || "0")) || 0,
         valorTotal: parseFloat(String(p.vProd || "0")) || 0,
         ean: String(p.cEAN || ""),
+        eanTrib: String(p.cEANTrib || ""),
       };
     });
 

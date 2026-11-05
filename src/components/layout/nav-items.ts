@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Package, Calendar, Users, DollarSign, Settings,
   BarChart2, Wallet, FileUp, Truck, Globe, Columns, Route, ShieldCheck,
-  AlertTriangle, Map, Layers, Warehouse, Shield, HardDrive, Boxes, PackageOpen,
+  AlertTriangle, Map, Layers, Warehouse, Shield, HardDrive, Boxes, PackageOpen, ScanBarcode,
 } from "lucide-react";
 
 export interface NavItem {
@@ -27,6 +27,7 @@ export const navGroups: NavGroup[] = [
       { href: "/kanban", label: "Kanban", icon: Columns, roles: ["ADMIN","OPERACIONAL","CONFERENTE"] },
       { href: "/agendamentos", label: "Agendamentos", icon: Calendar, roles: ["ADMIN","FINANCEIRO","OPERACIONAL","CONFERENTE"] },
       { href: "/rotas", label: "Rotas", icon: Route, roles: ["ADMIN","OPERACIONAL"] },
+      { href: "/conferencia", label: "Conferência", icon: ScanBarcode, roles: ["ADMIN","OPERACIONAL","CONFERENTE"] },
       { href: "/planejador-rotas", label: "Planejador", icon: Map, roles: ["ADMIN","OPERACIONAL"] },
       { href: "/frota", label: "Frota", icon: Truck, roles: ["ADMIN","OPERACIONAL","FINANCEIRO"] },
       { href: "/deposito", label: "Depósito", icon: PackageOpen, roles: ["ADMIN","OPERACIONAL","FINANCEIRO","CONFERENTE"] },
