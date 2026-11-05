@@ -78,21 +78,26 @@ export async function GET(req: NextRequest) {
   }
 
 
-  if (busca) {
-    const orConditions: any[] = [
-      { numero: { contains: busca } },
-      { destinatarioRazao: { contains: busca, mode: "insensitive" } },
-      { emitenteRazao: { contains: busca, mode: "insensitive" } },
-      { cidade: { contains: busca, mode: "insensitive" } },
-      { endereco: { contains: busca, mode: "insensitive" } },
-      { bairro: { contains: busca, mode: "insensitive" } },
-      { cep: { contains: busca, mode: "insensitive" } },
-      { chaveAcesso: { contains: busca } },
-      { xmlOriginal: { contains: busca, mode: "insensitive" } },
-    ];
-    const digits = busca.replace(/\D/g, "");
-    if (digits.length > 0) {
-      orConditions.push({ destinatarioCnpj: { contains: digits } });
+  // Varios termos separados por ";" (ex.: 1234;5678) trazem as notas de qualquer um deles
+  const termos = (busca || "").split(";").map((t) => t.trim()).filter(Boolean);
+  if (termos.length) {
+    const orConditions: any[] = [];
+    for (const termo of termos) {
+      orConditions.push(
+        { numero: { contains: termo } },
+        { destinatarioRazao: { contains: termo, mode: "insensitive" } },
+        { emitenteRazao: { contains: termo, mode: "insensitive" } },
+        { cidade: { contains: termo, mode: "insensitive" } },
+        { endereco: { contains: termo, mode: "insensitive" } },
+        { bairro: { contains: termo, mode: "insensitive" } },
+        { cep: { contains: termo, mode: "insensitive" } },
+        { chaveAcesso: { contains: termo } },
+        { xmlOriginal: { contains: termo, mode: "insensitive" } },
+      );
+      const digits = termo.replace(/\D/g, "");
+      if (digits.length > 0) {
+        orConditions.push({ destinatarioCnpj: { contains: digits } });
+      }
     }
     where.OR = orConditions;
   }
