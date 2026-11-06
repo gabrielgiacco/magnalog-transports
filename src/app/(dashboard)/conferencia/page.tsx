@@ -141,9 +141,11 @@ export default function ConferenciaPage() {
   return (
     <>
       <Topbar title="Conferência de carregamento" />
-      <Suspense fallback={<Loading />}>
-        <ConferenciaRotas />
-      </Suspense>
+      <div className="flex-1 overflow-y-auto">
+        <Suspense fallback={<Loading />}>
+          <ConferenciaRotas />
+        </Suspense>
+      </div>
     </>
   );
 }

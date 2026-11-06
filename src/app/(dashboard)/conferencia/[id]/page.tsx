@@ -123,6 +123,8 @@ export default function ConferenciaDetalhePage() {
   return (
     <>
       <Topbar title={`Conferência ${conf.rota.codigo}`} subtitle={subtitulo} />
+      {/* O layout do painel nao rola: a pagina tem a propria area de rolagem */}
+      <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
         {emAndamento ? (
           <>
@@ -162,6 +164,7 @@ export default function ConferenciaDetalhePage() {
         ) : (
           <ResultadoView conf={conf} avaria={avaria} />
         )}
+      </div>
       </div>
       {lido && (
         <QuantidadeModal codigo={lido.codigo} itens={lido.itens} salvando={registrando}
