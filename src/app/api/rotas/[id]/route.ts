@@ -140,6 +140,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       },
     });
   }
+  // Rota cancelada solta as entregas que ainda nao foram entregues, para poderem
+  // entrar em outra rota. Entregue/Finalizado ficam como historico.
+  if (data.status === "CANCELADA") {
+    await prisma.entrega.updateMany({
+      where: { rotaId: params.id, status: { notIn: ["ENTREGUE", "FINALIZADO"] } },
+      data: {
+        rotaId: null,
+        ordemRota: null,
+        uploadToken: null,
+        uploadTokenExpira: null,
+        motoristaId: null,
+        veiculoId: null,
+        valorMotorista: 0,
+        status: "PROGRAMADO"
+      },
+    });
+  }
   if (body.removeEntregaId) {
     await prisma.entrega.update({
       where: { id: body.removeEntregaId },
